@@ -1,0 +1,195 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; background: #E9E6DF; font-family: Inter, sans-serif; color: #1B1F24; }
+    #map-world { position: absolute; left: 0; top: 0; width: 3600px; height: 2500px; transform-origin: 0 0; }
+    .card { position: absolute; left: 96px; top: 716px; width: 640px; height: 248px; }
+    .card-in { position: absolute; inset: 0; display: flex; align-items: center; gap: 36px; padding: 0 44px; background: #FFFFFF; border-radius: 28px; box-shadow: 0 18px 40px rgba(27,31,36,0.18); }
+    .card-in > svg { flex: none; }
+    .card-small { font-weight: 700; font-size: 40px; color: #5B6168; line-height: 1.1; }
+    .card-big { font-weight: 900; font-size: 72px; letter-spacing: -0.02em; line-height: 1.05; margin-top: 6px; white-space: nowrap; }
+    .panel { position: absolute; left: 96px; top: 96px; width: 760px; }
+    .panel-in { position: absolute; left: 0; top: 0; right: 0; background: #FFFFFF; border-radius: 32px; box-shadow: 0 18px 40px rgba(27,31,36,0.18); padding: 52px 56px; }
+    #title { height: 330px; }
+    #title-in { height: 330px; }
+    #title-big { font-weight: 900; font-size: 110px; letter-spacing: -0.02em; line-height: 1; }
+    #title-small { font-weight: 700; font-size: 40px; color: #5B6168; margin-top: 26px; line-height: 1.25; }
+    #endc { top: 96px; height: 560px; }
+    #endc-in { height: 560px; }
+    #endc-addr { font-weight: 900; font-size: 76px; letter-spacing: -0.02em; line-height: 1.05; }
+    #endc-area { font-weight: 700; font-size: 44px; color: #5B6168; margin-top: 14px; }
+    .endc-line { font-weight: 700; font-size: 40px; margin-top: 40px; display: flex; align-items: center; gap: 20px; }
+    #endc-dist { color: #E5482B; font-weight: 900; font-size: 56px; margin-top: 24px; }
+    #note { position: absolute; right: 96px; bottom: 60px; font-weight: 700; font-size: 28px; color: #5B6168; background: rgba(255,255,255,0.85); padding: 10px 20px; border-radius: 14px; }
+  </style>
+  <div id="root" data-composition-id="route" data-width="1920" data-height="1080">
+    <div id="map" class="clip" data-start="0" data-duration="22" data-track-index="1" data-layout-allow-overflow data-layout-ignore>
+      <div id="map-world">
+<svg id="map-svg" xmlns="http://www.w3.org/2000/svg" width="3600" height="2500" viewBox="0 0 3600 2500">
+  <rect x="0" y="0" width="3600" height="2500" fill="#E9E6DF"/>
+  <rect x="70" y="380" width="460" height="1040" rx="24" fill="#C9DDB8"/>
+  <rect x="70" y="1520" width="460" height="560" rx="24" fill="#C9DDB8"/>
+  <g fill="#D8D2C6"><rect x="670" y="500" width="62" height="150" rx="6"/><rect x="670" y="750" width="62" height="150" rx="6"/><rect x="740" y="500" width="62" height="150" rx="6"/><rect x="740" y="750" width="62" height="150" rx="6"/><rect x="810" y="500" width="62" height="150" rx="6"/><rect x="810" y="750" width="62" height="150" rx="6"/><rect x="880" y="500" width="62" height="150" rx="6"/><rect x="880" y="750" width="62" height="150" rx="6"/><rect x="950" y="500" width="62" height="150" rx="6"/><rect x="950" y="750" width="62" height="150" rx="6"/><rect x="1020" y="500" width="62" height="150" rx="6"/><rect x="1020" y="750" width="62" height="150" rx="6"/><rect x="1090" y="500" width="62" height="150" rx="6"/><rect x="1090" y="750" width="62" height="150" rx="6"/><rect x="1160" y="500" width="62" height="150" rx="6"/><rect x="1160" y="750" width="62" height="150" rx="6"/><rect x="1230" y="500" width="62" height="150" rx="6"/><rect x="1230" y="750" width="62" height="150" rx="6"/><rect x="1448" y="500" width="62" height="150" rx="6"/><rect x="1448" y="750" width="62" height="150" rx="6"/><rect x="1518" y="500" width="62" height="150" rx="6"/><rect x="1518" y="750" width="62" height="150" rx="6"/><rect x="1588" y="500" width="62" height="150" rx="6"/><rect x="1588" y="750" width="62" height="150" rx="6"/><rect x="1658" y="500" width="62" height="150" rx="6"/><rect x="1658" y="750" width="62" height="150" rx="6"/><rect x="1728" y="500" width="62" height="150" rx="6"/><rect x="1728" y="750" width="62" height="150" rx="6"/><rect x="1798" y="500" width="62" height="150" rx="6"/><rect x="1798" y="750" width="62" height="150" rx="6"/><rect x="1868" y="500" width="62" height="150" rx="6"/><rect x="1868" y="750" width="62" height="150" rx="6"/><rect x="1938" y="500" width="62" height="150" rx="6"/><rect x="1938" y="750" width="62" height="150" rx="6"/><rect x="2008" y="500" width="62" height="150" rx="6"/><rect x="2008" y="750" width="62" height="150" rx="6"/><rect x="2078" y="500" width="62" height="150" rx="6"/><rect x="2078" y="750" width="62" height="150" rx="6"/><rect x="2248" y="500" width="62" height="150" rx="6"/><rect x="2248" y="750" width="62" height="150" rx="6"/><rect x="2318" y="500" width="62" height="150" rx="6"/><rect x="2318" y="750" width="62" height="150" rx="6"/><rect x="2388" y="500" width="62" height="150" rx="6"/><rect x="2388" y="750" width="62" height="150" rx="6"/><rect x="2458" y="500" width="62" height="150" rx="6"/><rect x="2458" y="750" width="62" height="150" rx="6"/><rect x="2528" y="500" width="62" height="150" rx="6"/><rect x="2528" y="750" width="62" height="150" rx="6"/><rect x="2598" y="500" width="62" height="150" rx="6"/><rect x="2598" y="750" width="62" height="150" rx="6"/><rect x="2668" y="500" width="62" height="150" rx="6"/><rect x="2668" y="750" width="62" height="150" rx="6"/><rect x="2738" y="500" width="62" height="150" rx="6"/><rect x="2738" y="750" width="62" height="150" rx="6"/><rect x="2808" y="500" width="62" height="150" rx="6"/><rect x="2808" y="750" width="62" height="150" rx="6"/><rect x="2878" y="500" width="62" height="150" rx="6"/><rect x="2878" y="750" width="62" height="150" rx="6"/><rect x="3048" y="500" width="62" height="150" rx="6"/><rect x="3048" y="750" width="62" height="150" rx="6"/><rect x="3118" y="500" width="62" height="150" rx="6"/><rect x="3118" y="750" width="62" height="150" rx="6"/><rect x="3188" y="500" width="62" height="150" rx="6"/><rect x="3188" y="750" width="62" height="150" rx="6"/><rect x="670" y="900" width="62" height="150" rx="6"/><rect x="670" y="1150" width="62" height="150" rx="6"/><rect x="740" y="900" width="62" height="150" rx="6"/><rect x="740" y="1150" width="62" height="150" rx="6"/><rect x="810" y="900" width="62" height="150" rx="6"/><rect x="810" y="1150" width="62" height="150" rx="6"/><rect x="880" y="900" width="62" height="150" rx="6"/><rect x="880" y="1150" width="62" height="150" rx="6"/><rect x="950" y="900" width="62" height="150" rx="6"/><rect x="950" y="1150" width="62" height="150" rx="6"/><rect x="1020" y="900" width="62" height="150" rx="6"/><rect x="1020" y="1150" width="62" height="150" rx="6"/><rect x="1090" y="900" width="62" height="150" rx="6"/><rect x="1090" y="1150" width="62" height="150" rx="6"/><rect x="1160" y="900" width="62" height="150" rx="6"/><rect x="1160" y="1150" width="62" height="150" rx="6"/><rect x="1230" y="900" width="62" height="150" rx="6"/><rect x="1230" y="1150" width="62" height="150" rx="6"/><rect x="1448" y="900" width="62" height="150" rx="6"/><rect x="1448" y="1150" width="62" height="150" rx="6"/><rect x="1518" y="900" width="62" height="150" rx="6"/><rect x="1518" y="1150" width="62" height="150" rx="6"/><rect x="1588" y="900" width="62" height="150" rx="6"/><rect x="1588" y="1150" width="62" height="150" rx="6"/><rect x="1658" y="900" width="62" height="150" rx="6"/><rect x="1658" y="1150" width="62" height="150" rx="6"/><rect x="1728" y="900" width="62" height="150" rx="6"/><rect x="1728" y="1150" width="62" height="150" rx="6"/><rect x="1798" y="900" width="62" height="150" rx="6"/><rect x="1798" y="1150" width="62" height="150" rx="6"/><rect x="1868" y="900" width="62" height="150" rx="6"/><rect x="1868" y="1150" width="62" height="150" rx="6"/><rect x="1938" y="900" width="62" height="150" rx="6"/><rect x="1938" y="1150" width="62" height="150" rx="6"/><rect x="2008" y="900" width="62" height="150" rx="6"/><rect x="2008" y="1150" width="62" height="150" rx="6"/><rect x="2078" y="900" width="62" height="150" rx="6"/><rect x="2078" y="1150" width="62" height="150" rx="6"/><rect x="2248" y="900" width="62" height="150" rx="6"/><rect x="2248" y="1150" width="62" height="150" rx="6"/><rect x="2318" y="900" width="62" height="150" rx="6"/><rect x="2318" y="1150" width="62" height="150" rx="6"/><rect x="2388" y="900" width="62" height="150" rx="6"/><rect x="2388" y="1150" width="62" height="150" rx="6"/><rect x="2458" y="900" width="62" height="150" rx="6"/><rect x="2458" y="1150" width="62" height="150" rx="6"/><rect x="2528" y="900" width="62" height="150" rx="6"/><rect x="2528" y="1150" width="62" height="150" rx="6"/><rect x="2598" y="900" width="62" height="150" rx="6"/><rect x="2598" y="1150" width="62" height="150" rx="6"/><rect x="2668" y="900" width="62" height="150" rx="6"/><rect x="2668" y="1150" width="62" height="150" rx="6"/><rect x="2738" y="900" width="62" height="150" rx="6"/><rect x="2738" y="1150" width="62" height="150" rx="6"/><rect x="2808" y="900" width="62" height="150" rx="6"/><rect x="2808" y="1150" width="62" height="150" rx="6"/><rect x="2878" y="900" width="62" height="150" rx="6"/><rect x="2878" y="1150" width="62" height="150" rx="6"/><rect x="3048" y="900" width="62" height="150" rx="6"/><rect x="3048" y="1150" width="62" height="150" rx="6"/><rect x="3118" y="900" width="62" height="150" rx="6"/><rect x="3118" y="1150" width="62" height="150" rx="6"/><rect x="3188" y="900" width="62" height="150" rx="6"/><rect x="3188" y="1150" width="62" height="150" rx="6"/><rect x="670" y="1300" width="62" height="150" rx="6"/><rect x="670" y="1550" width="62" height="150" rx="6"/><rect x="740" y="1300" width="62" height="150" rx="6"/><rect x="740" y="1550" width="62" height="150" rx="6"/><rect x="810" y="1300" width="62" height="150" rx="6"/><rect x="810" y="1550" width="62" height="150" rx="6"/><rect x="880" y="1300" width="62" height="150" rx="6"/><rect x="880" y="1550" width="62" height="150" rx="6"/><rect x="950" y="1300" width="62" height="150" rx="6"/><rect x="950" y="1550" width="62" height="150" rx="6"/><rect x="1020" y="1300" width="62" height="150" rx="6"/><rect x="1020" y="1550" width="62" height="150" rx="6"/><rect x="1090" y="1300" width="62" height="150" rx="6"/><rect x="1090" y="1550" width="62" height="150" rx="6"/><rect x="1160" y="1300" width="62" height="150" rx="6"/><rect x="1160" y="1550" width="62" height="150" rx="6"/><rect x="1230" y="1300" width="62" height="150" rx="6"/><rect x="1230" y="1550" width="62" height="150" rx="6"/><rect x="1448" y="1300" width="62" height="150" rx="6"/><rect x="1448" y="1550" width="62" height="150" rx="6"/><rect x="1518" y="1550" width="62" height="150" rx="6"/><rect x="1588" y="1300" width="62" height="150" rx="6"/><rect x="1588" y="1550" width="62" height="150" rx="6"/><rect x="1658" y="1300" width="62" height="150" rx="6"/><rect x="1658" y="1550" width="62" height="150" rx="6"/><rect x="1728" y="1300" width="62" height="150" rx="6"/><rect x="1728" y="1550" width="62" height="150" rx="6"/><rect x="1798" y="1300" width="62" height="150" rx="6"/><rect x="1798" y="1550" width="62" height="150" rx="6"/><rect x="1868" y="1300" width="62" height="150" rx="6"/><rect x="1868" y="1550" width="62" height="150" rx="6"/><rect x="1938" y="1300" width="62" height="150" rx="6"/><rect x="1938" y="1550" width="62" height="150" rx="6"/><rect x="2008" y="1300" width="62" height="150" rx="6"/><rect x="2008" y="1550" width="62" height="150" rx="6"/><rect x="2078" y="1300" width="62" height="150" rx="6"/><rect x="2078" y="1550" width="62" height="150" rx="6"/><rect x="2248" y="1300" width="62" height="150" rx="6"/><rect x="2248" y="1550" width="62" height="150" rx="6"/><rect x="2318" y="1300" width="62" height="150" rx="6"/><rect x="2318" y="1550" width="62" height="150" rx="6"/><rect x="2388" y="1300" width="62" height="150" rx="6"/><rect x="2388" y="1550" width="62" height="150" rx="6"/><rect x="2458" y="1300" width="62" height="150" rx="6"/><rect x="2458" y="1550" width="62" height="150" rx="6"/><rect x="2528" y="1300" width="62" height="150" rx="6"/><rect x="2528" y="1550" width="62" height="150" rx="6"/><rect x="2598" y="1300" width="62" height="150" rx="6"/><rect x="2598" y="1550" width="62" height="150" rx="6"/><rect x="2668" y="1300" width="62" height="150" rx="6"/><rect x="2668" y="1550" width="62" height="150" rx="6"/><rect x="2738" y="1300" width="62" height="150" rx="6"/><rect x="2738" y="1550" width="62" height="150" rx="6"/><rect x="2808" y="1300" width="62" height="150" rx="6"/><rect x="2808" y="1550" width="62" height="150" rx="6"/><rect x="2878" y="1300" width="62" height="150" rx="6"/><rect x="2878" y="1550" width="62" height="150" rx="6"/><rect x="3048" y="1300" width="62" height="150" rx="6"/><rect x="3048" y="1550" width="62" height="150" rx="6"/><rect x="3118" y="1300" width="62" height="150" rx="6"/><rect x="3118" y="1550" width="62" height="150" rx="6"/><rect x="3188" y="1300" width="62" height="150" rx="6"/><rect x="3188" y="1550" width="62" height="150" rx="6"/><rect x="670" y="1700" width="62" height="150" rx="6"/><rect x="740" y="1700" width="62" height="150" rx="6"/><rect x="810" y="1700" width="62" height="150" rx="6"/><rect x="880" y="1700" width="62" height="150" rx="6"/><rect x="950" y="1700" width="62" height="150" rx="6"/><rect x="1020" y="1700" width="62" height="150" rx="6"/><rect x="1090" y="1700" width="62" height="150" rx="6"/><rect x="1160" y="1700" width="62" height="150" rx="6"/><rect x="1230" y="1700" width="62" height="150" rx="6"/><rect x="1448" y="1700" width="62" height="150" rx="6"/><rect x="1518" y="1700" width="62" height="150" rx="6"/><rect x="1588" y="1700" width="62" height="150" rx="6"/><rect x="1658" y="1700" width="62" height="150" rx="6"/><rect x="1728" y="1700" width="62" height="150" rx="6"/><rect x="1798" y="1700" width="62" height="150" rx="6"/><rect x="1868" y="1700" width="62" height="150" rx="6"/><rect x="1938" y="1700" width="62" height="150" rx="6"/><rect x="2008" y="1700" width="62" height="150" rx="6"/><rect x="2078" y="1700" width="62" height="150" rx="6"/><rect x="2248" y="1700" width="62" height="150" rx="6"/><rect x="2318" y="1700" width="62" height="150" rx="6"/><rect x="2388" y="1700" width="62" height="150" rx="6"/><rect x="2458" y="1700" width="62" height="150" rx="6"/><rect x="2528" y="1700" width="62" height="150" rx="6"/><rect x="2598" y="1700" width="62" height="150" rx="6"/><rect x="2668" y="1700" width="62" height="150" rx="6"/><rect x="2738" y="1700" width="62" height="150" rx="6"/><rect x="2808" y="1700" width="62" height="150" rx="6"/><rect x="2878" y="1700" width="62" height="150" rx="6"/><rect x="3048" y="1700" width="62" height="150" rx="6"/><rect x="3118" y="1700" width="62" height="150" rx="6"/><rect x="3188" y="1700" width="62" height="150" rx="6"/></g>
+  <g stroke="#CFCAC0" stroke-width="64" stroke-linecap="round"><line x1="600" y1="700" x2="3340" y2="700"/><line x1="600" y1="1100" x2="3340" y2="1100"/><line x1="600" y1="1500" x2="3340" y2="1500"/><line x1="600" y1="1900" x2="3340" y2="1900"/><line x1="1400" y1="700" x2="1400" y2="1900"/><line x1="2200" y1="700" x2="2200" y2="1900"/><line x1="3000" y1="700" x2="3000" y2="1900"/></g>
+  <g stroke="#FFFFFF" stroke-width="56" stroke-linecap="round"><line x1="600" y1="700" x2="3340" y2="700"/><line x1="600" y1="1100" x2="3340" y2="1100"/><line x1="600" y1="1500" x2="3340" y2="1500"/><line x1="600" y1="1900" x2="3340" y2="1900"/><line x1="1400" y1="700" x2="1400" y2="1900"/><line x1="2200" y1="700" x2="2200" y2="1900"/><line x1="3000" y1="700" x2="3000" y2="1900"/></g>
+  <line x1="600" y1="0" x2="600" y2="2500" stroke="#DDB24B" stroke-width="110"/>
+  <line x1="600" y1="0" x2="600" y2="2500" stroke="#F3CF6B" stroke-width="100"/>
+  <g font-family="Inter" font-weight="700" font-size="34" fill="#5B6168">
+    <text x="1000" y="712" text-anchor="middle">Jalan IK 3/1</text>
+    <text x="1000" y="1512" text-anchor="middle">Jalan IK 3/3</text>
+    <text x="1900" y="1512" text-anchor="middle">Jalan IK 3/3</text>
+    <text transform="translate(2212 1100) rotate(-90)" text-anchor="middle">Jalan IK 3/6</text>
+    <text transform="translate(613 1250) rotate(-90)" text-anchor="middle" fill="#6E5A1E">Jalan utama</text>
+    <text transform="translate(613 400) rotate(-90)" text-anchor="middle" fill="#6E5A1E">Jalan utama</text>
+  </g>
+  <g id="lot31">
+    <rect id="lot31-fill" x="1518" y="1300" width="62" height="150" rx="6" fill="#D8D2C6"/>
+    <text id="lot31-num" x="1549" y="1428" text-anchor="middle" font-family="Inter" font-weight="900" font-size="34" fill="#1B1F24">31</text>
+  </g>
+  <path id="route-under" d="M600,1800 L600,700 L2200,700 L2200,1500 L1549,1500" pathLength="100" fill="none" stroke="#FFFFFF" stroke-width="34" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="100 120" stroke-dashoffset="110"/>
+  <path id="route" d="M600,1800 L600,700 L2200,700 L2200,1500 L1549,1500" pathLength="100" fill="none" stroke="#E5482B" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="100 120" stroke-dashoffset="110"/>
+  <g id="pin-wrap" transform="translate(1549 1340)">
+    <ellipse id="pin-shadow" cx="0" cy="6" rx="26" ry="9" fill="#1B1F24" opacity="0.25"/>
+    <g id="pin">
+      <path d="M0 0 C -14 -26 -46 -52 -46 -88 A 46 46 0 1 1 46 -88 C 46 -52 14 -26 0 0 Z" fill="#E5482B" stroke="#FFFFFF" stroke-width="6"/>
+      <circle cx="0" cy="-88" r="17" fill="#FFFFFF"/>
+    </g>
+  </g>
+  <g id="car-pos">
+    <g id="car" opacity="0">
+      <circle r="36" fill="#FFFFFF" stroke="#1B1F24" stroke-opacity="0.15" stroke-width="4"/>
+      <path d="M0 -22 L17 16 L0 7 L-17 16 Z" fill="#E5482B"/>
+    </g>
+  </g>
+</svg>
+      </div>
+    </div>
+
+    <div id="title" class="clip panel" data-start="0" data-duration="2.6" data-track-index="2">
+      <div id="title-in" class="panel-in">
+        <div id="title-big" data-var-text="title-big">Ke No. 31</div>
+        <div id="title-small" data-var-text="title-small">Jalan IK 3/3,<br/>Taman Indah KLIA</div>
+      </div>
+    </div>
+
+    <div id="card1" class="clip card" data-start="4.4" data-duration="2.2" data-track-index="3">
+      <div id="card1-in" class="card-in">
+        <svg viewBox="0 0 120 120" width="120" height="120"><rect width="120" height="120" rx="26" fill="#E5482B"/><path d="M38 92 V58 Q38 44 52 44 H78" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M68 30 L84 44 L68 58" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="card-text">
+          <div id="card1-small" class="card-small" data-var-text="card1-small">Belok kanan</div>
+          <div id="card1-big" class="card-big" data-var-text="card1-big">Jalan IK 3/1</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="card2" class="clip card" data-start="8.2" data-duration="1.9" data-track-index="3">
+      <div id="card2-in" class="card-in">
+        <svg viewBox="0 0 120 120" width="120" height="120"><rect width="120" height="120" rx="26" fill="#E5482B"/><path d="M38 92 V58 Q38 44 52 44 H78" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M68 30 L84 44 L68 58" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="card-text">
+          <div id="card2-small" class="card-small" data-var-text="card2-small">Belok kanan</div>
+          <div id="card2-big" class="card-big" data-var-text="card2-big">Jalan IK 3/6</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="card3" class="clip card" data-start="10.8" data-duration="1.9" data-track-index="3">
+      <div id="card3-in" class="card-in">
+        <svg viewBox="0 0 120 120" width="120" height="120"><rect width="120" height="120" rx="26" fill="#E5482B"/><path d="M38 92 V58 Q38 44 52 44 H78" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M68 30 L84 44 L68 58" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="card-text">
+          <div id="card3-small" class="card-small" data-var-text="card3-small">Belok kanan</div>
+          <div id="card3-big" class="card-big" data-var-text="card3-big">Jalan IK 3/3</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="card4" class="clip card" data-start="13.9" data-duration="2.3" data-track-index="3">
+      <div id="card4-in" class="card-in">
+        <svg viewBox="0 0 120 120" width="120" height="120"><rect width="120" height="120" rx="26" fill="#E5482B"/><path d="M60 98 C52 84 34 70 34 50 A26 26 0 1 1 86 50 C86 70 68 84 60 98 Z" fill="#fff"/><circle cx="60" cy="50" r="10" fill="#E5482B"/></svg>
+        <div class="card-text">
+          <div id="card4-small" class="card-small" data-var-text="card4-small">Sampai</div>
+          <div id="card4-big" class="card-big" data-var-text="card4-big">No. 31</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="endc" class="clip panel" data-start="16.6" data-duration="5.4" data-track-index="2">
+      <div id="endc-in" class="panel-in">
+        <div id="endc-addr" data-var-text="endc-addr">No. 31,<br/>Jalan IK 3/3</div>
+        <div id="endc-area" data-var-text="endc-area">Taman Indah KLIA</div>
+        <div id="endc-line" class="endc-line"><svg viewBox="0 0 120 120" width="64" height="64"><rect width="120" height="120" rx="26" fill="#E5482B"/><path d="M38 92 V58 Q38 44 52 44 H78" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M68 30 L84 44 L68 58" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-var-text="endc-line">3 kali belok kanan dari jalan utama</span></div>
+        <div id="endc-dist" data-var-text="endc-dist">± 410 m</div>
+      </div>
+    </div>
+
+    <div id="note" class="clip" data-start="0" data-duration="22" data-track-index="4" data-layout-ignore>Peta ilustrasi, tidak mengikut skala</div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const W = "#map-world";
+    const OVER = {"x":570,"y":-127.5,"scale":0.55};
+    const C = {
+      start: {"x":640,"y":-1060,"scale":0.9},
+      j1: {"x":640,"y":-70,"scale":0.9},
+      j2: {"x":-800,"y":-70,"scale":0.9},
+      j3: {"x":-800,"y":-790,"scale":0.9},
+      dest: {"x":-214.1,"y":-790,"scale":0.9},
+      house: {"x":-756.3,"y":-1065,"scale":1.25},
+    };
+    const R = ["#route", "#route-under"];
+    const OFF = [73.5,34.955,15.683,0];
+
+    // frame 0: overview, pin already marks the house
+    tl.set(W, { x: OVER.x, y: OVER.y, scale: OVER.scale }, 0);
+    tl.set("#car", { rotation: 0, transformOrigin: "50% 50%" }, 0);
+    tl.set("#car-pos", { x: 600, y: 1800 }, 0);
+    tl.set("#pin", { y: 0 }, 0);
+    tl.set("#pin-shadow", { opacity: 0.25 }, 0);
+
+    // title card holds, then wipes away
+    tl.fromTo("#title-in", { clipPath: "inset(0% 0% 0% 0% round 32px)" }, { clipPath: "inset(0% 100% 0% 0% round 32px)", duration: 0.3, ease: "power3.in" }, 2.2);
+
+    // dive to the start
+    tl.to(W, { ...C.start, duration: 1.2, ease: "power3.inOut" }, 2.4);
+    tl.set("#pin", { y: -2000 }, 2.4); // pin lifts away to drop again on arrival
+    tl.set("#pin-shadow", { opacity: 0 }, 2.4);
+    tl.fromTo("#car", { scale: 0.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.35, ease: "back.out(2)" }, 3.25);
+
+    // drive helper: car, route head and camera share one ease
+    function drive(t, dur, to, camTo, off) {
+      tl.to("#car-pos", { x: to[0], y: to[1], duration: dur, ease: "power1.inOut" }, t);
+      tl.to(W, { ...camTo, duration: dur, ease: "power1.inOut" }, t);
+      tl.to(R, { strokeDashoffset: off, duration: dur, ease: "power1.inOut" }, t);
+    }
+    tl.set(R, { strokeDashoffset: 100 }, 3.6);
+    drive(3.6, 2.0, [600,700], C.j1, OFF[0]);
+    tl.to("#car", { rotation: 90, duration: 0.4, ease: "power2.inOut" }, 5.8);
+    drive(6.4, 2.8, [2200,700], C.j2, OFF[1]);
+    tl.to("#car", { rotation: 180, duration: 0.4, ease: "power2.inOut" }, 9.4);
+    drive(10.0, 1.6, [2200,1500], C.j3, OFF[2]);
+    tl.to("#car", { rotation: 270, duration: 0.4, ease: "power2.inOut" }, 11.8);
+    drive(12.4, 1.4, [1549,1500], C.dest, OFF[3]);
+
+    // arrival: push in on the house, pin drops, lot fills
+    tl.to(W, { ...C.house, duration: 0.9, ease: "power2.inOut" }, 13.6);
+    tl.fromTo("#pin", { y: -700 }, { y: 0, duration: 0.47, ease: "bounce.out" }, 13.8);
+    tl.to("#pin-shadow", { opacity: 0.25, duration: 0.25 }, 13.95);
+    tl.to("#lot31-fill", { fill: "#F6C9BE", duration: 0.2 }, 14.1);
+    tl.to("#car", { scale: 0.3, opacity: 0, duration: 0.25, ease: "power2.in" }, 14.1);
+
+    // cards wipe in from the left, then hold still
+    for (const [id, t] of [["#card1-in", 4.4], ["#card2-in", 8.2], ["#card3-in", 10.8], ["#card4-in", 13.9]]) {
+      tl.fromTo(id, { clipPath: "inset(0% 100% 0% 0% round 28px)" }, { clipPath: "inset(0% 0% 0% 0% round 28px)", duration: 0.33, ease: "power3.out" }, t);
+    }
+    for (const [id, t] of [["#card1-in", 6.3], ["#card2-in", 9.8], ["#card3-in", 12.4], ["#card4-in", 15.9]]) {
+      tl.to(id, { clipPath: "inset(0% 100% 0% 0% round 28px)", duration: 0.28, ease: "power3.in" }, t);
+    }
+
+    // pull back to the whole route, end card builds line by line
+    tl.to(W, { ...OVER, duration: 1.4, ease: "power2.inOut" }, 16.0);
+    tl.fromTo("#endc-in", { clipPath: "inset(0% 100% 0% 0% round 32px)" }, { clipPath: "inset(0% 0% 0% 0% round 32px)", duration: 0.4, ease: "power3.out" }, 16.6);
+    for (const [id, t] of [["#endc-addr", 16.75], ["#endc-area", 17.05], ["#endc-line", 17.5], ["#endc-dist", 17.9]]) {
+      tl.fromTo(id, { clipPath: "inset(0% 100% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.3, ease: "power3.out" }, t);
+    }
+
+    window.__timelines["route"] = tl;
+  </script>
+</template>
