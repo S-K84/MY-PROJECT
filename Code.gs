@@ -3,7 +3,7 @@
  * Dibina dengan Google Apps Script + Google Sheets + Leaflet/OpenStreetMap.
  *
  * Langkah pertama: jalankan fungsi setup() sekali dari editor Apps Script.
- * Versi: 2026.11.01-d (mesti sama dengan APP_VERSION dalam Index.html)
+ * Versi: 2026.11.03-a (mesti sama dengan APP_VERSION dalam Index.html)
  */
 
 const CONFIG = {
