@@ -1067,7 +1067,7 @@ const EN = {
     'Try a destination near a road, or change the travel mode.', 'Titik singgah dibatalkan.': 'Stop cancelled.',
   // Pentadbir
   'Kuota (global)': 'Quota (global)', 'Laporan aktif terkini': 'Latest active reports', 'Pengguna disekat': 'Blocked users',
-  'Pengguna aktif (3 min)': 'Active users (3 min)', 'Pengguna (1 jam)': 'Users (1 hour)', 'Laporan aktif': 'Active reports',
+  'Pengguna aktif (5 min)': 'Active users (5 min)', 'Pengguna (1 jam)': 'Users (1 hour)', 'Laporan aktif': 'Active reports',
   'Laporan (24 jam)': 'Reports (24 h)', 'Perkongsian langsung': 'Live shares', '🗺️ Lihat': '🗺️ View', '🗑️ Padam': '🗑️ Delete',
   '🚫 Sekat pengguna': '🚫 Block user', 'Nyahsekat': 'Unblock', 'disembunyikan': 'hidden', 'Pasti? Tekan lagi': 'Sure? Tap again',
   'Tiada laporan aktif.': 'No active reports.', 'Tiada pengguna disekat.': 'No blocked users.', 'Muat semula': 'Reload',
@@ -1116,16 +1116,16 @@ const EN = {
     'Not available yet. "Time to leave" reminders need push notifications and calendar access, ' +
     'which an Apps Script web app cannot do while closed.',
   ['Disimpan di server: nama samaran, mood, tetapan, laporan & undi, statistik mata, dan lokasi terkini (dikaburkan ~100 m, ' +
-    'dipadam selepas 1 jam). Rumah, kerja & kegemaran juga disimpan di server supaya tidak hilang (iPhone membuang storan pelayar). ' +
+    'dipadam selepas 3 minit). Rumah, kerja & kegemaran juga disimpan di server supaya tidak hilang (iPhone membuang storan pelayar). ' +
     'Sejarah carian sentiasa kekal dalam telefon sahaja. Pemilik aplikasi boleh melihat data di server.']:
     'Stored on the server: nickname, mood, settings, reports & votes, point stats, and your latest location (blurred ~100 m, ' +
-    'deleted after 1 hour). Home, work & favourites are also stored on the server so they are not lost (iPhone clears browser storage). ' +
+    'deleted after 3 minutes). Home, work & favourites are also stored on the server so they are not lost (iPhone clears browser storage). ' +
     'Search history always stays on this phone only. The app owner can see the data on the server.',
   ['Disimpan di server: nama samaran, mood, tetapan, laporan & undi, statistik mata, dan lokasi terkini (dikaburkan ~100 m, ' +
-    'dipadam selepas 1 jam). Rumah, kerja & kegemaran disimpan dalam telefon ini sahaja. ' +
+    'dipadam selepas 3 minit). Rumah, kerja & kegemaran disimpan dalam telefon ini sahaja. ' +
     'Sejarah carian sentiasa kekal dalam telefon sahaja. Pemilik aplikasi boleh melihat data di server.']:
     'Stored on the server: nickname, mood, settings, reports & votes, point stats, and your latest location (blurred ~100 m, ' +
-    'deleted after 1 hour). Home, work & favourites are stored on this phone only. ' +
+    'deleted after 3 minutes). Home, work & favourites are stored on this phone only. ' +
     'Search history always stays on this phone only. The app owner can see the data on the server.',
   'Anda menggunakan JalanKita tanpa log masuk. Identiti anda disimpan dalam pelayar ini sahaja.':
     'You are using JalanKita without signing in. Your identity is stored in this browser only.',
@@ -1848,7 +1848,7 @@ const PAGES = {
         : 'Anda menggunakan JalanKita tanpa log masuk. Identiti anda disimpan dalam pelayar ini sahaja.') +
       sec('Data anda') +
       note('Disimpan di server: nama samaran, mood, tetapan, laporan & undi, statistik mata, ' +
-        'dan lokasi terkini (dikaburkan ~100 m, dipadam selepas 1 jam). ' +
+        'dan lokasi terkini (dikaburkan ~100 m, dipadam selepas 3 minit). ' +
         (S.syncPlaces ? 'Rumah, kerja & kegemaran juga disimpan di server supaya tidak hilang (iPhone membuang storan pelayar). '
           : 'Rumah, kerja & kegemaran disimpan dalam telefon ini sahaja. ') +
         'Sejarah carian sentiasa kekal dalam telefon sahaja. Pemilik aplikasi boleh melihat data di server.') +
@@ -3353,7 +3353,7 @@ function renderAdmin(d) {
   const banned = (d.banned || []).map(u => `<div class="adm-row"><div class="t">${esc(u)}</div>
     <div class="adm-act"><button data-adm="unban" data-id="${esc(u)}">Nyahsekat</button></div></div>`).join('')
     || '<div class="hint">Tiada pengguna disekat.</div>';
-  $('adminBody').innerHTML = `<div class="stat-grid">${stat(d.activeUsers, 'Pengguna aktif (3 min)')}
+  $('adminBody').innerHTML = `<div class="stat-grid">${stat(d.activeUsers, 'Pengguna aktif (5 min)')}
       ${stat(d.usersHour, 'Pengguna (1 jam)')}${stat(d.reports, 'Laporan aktif')}${stat(d.reportsDay, 'Laporan (24 jam)')}
       ${stat(d.shares, 'Perkongsian langsung')}${stat((d.banned || []).length, 'Pengguna disekat')}</div>
     ${types ? `<p class="pop-muted" style="margin:0 0 12px">${types}</p>` : ''}

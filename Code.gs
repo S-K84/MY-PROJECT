@@ -21,13 +21,13 @@ const CONFIG = {
   },
   DOWNVOTE_LIMIT: 3,        // disembunyikan jika undi tidak >= nilai ini DAN melebihi undi ya
   MAX_VOTERS: 200,          // had senarai pengundi bagi satu laporan
-  USER_ACTIVE_SEC: 180,     // pengguna dianggap aktif jika kemas kini dalam tempoh ini
-  USER_RETAIN_SEC: 3600,    // rekod lokasi dipadam selepas tempoh ini (privasi)
+  USER_ACTIVE_SEC: 180,     // pengguna dianggap aktif jika kemas kini dalam tempoh ini; lokasi dalam cache luput selepas ini
+  USER_RETAIN_SEC: 3600,    // hanya untuk membersihkan sheet Pengguna lama (lokasi kini dalam cache, bukan Sheet)
   NEARBY_USERS_KM: 15,      // hanya tunjuk pengguna lain dalam radius ini
   REPORTS_RADIUS_KM: 60,    // hanya hantar laporan dalam radius ini kepada klien
   MAX_REPORTS_SENT: 300,    // had laporan setiap respons (terdekat dahulu)
   MAX_ACTIVE_REPORTS: 3000, // had laporan aktif keseluruhan — halang Sheet & respons membengkak
-  MAX_USERS: 2000,          // had baris lokasi pengguna aktif
+  MAX_USERS: 2000,          // had indeks "pengguna sejam" untuk panel pentadbir (saiz nilai cache)
   MAX_STATS_ROWS: 10000,    // had baris statistik profil
   MAX_PREFS_ROWS: 10000,    // had baris data pengguna (tetapan disegerak)
   MAX_PREFS_CHARS: 12000,   // had saiz data seorang pengguna
@@ -378,6 +378,37 @@ function voteReport(token, id, up) {
 }
 
 // ---------------------------------------------------------------- Pengguna (Wazer berdekatan)
+// Lokasi pengguna disimpan dalam CacheService, BUKAN Sheet. Dahulu setiap kemas kini memegang kunci skrip & menulis ke
+// Sheet, dan setiap getLiveData membaca seluruh sheet Pengguna — itu had utama bila pengguna bertambah.
+//   u_<id>      = rekod terkini pengguna (sumber sebenar). Luput sendiri selepas USER_ACTIVE_SEC (privasi: tiada sejarah).
+//   uc_<i>_<j>  = indeks sel grid ~22 km: { id: masa } — siapa yang MUNGKIN berada dalam sel itu.
+//   u_all       = { id: masa } pengguna sejam lalu (untuk panel pentadbir sahaja; tiada lokasi).
+// Indeks dikemas kini tanpa kunci (baca-ubah-tulis). Jika dua permintaan bertembung, satu entri indeks mungkin hilang
+// sehingga kemas kini seterusnya (≤ 30 s) — tidak berbahaya kerana pembaca sentiasa menyemak semula rekod u_<id>.
+// Mod halimunan memadam u_<id>, jadi pengguna itu hilang serta-merta walaupun masih tersenarai dalam indeks.
+const USER_CELL_DEG_ = 0.2;   // sel ~22 km: radius 15 km (NEARBY_USERS_KM) dicakup oleh sel sendiri + 8 jiran
+const USER_CELL_MAX_ = 1500;  // had entri satu sel (nilai cache maks 100 KB)
+const USER_SEEN_SEC_ = 300;   // u_all dikemas kini paling kerap sekali setiap 5 minit bagi seorang pengguna
+const USERS_SENT_MAX_ = 200;  // had pengguna dalam satu respons (terdekat dahulu)
+
+function parseJson_(s) {
+  if (s == null) return null;
+  try { return JSON.parse(s); } catch (e) { return null; }
+}
+
+function userCellKey_(i, j) { return 'uc_' + i + '_' + j; }
+function userCellIdx_(lat, lng) { return [Math.floor(lat / USER_CELL_DEG_), Math.floor(lng / USER_CELL_DEG_)]; }
+
+/** Tambah/kemas kini id dalam indeks { id: saat } di cache; buang entri lebih lama daripada maxAgeSec; hadkan saiz. */
+function touchIndex_(cache, key, id, nowSec, maxAgeSec, cap, ttlSec) {
+  const idx = parseJson_(cache.get(key)) || {};
+  idx[id] = nowSec;
+  let ids = Object.keys(idx).filter(k => idx[k] > nowSec - maxAgeSec);
+  if (ids.length > cap) ids = ids.sort((a, b) => idx[b] - idx[a]).slice(0, cap);
+  const out = {};
+  ids.forEach(k => { out[k] = idx[k]; });
+  cache.put(key, JSON.stringify(out), ttlSec);
+}
 
 function updateLocation(token, u) {
   const userId = verify_(token);
@@ -386,59 +417,58 @@ function updateLocation(token, u) {
   if (!isValidCoord_(lat, lng)) return { ok: false };
   rateLimit_('location', userId);
 
-  const lock = lock_();
-  try {
-    const sh = getSheet_(SHEET_USERS);
-    const last = sh.getLastRow();
-    // Simpan koordinat dibundarkan (~10 m) — cukup untuk peta, kurang tepat untuk penjejakan.
-    const mood = MOODS.indexOf(String(u.mood)) >= 0 ? String(u.mood) : '';
-    const row = [userId, cell_(u.name, 30) || 'Tanpa Nama', round_(lat, 4), round_(lng, 4),
-      clamp_(Number(u.speed) || 0, 0, 300), clamp_(Number(u.heading) || 0, 0, 360), new Date(), mood];
-    let rowNum = -1;
-    if (last >= 2) {
-      const ids = sh.getRange(2, 1, last - 1, 1).getValues();
-      const idx = ids.findIndex(v => v[0] === userId);
-      if (idx >= 0) rowNum = idx + 2;
-    }
-    if (rowNum > 0) sh.getRange(rowNum, 1, 1, row.length).setValues([row]);
-    else if (last - 1 >= CONFIG.MAX_USERS) return { ok: false }; // penuh — lokasi tidak dikongsi
-    else sh.appendRow(row);
-    return { ok: true };
-  } finally {
-    lock.releaseLock();
+  const cache = CacheService.getScriptCache(), now = Date.now(), nowSec = Math.floor(now / 1000);
+  const prev = parseJson_(cache.get('u_' + userId));
+  // Simpan koordinat dibundarkan (~10 m) — cukup untuk peta, kurang tepat untuk penjejakan. Arah tidak disimpan.
+  const rec = {
+    n: String(u.name == null ? '' : u.name).replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 30) || 'Tanpa Nama',
+    lat: round_(lat, 4), lng: round_(lng, 4), v: clamp_(Number(u.speed) || 0, 0, 300),
+    m: MOODS.indexOf(String(u.mood)) >= 0 ? String(u.mood) : '', t: now,
+    s: prev && nowSec - Number(prev.s || 0) < USER_SEEN_SEC_ ? Number(prev.s) : 0
+  };
+  if (!rec.s) {
+    touchIndex_(cache, 'u_all', userId, nowSec, 3600, CONFIG.MAX_USERS, 3600);
+    rec.s = nowSec;
   }
+  // Rekod dahulu, kemudian indeks: pembaca yang menjumpai id dalam indeks sentiasa mendapat rekod terkini.
+  cache.put('u_' + userId, JSON.stringify(rec), CONFIG.USER_ACTIVE_SEC);
+  const c = userCellIdx_(rec.lat, rec.lng);
+  touchIndex_(cache, userCellKey_(c[0], c[1]), userId, nowSec, CONFIG.USER_ACTIVE_SEC, USER_CELL_MAX_, 600);
+  return { ok: true };
 }
 
 /** Padam lokasi pengguna dengan serta-merta (mod halimunan). */
 function hideMe(token) {
   const userId = verify_(token);
   rateLimit_('location', userId);
-  const lock = lock_();
-  try {
-    const sh = getSheet_(SHEET_USERS);
-    const last = sh.getLastRow();
-    if (last < 2) return { ok: true };
-    const ids = sh.getRange(2, 1, last - 1, 1).getValues();
-    const idx = ids.findIndex(v => v[0] === userId);
-    if (idx >= 0) sh.deleteRow(idx + 2);
-    return { ok: true };
-  } finally {
-    lock.releaseLock();
-  }
+  CacheService.getScriptCache().remove('u_' + userId);
+  return { ok: true };
 }
 
 function getActiveUsers_(myId, near) {
   if (!near) return [];
-  const sh = getSheet_(SHEET_USERS);
-  const last = sh.getLastRow();
-  if (last < 2) return [];
-  const cutoff = Date.now() - CONFIG.USER_ACTIVE_SEC * 1000;
-  return sh.getRange(2, 1, last - 1, USER_HEADERS.length).getValues()
-    .filter(x => x[0] && x[0] !== myId && new Date(x[6]).getTime() > cutoff)
-    .filter(x => distKm_(near.lat, near.lng, Number(x[2]), Number(x[3])) <= CONFIG.NEARBY_USERS_KM)
+  const cache = CacheService.getScriptCache(), now = Date.now();
+  const cutoffSec = now / 1000 - CONFIG.USER_ACTIVE_SEC, c = userCellIdx_(near.lat, near.lng), keys = [];
+  for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) keys.push(userCellKey_(c[0] + a, c[1] + b));
+  const cells = cache.getAll(keys), ids = {};
+  Object.keys(cells).forEach(k => {
+    const idx = parseJson_(cells[k]) || {};
+    Object.keys(idx).forEach(id => { if (id !== myId && idx[id] > cutoffSec) ids[id] = true; });
+  });
+  const list = Object.keys(ids), found = [];
+  for (let i = 0; i < list.length; i += 100) {             // getAll dalam kumpulan kecil
+    const recs = cache.getAll(list.slice(i, i + 100).map(id => 'u_' + id));
+    Object.keys(recs).forEach(k => {
+      const r = parseJson_(recs[k]);
+      if (!r || !(Number(r.t) > now - CONFIG.USER_ACTIVE_SEC * 1000)) return;
+      const d = distKm_(near.lat, near.lng, Number(r.lat), Number(r.lng));
+      if (d <= CONFIG.NEARBY_USERS_KM) found.push({ r: r, d: d });
+    });
+  }
+  return found.sort((a, b) => a.d - b.d).slice(0, USERS_SENT_MAX_)
     // Data awam dikaburkan: koordinat ~100 m, kelajuan dibundarkan, tiada arah atau ID.
-    .map(x => ({ name: String(x[1]), lat: round_(Number(x[2]), 3), lng: round_(Number(x[3]), 3),
-      speed: Math.round(Number(x[4]) / 10) * 10, mood: MOODS.indexOf(String(x[7])) >= 0 ? String(x[7]) : '' }));
+    .map(x => ({ name: String(x.r.n || ''), lat: round_(Number(x.r.lat), 3), lng: round_(Number(x.r.lng), 3),
+      speed: Math.round(Number(x.r.v) / 10) * 10, mood: MOODS.indexOf(String(x.r.m)) >= 0 ? String(x.r.m) : '' }));
 }
 
 /** Satu panggilan untuk segarkan semua data peta (jimat kuota). */
@@ -959,7 +989,9 @@ function cleanup(e) {
     const now = Date.now();
     pruneSheet_(getSheet_(SHEET_REPORTS), REPORT_HEADERS.length,
       x => new Date(x[8]).getTime() > now && !isHidden_(Number(x[9]), Number(x[10])));
-    pruneSheet_(getSheet_(SHEET_USERS), USER_HEADERS.length,
+    // Lokasi kini dalam cache. Ini hanya mengosongkan baris lama dari versi sebelum ini (kosong selepas sejam).
+    const usersSh = getSheet_(SHEET_USERS);
+    if (usersSh) pruneSheet_(usersSh, USER_HEADERS.length,
       x => new Date(x[6]).getTime() > now - CONFIG.USER_RETAIN_SEC * 1000);
     // Privasi: padam data pengguna (termasuk lokasi rumah) yang tidak dikemas kini selama 180 hari
     pruneSheet_(prefsSheet_(), PREFS_HEADERS.length,
@@ -1379,8 +1411,9 @@ function adminOverview(token) {
       user: String(x[5]), name: String(x[6] || ''), time: new Date(x[7]).getTime(), up: Number(x[9]), down: Number(x[10]),
       hidden: isHidden_(Number(x[9]), Number(x[10])) }))
     .sort((a, b) => b.time - a.time);
-  const us = getSheet_(SHEET_USERS), lastU = us.getLastRow();
-  const seen = lastU < 2 ? [] : us.getRange(2, 7, lastU - 1, 1).getValues().map(x => new Date(x[0]).getTime());
+  // Indeks u_all dikemas kini paling kerap sekali setiap 5 minit bagi seorang pengguna, jadi "aktif" = 5 minit lalu (anggaran)
+  const allIdx = parseJson_(cache.get('u_all')) || {};
+  const seen = Object.keys(allIdx).map(k => Number(allIdx[k]) * 1000);
   let shares = 0;
   try {
     const ss = sharesSheet_(), lastS = ss.getLastRow();
@@ -1392,7 +1425,7 @@ function adminOverview(token) {
   const byType = {};
   reps.forEach(x => { byType[x.type] = (byType[x.type] || 0) + 1; });
   return {
-    activeUsers: seen.filter(t => t > now - CONFIG.USER_ACTIVE_SEC * 1000).length,
+    activeUsers: seen.filter(t => t > now - USER_SEEN_SEC_ * 1000).length,
     usersHour: seen.filter(t => t > now - 3600000).length,
     reports: reps.length, reportsDay: reps.filter(x => x.time > now - 864e5).length,
     shares: shares, byType: byType, quota: quota, recent: reps.slice(0, 100), banned: bannedList_()
