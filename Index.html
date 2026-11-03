@@ -27,7 +27,7 @@
       var h = document.createElement('h3'); h.textContent = '⚠️ Aplikasi gagal bermula';
       var pre = document.createElement('pre');
       pre.style.cssText = 'white-space:pre-wrap;text-align:left;font-size:12px;background:#dde1e6;padding:10px;border-radius:10px';
-      pre.textContent = 'Versi: 2026.11.03-a\nPustaka peta (Leaflet): ' + (window.L ? 'dimuat' : 'TIDAK DIMUAT') +
+      pre.textContent = 'Versi: ' + <?!= versionJson ?> + '\nPustaka peta (Leaflet): ' + (window.L ? 'dimuat' : 'TIDAK DIMUAT') +
         '\nPutaran peta: ' + (window.L && L.Map && L.Map.prototype.setBearing ? 'dimuat' : 'tiada') +
         '\nRalat:\n' + (window.__bootErrors.length ? window.__bootErrors.join('\n') : '(tiada ralat dilaporkan)');
       var p = document.createElement('p'); p.textContent = 'Tangkap skrin mesej ini dan hantar kepada pembangun.';
@@ -659,7 +659,7 @@
   <div id="netBadge" role="status">📵 Tiada liputan</div>
 
 <script>
-const APP_VERSION = '2026.11.03-a';
+const APP_VERSION = <?!= versionJson ?>;   // dari Code.gs (APP_VERSION)
 
 // Papar ralat di skrin (bukan skrin kosong) supaya mudah dikenal pasti — teks sahaja, tiada HTML pengguna
 function showFatal(title, detail) {
@@ -1097,6 +1097,30 @@ const EN = {
   'Lokasi anda dipadam dari server.': 'Your location was deleted from the server.', 'Mod halimunan: lokasi anda tidak dikongsi.':
     'Invisible mode: your location is not shared.', 'Lokasi anda dikongsi (dikaburkan ~100 m).': 'Your location is shared (blurred ~100 m).',
   'Sistem sibuk. Cuba lagi sebentar.': 'The system is busy. Try again shortly.',
+  // Mesej ralat server (disemak oleh tests/i18n.test.js — setiap mesej baharu mesti ditambah di sini)
+  'Sistem belum disediakan.': 'The system has not been set up yet.', 'Lokasi tidak sah.': 'Invalid location.',
+  'Jenis laporan tidak sah.': 'Invalid report type.', 'Jenis laporan berulang.': 'Duplicate report type.',
+  'Sistem penuh buat sementara. Cuba lagi nanti.': 'The system is temporarily full. Try again later.',
+  'Laporan tidak dijumpai.': 'Report not found.', 'Laporan sudah luput.': 'This report has expired.',
+  'Undian ditutup untuk laporan ini.': 'Voting is closed for this report.',
+  'Tidak dapat membuka pautan ini. Cuba lagi.': 'Could not open this link. Try again.',
+  'Pautan menghala ke laman yang tidak disokong.': 'The link leads to an unsupported site.',
+  'Data terlalu besar.': 'Data is too large.', 'Data tidak sah.': 'Invalid data.',
+  'Titik asal/destinasi tidak sah.': 'Invalid start or destination.', 'Tidak dibenarkan.': 'Not allowed.',
+  'Mulakan navigasi dahulu untuk kongsi sehingga sampai destinasi.': 'Start navigation first to share until you arrive.',
+  'Perkongsian tidak dijumpai.': 'Share not found.',
+  'Carian sepanjang laluan tidak tersedia sekarang. Cuba lagi sebentar.': 'Search along route is unavailable right now. Try again shortly.',
+  'Kategori tidak sah.': 'Invalid category.', 'Laluan tidak sah.': 'Invalid route.', 'Photon tidak menjawab.': 'The place search service did not respond.',
+  'ID pengguna tidak sah.': 'Invalid user ID.', 'Anda tidak boleh menyekat diri sendiri.': 'You cannot block yourself.',
+  'Senarai sekatan penuh.': 'The block list is full.',
+  // Paparan lain yang tertinggal
+  '🏠 Rumah disimpan.': '🏠 Home saved.', '💼 Kerja disimpan.': '💼 Work saved.',
+  'Tiada hasil. Cuba tambah nama kawasan, cth. "P&C Kitchen Bandar Serenia".':
+    'No results. Try adding the area name, e.g. "P&C Kitchen Bandar Serenia".',
+  'Tekan lama pautan di atas untuk salin.': 'Long-press the link above to copy it.',
+  'Laporan ini sudah ada. 👍 anda ditambah. Terima kasih!': 'This report already exists. Your 👍 was added. Thank you!',
+  'Utara': 'North', 'Timur Laut': 'Northeast', 'Timur': 'East', 'Tenggara': 'Southeast', 'Selatan': 'South',
+  'Barat Daya': 'Southwest', 'Barat': 'West', 'Barat Laut': 'Northwest',
   'Pelayan lambat menjawab. Cuba lagi.': 'The server is slow to respond. Try again.',
   'Terlalu banyak permintaan. Cuba lagi nanti.': 'Too many requests. Try again later.', 'Sesi tidak sah. Muat semula halaman.':
     'Invalid session. Reload the page.', 'Tunggu sebentar sebelum membuat laporan lain.': 'Please wait before making another report.',
@@ -1186,6 +1210,7 @@ const EN_RULES = [
   [/^(.+) laporan dihantar\. Terima kasih! 🙏$/, m => m[1] + ' reports sent. Thank you! 🙏'],
   [/^JalanKita · Peta © OpenStreetMap · Laluan oleh Google$/, () => 'JalanKita · Map © OpenStreetMap · Routes by Google'],
   [/^Pilih 1 hingga (\d+) jenis laporan\.$/, m => 'Choose 1 to ' + m[1] + ' report types.'],
+  [/^Arah ke (.+)$/, m => 'Heading ' + tr(m[1])], [/^oleh ([^·]+)$/, m => 'by ' + m[1]],
   [/^Lokasi anda dikesan (\d+) km dari destinasi\. Semak GPS atau matikan VPN\.$/, m =>
     'Your location was detected ' + m[1] + ' km from the destination. Check your GPS or turn off your VPN.'],
   [/^(\d+) setiap (\d+) jam$/, m => m[1] + ' per ' + m[2] + ' h'],
@@ -3472,7 +3497,10 @@ $('btnSend').onclick = async () => {
     const res = await call('submitReports', token, payload);
     rememberMine(res && res.ids);
     $('reportModal').style.display = 'none';
-    toast(items.length > 1 ? `${items.length} laporan dihantar. Terima kasih! 🙏` : 'Laporan dihantar. Terima kasih! 🙏');
+    // Server menggabungkan laporan yang sama (jenis, ≤200 m) dengan yang sudah ada — dikira sebagai 👍, bukan pin baharu
+    const mergedN = Number(res && res.merged) || 0;
+    toast(mergedN && mergedN === items.length ? 'Laporan ini sudah ada. 👍 anda ditambah. Terima kasih!'
+      : items.length > 1 ? `${items.length} laporan dihantar. Terima kasih! 🙏` : 'Laporan dihantar. Terima kasih! 🙏');
     refresh();
   } catch (e) {
     if (isNetErr(e)) {

@@ -18,6 +18,7 @@ function mockCache(clock) {
       ks.forEach(k => { const v = cache.get(k); if (v != null) o[k] = v; });
       return o;
     },
+    putAll: (obj, ttl) => { Object.keys(obj).forEach(k => cache.put(k, obj[k], ttl)); },
     put: (k, v, ttl) => {
       if (ttl > 21600) throw new Error('Tempoh cache melebihi 6 jam: ' + k);
       if (String(v).length > 100000) throw new Error('Nilai cache melebihi 100 KB: ' + k);
@@ -27,6 +28,31 @@ function mockCache(clock) {
     remove: k => { delete store[k]; }
   };
   return cache;
+}
+
+/** Satu helaian Google Sheets olok-olok (baris 1 = tajuk). Nilai disimpan seperti getValues() memulangkannya. */
+class FakeSheet {
+  constructor(headers) { this.rows = [headers.slice()]; this.reads = 0; }
+  getLastRow() { return this.rows.length; }
+  getRange(r, c, nr, nc) {
+    const sh = this; nr = nr || 1; nc = nc || 1;
+    const cell = (i, j) => { const row = sh.rows[r - 1 + i] || []; const v = row[c - 1 + j]; return v === undefined ? '' : v; };
+    const ensure = i => { while (sh.rows.length < r + i) sh.rows.push([]); return sh.rows[r - 1 + i]; };
+    const strip = v => (typeof v === 'string' && v[0] === "'" ? v.slice(1) : v);   // seperti Sheets: awalan ' tidak dipulangkan
+    return {
+      getValues() { sh.reads++; const out = []; for (let i = 0; i < nr; i++) { const row = []; for (let j = 0; j < nc; j++) row.push(cell(i, j)); out.push(row); } return out; },
+      getValue() { return cell(0, 0); },
+      setValues(vals) { vals.forEach((v, i) => { const row = ensure(i); v.forEach((x, j) => { row[c - 1 + j] = strip(x); }); }); return this; },
+      setValue(v) { ensure(0)[c - 1] = strip(v); return this; },
+      clearContent() { for (let i = 0; i < nr; i++) { const row = ensure(i); for (let j = 0; j < nc; j++) row[c - 1 + j] = ''; } trim(); return this; },
+      setFontWeight() { return this; }
+    };
+    function trim() { while (sh.rows.length > 1 && sh.rows[sh.rows.length - 1].every(v => v === '' || v == null)) sh.rows.pop(); }
+  }
+  appendRow(row) { this.rows.push(row.map(v => (typeof v === 'string' && v[0] === "'" ? v.slice(1) : v))); }
+  deleteRow(n) { this.rows.splice(n - 1, 1); }
+  setFrozenRows() {}
+  data() { return this.rows.slice(1); }
 }
 
 /**
@@ -41,14 +67,32 @@ function loadCode(extraGlobals) {
     constructor(...a) { if (a.length) super(...a); else super(clock.now); }
     static now() { return clock.now; }
   }
+  const sheets = {};
+  const spreadsheet = {
+    getSheetByName: n => sheets[n] || null,
+    insertSheet: n => (sheets[n] = new FakeSheet([])),
+    getId: () => 'sheet-ujian'
+  };
+  let uuid = 0;
   const ctx = vm.createContext(Object.assign({
     CacheService: { getScriptCache: () => cache },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: k => (k === 'SHEET_ID' ? 'sheet-ujian' : null) }) },
+    SpreadsheetApp: { openById: () => spreadsheet },
+    LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock() {} }) },
+    Utilities: { getUuid: () => '00000000-0000-4000-8000-' + String(++uuid).padStart(12, '0') },
     Date: FakeDate,
     console: { log: m => logs.push(String(m)), warn: m => logs.push(String(m)), error: m => logs.push(String(m)) }
   }, extraGlobals || {}));
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'Code.gs'), 'utf8'), ctx, { filename: 'Code.gs' });
   ctx.verify_ = token => token;           // ujian: token = id pengguna (tandatangan HMAC tidak diuji di sini)
-  return { ctx, cache, clock, logs };
+  // Cipta helaian dengan tajuk sebenar dari Code.gs
+  ['SHEET_REPORTS:REPORT_HEADERS', 'SHEET_STATS:STATS_HEADERS', 'SHEET_PREFS:PREFS_HEADERS', 'SHEET_SHARES:SHARE_HEADERS',
+    'SHEET_USERS:USER_HEADERS'].forEach(p => {
+    const [n, h] = p.split(':');
+    const name = vm.runInContext(n, ctx), headers = vm.runInContext(h, ctx);
+    sheets[name] = new FakeSheet(Array.from(headers));
+  });
+  return { ctx, cache, clock, logs, sheets, sheet: n => sheets[vm.runInContext(n, ctx)] };
 }
 
 /** Skrip utama Index.html, dengan tag templat HtmlService diganti nilai contoh. */
@@ -57,7 +101,7 @@ function clientScript() {
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
   const main = scripts[scripts.length - 1];
   return main.replace('<?!= typesJson ?>', '{}').replace('<?!= initialJson ?>', 'null')
-    .replace('<?!= appUrlJson ?>', '""').replace('<?!= trackJson ?>', 'null');
+    .replace('<?!= appUrlJson ?>', '""').replace('<?!= trackJson ?>', 'null').replace('<?!= versionJson ?>', '"ujian"');
 }
 
 module.exports = { ROOT, loadCode, clientScript };
