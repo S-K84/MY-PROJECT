@@ -1,0 +1,5 @@
+# Kelayakan clasp — JANGAN commit (memberi akses kepada akaun Google anda)
+.clasprc.json
+# Dijana oleh aliran kerja deploy
+.clasp.json
+node_modules/
