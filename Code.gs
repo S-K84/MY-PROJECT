@@ -869,6 +869,13 @@ function deletePrefs(token) {
   }
 }
 
+// Jarak garis lurus maksimum asal → destinasi. Perjalanan darat terpanjang yang munasabah di rantau ini
+// (cth. Bangkok → Singapura ~1,430 km) masih di bawah had; lokasi pelayar yang salah (UK, Eropah) jauh melebihinya.
+const ROUTE_MAX_KM_ = 2000;
+const MAPS_QUOTA_MSG_ = 'Kuota peta Google hari ini sudah habis. Cuba lagi esok.';
+/** Apps Script melontar "Service invoked too many times for one day: route." bila kuota harian Maps habis. */
+function isMapsQuotaErr_(e) { return /too many times|quota|OVER_(QUERY|DAILY)_LIMIT/i.test(String(e && e.message || e)); }
+
 /**
  * origin: {lat,lng}; dest: {lat,lng}; opts: {avoidTolls}
  * Menggunakan servis Maps terbina dalam Apps Script (tiada API key diperlukan).
@@ -880,6 +887,12 @@ function getRoute(token, origin, dest, opts) {
   const dLat = Number(dest.lat), dLng = Number(dest.lng);
   if (!isValidCoord_(oLat, oLng) || !isValidCoord_(dLat, dLng)) {
     throw new Error('Titik asal/destinasi tidak sah.');
+  }
+  // Tiada laluan darat sejauh ini dari Malaysia — biasanya lokasi pelayar salah (komputer tanpa GPS, VPN).
+  // Disemak SEBELUM had kadar & panggilan Google supaya tidak membazir kuota Maps.
+  const km = distKm_(oLat, oLng, dLat, dLng);
+  if (km > ROUTE_MAX_KM_) {
+    throw new Error('Lokasi anda dikesan ' + Math.round(km) + ' km dari destinasi. Semak GPS atau matikan VPN.');
   }
   // Semakan berkala (bukan permintaan pengguna) dihadkan berasingan supaya tidak menghabiskan kuota Maps bersama
   rateLimitAll_([['route', userId], ['G_maps']].concat(opts.recheck === true ? [['G_recheck']] : []));
@@ -906,15 +919,25 @@ function getRoute(token, origin, dest, opts) {
   const wantFerries = !walk && opts.avoidFerries === true;
   let res;
   try {
-    if (avoid.length || wantFerries) df.setAvoid(avoid.concat(wantFerries ? ['ferries'] : []).join('|'));
-    res = df.getDirections();
+    try {
+      if (avoid.length || wantFerries) df.setAvoid(avoid.concat(wantFerries ? ['ferries'] : []).join('|'));
+      res = df.getDirections();
+    } catch (e) {
+      if (!wantFerries || isMapsQuotaErr_(e)) throw e;
+      // Jika "ferries" tidak diterima oleh servis Maps Apps Script, cuba tanpa pilihan itu
+      df.setAvoid(avoid.join('|'));
+      res = df.getDirections();
+    }
   } catch (e) {
-    if (!wantFerries) throw e;
-    // Jika "ferries" tidak diterima oleh servis Maps Apps Script, cuba tanpa pilihan itu
-    df.setAvoid(avoid.join('|'));
-    res = df.getDirections();
+    if (isMapsQuotaErr_(e)) { console.warn('getRoute: kuota Maps habis — ' + e.message); throw new Error(MAPS_QUOTA_MSG_); }
+    throw e;
   }
-  if (res.status !== 'OK') throw new Error('Laluan tidak dijumpai.');
+  if (res.status !== 'OK') {
+    console.warn('getRoute: status Google ' + res.status + ' (' + Math.round(km) + ' km, ' + (walk ? 'jalan kaki' : 'memandu') +
+      (avoid.length || wantFerries ? ', elak ' + avoid.concat(wantFerries ? ['ferries'] : []).join('|') : '') + ')');
+    if (/^OVER_(QUERY|DAILY)_LIMIT$/.test(res.status)) throw new Error(MAPS_QUOTA_MSG_);
+    throw new Error(res.status === 'ZERO_RESULTS' ? 'Tiada laluan ke destinasi ini.' : 'Laluan tidak dijumpai.');
+  }
 
   return res.routes.map(rt => {
     // Dengan titik singgah, laluan ada 2 "leg" → dicantum menjadi satu

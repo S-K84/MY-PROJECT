@@ -932,6 +932,8 @@ const EN = {
   'Tiada laporan di hadapan. Selamat memandu! 👍': 'No reports ahead. Drive safely! 👍',
   'Anda telah tiba!': 'You have arrived!', 'Belum sampai? Teruskan': 'Not there yet? Continue', 'Selesai': 'Done',
   'Sambung memandu': 'Continue driving', 'Tidak': 'No', 'Mengira laluan…': 'Calculating route…', 'Laluan tidak dijumpai.': 'Route not found.',
+  'Tiada laluan ke destinasi ini.': 'There is no route to this destination.',
+  'Kuota peta Google hari ini sudah habis. Cuba lagi esok.': "Today's Google Maps quota is used up. Try again tomorrow.",
   'Tidak dapat mengira laluan': 'Could not calculate route', 'Lokasi anda belum diketahui.': 'Your location is not known yet.',
   'Lokasi belum diketahui.': 'Location not known yet.', 'Tetapkan lokasi anda dahulu.': 'Set your location first.',
   // Carian
@@ -1184,6 +1186,8 @@ const EN_RULES = [
   [/^(.+) laporan dihantar\. Terima kasih! 🙏$/, m => m[1] + ' reports sent. Thank you! 🙏'],
   [/^JalanKita · Peta © OpenStreetMap · Laluan oleh Google$/, () => 'JalanKita · Map © OpenStreetMap · Routes by Google'],
   [/^Pilih 1 hingga (\d+) jenis laporan\.$/, m => 'Choose 1 to ' + m[1] + ' report types.'],
+  [/^Lokasi anda dikesan (\d+) km dari destinasi\. Semak GPS atau matikan VPN\.$/, m =>
+    'Your location was detected ' + m[1] + ' km from the destination. Check your GPS or turn off your VPN.'],
   [/^(\d+) setiap (\d+) jam$/, m => m[1] + ' per ' + m[2] + ' h'],
   [/^(.+):$/, m => { const x = tr(m[1]); return x === m[1] ? m[0] : x + ':'; }]
 ];
@@ -1305,7 +1309,11 @@ function call(fn, ...args) {
     const timer = setTimeout(() => { if (!done) { done = true; reject(new Error(SLOW_MSG)); } }, CALL_TIMEOUT_MS);
     google.script.run
       .withSuccessHandler(v => { clearTimeout(timer); setOffline(false); if (!done) { done = true; resolve(v); } })
-      .withFailureHandler(e => { clearTimeout(timer); if (isNetErr(e)) setOffline(true); if (!done) { done = true; reject(e); } })[fn](...args);
+      .withFailureHandler(e => {
+        clearTimeout(timer); if (isNetErr(e)) setOffline(true);
+        // google.script.run memberi mesej "Error: …" — buang awalan itu supaya pengguna nampak mesej bersih (dan ia boleh diterjemah)
+        if (!done) { done = true; const c = new Error(String(e && e.message || e).replace(/^(Error|Exception):\s*/i, '')); c.raw = e; reject(c); }
+      })[fn](...args);
   });
 }
 
@@ -2331,7 +2339,7 @@ async function planRoute(dest, silent) {
     if (silent) toast(msg);
     else showPanel(`<span class="handle"></span><div class="route-head"><h3>Tidak dapat mengira laluan</h3>
       <button class="round" onclick="cancelRoute()" aria-label="Tutup">${ICON.x}</button></div><div class="hint">${esc(msg)}<br>
-      ${isNetErr(e) ? '' : 'Cuba destinasi yang dekat dengan jalan raya, atau tukar mod perjalanan.'}</div>
+      ${/Tiada laluan|Laluan tidak dijumpai/.test(msg) ? 'Cuba destinasi yang dekat dengan jalan raya, atau tukar mod perjalanan.' : ''}</div>
       <button class="btn btn-accent" style="width:100%" onclick="planRoute(state.dest)">Cuba lagi</button>`);
   }
 }
