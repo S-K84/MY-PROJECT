@@ -9,13 +9,13 @@ test('skrip utama Index.html tiada ralat sintaks', () => {
   assert.doesNotThrow(() => new vm.Script(clientScript(), { filename: 'Index.html' }));
 });
 
-test('versi sama dalam Code.gs dan Index.html', () => {
+test('versi ditulis di satu tempat sahaja (Code.gs) dan disuntik ke Index.html', () => {
   const code = fs.readFileSync(path.join(ROOT, 'Code.gs'), 'utf8');
   const html = fs.readFileSync(path.join(ROOT, 'Index.html'), 'utf8');
-  const v = (code.match(/Versi: (\S+)/) || [])[1];
-  assert.ok(v, 'versi tidak dijumpai dalam Code.gs');
-  assert.ok(html.includes("const APP_VERSION = '" + v + "'"), 'APP_VERSION dalam Index.html bukan ' + v);
-  assert.ok(html.includes("'Versi: " + v + "\\n"), 'versi pengesan permulaan dalam Index.html bukan ' + v);
+  assert.match(code, /^const APP_VERSION = '\d{4}\.\d{2}\.\d{2}-[a-z]';$/m);
+  assert.match(code, /t\.versionJson = jsonForScript_\(APP_VERSION\)/);
+  assert.ok(!/\d{4}\.\d{2}\.\d{2}-[a-z]/.test(html), 'Index.html masih ada versi yang ditulis terus');
+  assert.strictEqual((html.match(/<\?!= versionJson \?>/g) || []).length, 2);
 });
 
 test('setiap jenis arahan suara yang digunakan ada keutamaan', () => {

@@ -3,8 +3,11 @@
  * Dibina dengan Google Apps Script + Google Sheets + Leaflet/OpenStreetMap.
  *
  * Langkah pertama: jalankan fungsi setup() sekali dari editor Apps Script.
- * Versi: 2026.11.03-a (mesti sama dengan APP_VERSION dalam Index.html)
  */
+
+// Versi aplikasi — SATU-SATUNYA tempat versi ditulis. Ia disuntik ke Index.html oleh doGet() (menu ☰ & skrin ralat).
+// Naikkan setiap kali kod berubah supaya mudah semak telefon sudah guna kod terkini.
+const APP_VERSION = '2026.11.03-b';
 
 const CONFIG = {
   // ttlMin = berapa minit laporan kekal aktif sebelum luput
@@ -32,12 +35,12 @@ const CONFIG = {
   MAX_PREFS_ROWS: 10000,    // had baris data pengguna (tetapan disegerak)
   MAX_PREFS_CHARS: 12000,   // had saiz data seorang pengguna
   PREFS_RETAIN_DAYS: 180,   // data pengguna yang tidak aktif dipadam selepas tempoh ini
+  STATS_RETAIN_DAYS: 365,   // statistik (mata) pengguna yang tidak aktif setahun dipadam — beri ruang kepada pengguna baharu
   REPORT_COOLDOWN_SEC: 30,  // had kekerapan laporan seorang pengguna
   MAX_REPORT_ITEMS: 5,      // maks jenis dalam satu laporan berbilang
   MAX_SHARES: 500,          // had baris perkongsian perjalanan
   SHARE_MAX_MIN: 360,       // perkongsian paling lama 6 jam (termasuk "sampai destinasi")
   MAX_BANNED: 500,          // had senarai pengguna disekat
-  CACHE_SEC: 10,
   REGION: 'my',
   // Had kadar: [bilangan maksimum, tetingkap saat]. Kunci "G_" = global (semua pengguna).
   LIMITS: {
@@ -67,7 +70,7 @@ const USER_HEADERS = ['PenggunaID', 'Nama', 'Lat', 'Lng', 'Kelajuan', 'Arah', 'K
 const SHEET_STATS = 'Statistik';
 const SHEET_PREFS = 'DataPengguna';
 const PREFS_HEADERS = ['PenggunaID', 'Data', 'Kemaskini'];
-const STATS_HEADERS = ['PenggunaID', 'Nama', 'Laporan', 'UndiDiterima', 'UndiDiberi', 'Sertai'];
+const STATS_HEADERS = ['PenggunaID', 'Nama', 'Laporan', 'UndiDiterima', 'UndiDiberi', 'Sertai', 'Aktif'];
 // Emoji "mood" yang dibenarkan (dipaparkan kepada pengguna lain di peta) — senarai tetap, bukan teks bebas
 const MOODS = ['🙂', '😎', '🤠', '😇', '🥳', '😴', '🤓', '😤', '🥶',
   '🤩', '👻', '🐱', '🦁', '🐼', '🚗', '🏍️', '🚕', '🚚'];
@@ -83,6 +86,7 @@ function doGet(e) {
   const tr = String((e && e.parameter && e.parameter.track) || '');
   t.trackJson = jsonForScript_(SHARE_ID_RE_.test(tr) ? tr : null);
   t.appUrlJson = jsonForScript_(ScriptApp.getService().getUrl() || '');
+  t.versionJson = jsonForScript_(APP_VERSION);
   // Tiada setXFrameOptionsMode(ALLOWALL): halaman tidak boleh dibenam oleh laman lain (clickjacking).
   return t.evaluate()
     .setTitle('JalanKita')
@@ -291,17 +295,40 @@ function submitReports(token, r) {
   const lock = lock_();
   try {
     const sh = getSheet_(SHEET_REPORTS);
-    const now = new Date(), name = cell_(r.name, 30) || 'Tanpa Nama';
+    const now = new Date(), nowMs = now.getTime(), name = cell_(r.name, 30) || 'Tanpa Nama';
+    const last = sh.getLastRow();
+    const rows = last >= 2 ? sh.getRange(2, 1, last - 1, REPORT_HEADERS.length).getValues() : [];
+    let merged = 0;
     const ids = items.map(it => {
+      // Laporan sama (jenis, ≤200 m, arah serasi) sudah aktif → gabung sebagai 👍, bukan pin baharu (seperti Waze)
+      const dup = findDuplicate_(rows, it.type, lat, lng, it.heading, nowMs);
+      if (dup >= 0) {
+        merged++;
+        const row = rows[dup], rowNum = dup + 2;
+        const voters = String(row[11] || '').split(',').filter(String);
+        if (voters.indexOf(userId) < 0 && voters.length < CONFIG.MAX_VOTERS) {
+          voters.push(userId);
+          row[8] = new Date(extendExpiry_(row[8], CONFIG.REPORT_TYPES[it.type].ttlMin, nowMs));
+          row[9] = Number(row[9]) + 1;
+          row[11] = voters.join(',');
+          sh.getRange(rowNum, 9, 1, 2).setValues([[row[8], row[9]]]);
+          sh.getRange(rowNum, 12).setValue(row[11]);
+          bumpStats_(userId, '', 0, 0, 1);                                               // dikira sebagai undi
+          if (row[5] && String(row[5]) !== userId) bumpStats_(String(row[5]), '', 0, 1, 0); // pelapor asal dapat 👍
+        }
+        return String(row[0]);
+      }
       const id = Utilities.getUuid();
-      const expires = new Date(now.getTime() + CONFIG.REPORT_TYPES[it.type].ttlMin * 60000);
-      sh.appendRow([id, it.type, lat, lng, it.desc, userId, name, now, expires, 1, 0, userId, it.heading]);
+      const expires = new Date(nowMs + CONFIG.REPORT_TYPES[it.type].ttlMin * 60000);
+      const newRow = [id, it.type, lat, lng, it.desc, userId, name, now, expires, 1, 0, userId, it.heading];
+      sh.appendRow(newRow);
+      rows.push(newRow);
       return id;
     });
-    bumpStats_(userId, cell_(r.name, 30), items.length, 0, 0);
+    bumpStats_(userId, cell_(r.name, 30), items.length - merged, 0, 0);
     cache.put(cdKey, '1', CONFIG.REPORT_COOLDOWN_SEC);
-    cache.remove('reports');
-    return { ok: true, ids: ids, id: ids[0] };
+    rebuildReports_();
+    return { ok: true, ids: ids, id: ids[0], merged: merged };
   } finally {
     lock.releaseLock();
   }
@@ -311,16 +338,62 @@ function isHidden_(up, down) {
   return down >= CONFIG.DOWNVOTE_LIMIT && down > up;
 }
 
+const DUP_RADIUS_KM_ = 0.2;     // laporan jenis sama dalam radius ini dianggap laporan yang sama
+const DUP_HEADING_TOL_ = 60;    // dan arahnya berbeza tidak lebih daripada ini (laporan tanpa arah = semua arah)
+
+/** Indeks baris laporan aktif yang sama (jenis, terdekat ≤200 m, arah serasi), atau -1. */
+function findDuplicate_(rows, type, lat, lng, heading, nowMs) {
+  let best = -1, bestD = Infinity;
+  rows.forEach((x, i) => {
+    if (!x[0] || String(x[1]) !== type || new Date(x[8]).getTime() <= nowMs || isHidden_(Number(x[9]), Number(x[10]))) return;
+    if (!headingsMatch_(x[12], heading)) return;
+    const d = distKm_(lat, lng, Number(x[2]), Number(x[3]));
+    if (d <= DUP_RADIUS_KM_ && d < bestD) { best = i; bestD = d; }
+  });
+  return best;
+}
+
+function headingsMatch_(a, b) {
+  if (a === '' || a == null || b === '' || b == null || !isFinite(Number(a)) || !isFinite(Number(b))) return true;
+  return Math.abs(((Number(b) - Number(a)) % 360 + 540) % 360 - 180) <= DUP_HEADING_TOL_;
+}
+
+/** "Masih ada" memanjangkan separuh TTL, tetapi tidak lebih 2×TTL dari sekarang. */
+function extendExpiry_(exp, ttlMin, nowMs) {
+  return Math.min(Math.max(new Date(exp).getTime(), nowMs) + ttlMin * 30000, nowMs + ttlMin * 120000);
+}
+
+// ---- Cache laporan aktif
+// Laporan dibaca dari cache (bukan Sheet) oleh getLiveData setiap 15 s bagi setiap pengguna. Setiap penulisan
+// (lapor, undi, padam, sekat, cleanup) membina semula cache di bawah kunci skrip, jadi cache boleh disimpan lama
+// (6 jam) — yang luput ditapis semasa membaca. Senarai besar dipecah kepada beberapa nilai (had cache 100 KB setiap satu).
+const REPORTS_CHUNK_ = 30000;   // aksara setiap bahagian (≤ ~90 KB walaupun semua aksara 3 bait UTF-8)
+const REPORTS_TTL_ = 21600;
+
 function getReports_() {
   const cache = CacheService.getScriptCache();
-  const hit = cache.get('reports');
-  if (hit) return JSON.parse(hit);
+  const meta = parseJson_(cache.get('rep_meta'));
+  if (meta && meta.v && meta.n >= 0) {
+    const keys = [];
+    for (let i = 0; i < meta.n; i++) keys.push('rep_' + meta.v + '_' + i);
+    const got = keys.length ? cache.getAll(keys) : {};
+    if (keys.every(k => got[k] != null)) {
+      const list = keys.length ? parseJson_(keys.map(k => got[k]).join('')) : [];
+      if (Array.isArray(list)) {
+        const now = Date.now();
+        return list.filter(r => r.expires > now);
+      }
+    }
+  }
+  return rebuildReports_();   // cache tiada / sebahagiannya telah dibuang oleh Google
+}
 
+/** Baca laporan aktif dari Sheet dan simpan dalam cache. Panggil selepas setiap perubahan pada sheet Laporan. */
+function rebuildReports_() {
   const sh = getSheet_(SHEET_REPORTS);
   const last = sh.getLastRow();
-  if (last < 2) return [];
   const now = Date.now();
-  const rows = sh.getRange(2, 1, last - 1, REPORT_HEADERS.length).getValues();
+  const rows = last >= 2 ? sh.getRange(2, 1, last - 1, REPORT_HEADERS.length).getValues() : [];
   // Hanya medan awam dipulangkan — PenggunaID & senarai pengundi kekal di server.
   const out = rows
     .filter(x => x[0] && new Date(x[8]).getTime() > now && !isHidden_(Number(x[9]), Number(x[10])))
@@ -330,7 +403,22 @@ function getReports_() {
       expires: new Date(x[8]).getTime(), up: Number(x[9]), down: Number(x[10]),
       heading: x[12] === '' || x[12] == null || !isFinite(Number(x[12])) ? null : Number(x[12])
     }));
-  try { cache.put('reports', JSON.stringify(out), CONFIG.CACHE_SEC); } catch (e) { /* terlalu besar */ }
+  const json = JSON.stringify(out), v = Utilities.getUuid().replace(/-/g, '').slice(0, 10), parts = {};
+  let n = 0;
+  for (let i = 0; i < json.length;) {
+    let end = Math.min(json.length, i + REPORTS_CHUNK_);
+    const c = json.charCodeAt(end - 1);
+    if (end < json.length && c >= 0xD800 && c <= 0xDBFF) end--;   // jangan pecahkan pasangan surrogate (emoji)
+    parts['rep_' + v + '_' + (n++)] = json.slice(i, end);
+    i = end;
+  }
+  const cache = CacheService.getScriptCache();
+  try {
+    if (n) cache.putAll(parts, REPORTS_TTL_);
+    cache.put('rep_meta', JSON.stringify({ v: v, n: n }), REPORTS_TTL_);   // meta terakhir: bahagian sudah sedia
+  } catch (e) {
+    cache.remove('rep_meta');   // gagal simpan — pembaca seterusnya akan membaca Sheet
+  }
   return out;
 }
 
@@ -360,9 +448,7 @@ function voteReport(token, id, up) {
 
     if (up) {
       const ttl = CONFIG.REPORT_TYPES[row[1]] ? CONFIG.REPORT_TYPES[row[1]].ttlMin : 60;
-      // Panjangkan separuh TTL, tetapi tidak lebih 2×TTL dari sekarang.
-      const newExp = Math.min(Math.max(new Date(row[8]).getTime(), Date.now()) + ttl * 30000,
-        Date.now() + ttl * 120000);
+      const newExp = extendExpiry_(row[8], ttl, Date.now());
       sh.getRange(rowNum, 9, 1, 2).setValues([[new Date(newExp), Number(row[9]) + 1]]);
     } else {
       sh.getRange(rowNum, 11).setValue(Number(row[10]) + 1);
@@ -370,7 +456,7 @@ function voteReport(token, id, up) {
     sh.getRange(rowNum, 12).setValue(voters.join(','));
     bumpStats_(userId, '', 0, 0, 1);                                     // pengundi
     if (up && row[5] && String(row[5]) !== userId) bumpStats_(String(row[5]), '', 0, 1, 0); // pelapor dapat 👍
-    CacheService.getScriptCache().remove('reports');
+    rebuildReports_();
     return { ok: true };
   } finally {
     lock.releaseLock();
@@ -715,13 +801,14 @@ function bumpStats_(userId, name, dReports, dUpRecv, dVotes) {
   }
   if (rowNum < 0) {
     if (last - 1 >= CONFIG.MAX_STATS_ROWS) return; // had baris — halang Sheet dibanjiri identiti palsu
-    sh.appendRow([userId, protectCell_(String(name || '')), dReports, dUpRecv, dVotes, new Date()]);
+    sh.appendRow([userId, protectCell_(String(name || '')), dReports, dUpRecv, dVotes, new Date(), new Date()]);
     return;
   }
   const r = sh.getRange(rowNum, 1, 1, STATS_HEADERS.length).getValues()[0];
   // r[1] dibaca semula dari Sheet — getValues() membuang awalan ' , jadi lindungi semula sebelum ditulis balik
   sh.getRange(rowNum, 2, 1, 4).setValues([[protectCell_(String(name || r[1] || '')),
     Number(r[2]) + dReports, Number(r[3]) + dUpRecv, Number(r[4]) + dVotes]]);
+  sh.getRange(rowNum, 7).setValue(new Date());   // Aktif: untuk pembersihan rekod lama dalam cleanup()
 }
 
 function getProfile(token) {
@@ -1021,7 +1108,13 @@ function cleanup(e) {
       x => new Date(x[2]).getTime() > now - CONFIG.PREFS_RETAIN_DAYS * 864e5);
     // Privasi: rekod perkongsian perjalanan dipadam sehari selepas tamat
     pruneSheet_(sharesSheet_(), SHARE_HEADERS.length, x => new Date(x[8]).getTime() > now - 864e5);
-    CacheService.getScriptCache().remove('reports');
+    // Statistik tidak aktif setahun dipadam; tanpa ini sheet penuh (MAX_STATS_ROWS) dan pengguna baharu tidak dapat mata.
+    // Baris lama tanpa lajur "Aktif" guna tarikh "Sertai".
+    const stats = statsSheet_();
+    if (stats.getRange(1, 7).getValue() !== 'Aktif') stats.getRange(1, 7).setValue('Aktif').setFontWeight('bold');
+    pruneSheet_(stats, STATS_HEADERS.length,
+      x => new Date(x[6] || x[5]).getTime() > now - CONFIG.STATS_RETAIN_DAYS * 864e5);
+    rebuildReports_();
   } finally {
     lock.releaseLock();
   }
@@ -1031,7 +1124,8 @@ function pruneSheet_(sh, width, keepFn) {
   const last = sh.getLastRow();
   if (last < 2) return;
   const range = sh.getRange(2, 1, last - 1, width);
-  const keep = range.getValues().filter(keepFn).map(r => r.map(protectCell_));
+  const rows = range.getValues(), keep = rows.filter(keepFn).map(r => r.map(protectCell_));
+  if (keep.length === rows.length) return;   // tiada yang dibuang — jangan tulis semula seluruh sheet setiap jam
   range.clearContent();
   if (keep.length) sh.getRange(2, 1, keep.length, width).setValues(keep);
 }
@@ -1466,7 +1560,7 @@ function adminDeleteReport(token, id) {
     const i = ids.findIndex(v => String(v[0]) === id);
     if (i < 0) throw new Error('Laporan tidak dijumpai.');
     sh.deleteRow(i + 2);
-    CacheService.getScriptCache().remove('reports');
+    rebuildReports_();
     return { ok: true };
   } finally {
     lock.releaseLock();
@@ -1488,7 +1582,7 @@ function adminBan(token, userId, ban) {
       list.push(userId);
       const sh = getSheet_(SHEET_REPORTS);
       pruneSheet_(sh, REPORT_HEADERS.length, x => String(x[5]) !== userId);
-      CacheService.getScriptCache().remove('reports');
+      rebuildReports_();
     }
     props.setProperty('BANNED', JSON.stringify(list));
     CacheService.getScriptCache().put('banned', JSON.stringify(list), 600);
