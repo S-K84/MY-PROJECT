@@ -220,17 +220,33 @@ function rateLimit_(name, who, count) {
   rateLimitAll_([[name, who]], count);
 }
 
+/**
+ * Kunci kiraan bagi tetingkap masa SEMASA. Nombor tetingkap ada dalam kunci, jadi setiap tetingkap bermula dari 0.
+ * (Dahulu kunci yang sama ditulis semula dengan cache.put, yang menetapkan semula tempoh luput setiap kali —
+ * kiraan tidak pernah kosong selagi ada permintaan, lalu pengguna aktif akhirnya disekat terus.)
+ */
+function rlKey_(name, who) {
+  const win = CONFIG.LIMITS[name][1];
+  return 'rl_' + name + '_' + (who || 'all') + '_' + Math.floor(Date.now() / 1000 / win);
+}
+
 // Semak SEMUA had dahulu, baru tolak baki. Permintaan yang ditolak tidak menghabiskan kuota.
+// Tiada kunci (lock): permintaan serentak boleh melebihi had sedikit — boleh diterima untuk had lembut.
 function rateLimitAll_(pairs, count) {
   count = Math.max(1, Math.floor(Number(count) || 1));
   const cache = CacheService.getScriptCache();
-  const rows = pairs.map(p => {
-    const lim = CONFIG.LIMITS[p[0]];
-    const key = 'rl_' + p[0] + '_' + (p[1] || 'all');
-    return { lim: lim, key: key, n: Number(cache.get(key) || 0) };
-  });
+  const rows = pairs.map(p => ({ lim: CONFIG.LIMITS[p[0]], key: rlKey_(p[0], p[1]) }));
+  const got = cache.getAll(rows.map(x => x.key));
+  rows.forEach(x => { x.n = Number(got[x.key] || 0); });
   if (rows.some(x => x.n + count > x.lim[0])) throw new Error('Terlalu banyak permintaan. Cuba lagi nanti.');
   rows.forEach(x => cache.put(x.key, String(x.n + count), x.lim[1]));
+}
+
+/** Kunci skrip dengan mesej mesra. waitLock() melontar "Lock timeout…" yang disangka klien sebagai tiada liputan. */
+function lock_(ms) {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(ms || 10000)) throw new Error('Sistem sibuk. Cuba lagi sebentar.');
+  return lock;
 }
 
 // ---------------------------------------------------------------- Laporan
@@ -272,8 +288,7 @@ function submitReports(token, r) {
   rateLimitAll_([['report', userId], ['G_report']], items.length);
   if (getReports_().length + items.length > CONFIG.MAX_ACTIVE_REPORTS) throw new Error('Sistem penuh buat sementara. Cuba lagi nanti.');
 
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  const lock = lock_();
   try {
     const sh = getSheet_(SHEET_REPORTS);
     const now = new Date(), name = cell_(r.name, 30) || 'Tanpa Nama';
@@ -325,11 +340,9 @@ function voteReport(token, id, up) {
   id = String(id || '');
   if (!/^[0-9a-f-]{8,36}$/i.test(id)) throw new Error('Laporan tidak dijumpai.');
   up = up === true;
-  rateLimit_('vote', userId);
-  rateLimit_('G_vote');
+  rateLimitAll_([['vote', userId], ['G_vote']]);
 
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  const lock = lock_();
   try {
     const sh = getSheet_(SHEET_REPORTS);
     const last = sh.getLastRow();
@@ -373,8 +386,7 @@ function updateLocation(token, u) {
   if (!isValidCoord_(lat, lng)) return { ok: false };
   rateLimit_('location', userId);
 
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  const lock = lock_();
   try {
     const sh = getSheet_(SHEET_USERS);
     const last = sh.getLastRow();
@@ -401,8 +413,7 @@ function updateLocation(token, u) {
 function hideMe(token) {
   const userId = verify_(token);
   rateLimit_('location', userId);
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  const lock = lock_();
   try {
     const sh = getSheet_(SHEET_USERS);
     const last = sh.getLastRow();
@@ -560,8 +571,7 @@ function geocodeNear_(query, near) {
 function geocode_(userId, query) {
   query = String(query == null ? '' : query).trim().slice(0, 200);
   if (!query) return [];
-  rateLimit_('geocode', userId);
-  rateLimit_('G_maps');
+  rateLimitAll_([['geocode', userId], ['G_maps']]);
   const res = Maps.newGeocoder().setRegion(CONFIG.REGION).setLanguage('ms').geocode(query);
   return (res.results || []).slice(0, 5).map(g => ({
     name: g.formatted_address,
@@ -618,8 +628,7 @@ function resolveLocation(token, text) {
   if (!urlMatch) throw new Error('Tiada pautan lokasi dijumpai.');
   let url = urlMatch[0];
   if (!allowedLink_(url)) throw new Error('Pautan ini bukan pautan peta yang disokong.');
-  rateLimit_('resolve', userId);
-  rateLimit_('G_resolve');
+  rateLimitAll_([['resolve', userId], ['G_resolve']]);
 
   let name = placeNameFromUrl_(url);
   for (let hop = 0; hop < 5; hop++) {
@@ -688,8 +697,7 @@ function bumpStats_(userId, name, dReports, dUpRecv, dVotes) {
 function getProfile(token) {
   const userId = verify_(token);
   rateLimit_('profile', userId);
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  const lock = lock_();
   try {
     const sh = statsSheet_();
     const last = sh.getLastRow();
@@ -712,8 +720,7 @@ function whereAmI(token, lat, lng) {
   const userId = verify_(token);
   lat = Number(lat); lng = Number(lng);
   if (!isValidCoord_(lat, lng)) return { road: '' };
-  rateLimit_('geocode', userId);
-  rateLimit_('G_maps');
+  rateLimitAll_([['geocode', userId], ['G_maps']]);
   const res = Maps.newGeocoder().setLanguage('ms').reverseGeocode(lat, lng);
   const results = res.results || [];
   // Cari nama jalan dalam mana-mana hasil; abaikan "Plus Code" Google (cth. "XP94+V3 Serdang")
@@ -798,8 +805,7 @@ function savePrefs(token, json) {
   let data;
   try { data = cleanPrefs_(JSON.parse(json)); } catch (e) { throw new Error('Data tidak sah.'); }
   const out = protectCell_(JSON.stringify(data));
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  const lock = lock_();
   try {
     const sh = prefsSheet_();
     const last = sh.getLastRow();
@@ -820,8 +826,7 @@ function savePrefs(token, json) {
 function deletePrefs(token) {
   const userId = verify_(token);
   rateLimit_('prefsSave', userId);
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  const lock = lock_();
   try {
     const sh = prefsSheet_();
     const last = sh.getLastRow();
@@ -949,8 +954,7 @@ function exitNumber_(html) {
 
 function cleanup(e) {
   if (!isRealTrigger_(e) && !isOwner_()) throw new Error('Tidak dibenarkan.');
-  const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
+  const lock = lock_(30000);
   try {
     const now = Date.now();
     pruneSheet_(getSheet_(SHEET_REPORTS), REPORT_HEADERS.length,
@@ -1070,8 +1074,7 @@ function saveShareMeta_(id, m) { CacheService.getScriptCache().put('shm_' + id, 
 
 /** Tulis status/lokasi ke Sheet. live = null → lokasi dipadam. */
 function writeShare_(id, st, live, poly) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  const lock = lock_();
   try {
     const sh = sharesSheet_(), last = sh.getLastRow();
     if (last < 2) return;
@@ -1103,8 +1106,7 @@ function startShare(token, o) {
   const m = { owner: userId, name: name.replace(/^'/, ''), dt: hasDest ? String(cell_(d.title, 80)).replace(/^'/, '') : '',
     dlat: hasDest ? dLat : null, dlng: hasDest ? dLng : null, exp: exp, st: minutes ? 'live' : 'arrive', pv: 1, wrote: now };
 
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  const lock = lock_();
   try {
     const sh = sharesSheet_(), last = sh.getLastRow();
     // Satu perkongsian aktif bagi setiap pengguna: yang lama ditamatkan & lokasinya dipadam
@@ -1386,7 +1388,7 @@ function adminOverview(token) {
       .filter(x => new Date(x[0]).getTime() > now && SHARE_LIVE_.indexOf(String(x[1])) >= 0).length;
   } catch (e) { /* tiada Sheet lagi */ }
   const quota = ['G_maps', 'G_recheck', 'G_report', 'G_photon', 'G_overpass', 'G_resolve'].map(k => ({
-    key: k, used: Number(cache.get('rl_' + k + '_all') || 0), max: CONFIG.LIMITS[k][0], hours: CONFIG.LIMITS[k][1] / 3600 }));
+    key: k, used: Number(cache.get(rlKey_(k)) || 0), max: CONFIG.LIMITS[k][0], hours: CONFIG.LIMITS[k][1] / 3600 }));
   const byType = {};
   reps.forEach(x => { byType[x.type] = (byType[x.type] || 0) + 1; });
   return {
@@ -1401,8 +1403,7 @@ function adminDeleteReport(token, id) {
   requireOwner_(token);
   id = String(id || '');
   if (!/^[0-9a-f-]{8,36}$/i.test(id)) throw new Error('Laporan tidak dijumpai.');
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  const lock = lock_();
   try {
     const sh = getSheet_(SHEET_REPORTS), last = sh.getLastRow();
     const ids = last < 2 ? [] : sh.getRange(2, 1, last - 1, 1).getValues();
@@ -1422,8 +1423,7 @@ function adminBan(token, userId, ban) {
   userId = String(userId || '');
   if (!/^[ag]_[A-Za-z0-9_-]{8,40}$/.test(userId)) throw new Error('ID pengguna tidak sah.');
   if (ban === true && userId === me) throw new Error('Anda tidak boleh menyekat diri sendiri.');
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  const lock = lock_();
   try {
     const props = PropertiesService.getScriptProperties();
     let list = bannedList_().filter(x => x !== userId);

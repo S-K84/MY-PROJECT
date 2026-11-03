@@ -1094,6 +1094,8 @@ const EN = {
   'Sejarah carian dipadam.': 'Search history cleared.', 'Data anda dipadam dari server.': 'Your data was deleted from the server.',
   'Lokasi anda dipadam dari server.': 'Your location was deleted from the server.', 'Mod halimunan: lokasi anda tidak dikongsi.':
     'Invisible mode: your location is not shared.', 'Lokasi anda dikongsi (dikaburkan ~100 m).': 'Your location is shared (blurred ~100 m).',
+  'Sistem sibuk. Cuba lagi sebentar.': 'The system is busy. Try again shortly.',
+  'Pelayan lambat menjawab. Cuba lagi.': 'The server is slow to respond. Try again.',
   'Terlalu banyak permintaan. Cuba lagi nanti.': 'Too many requests. Try again later.', 'Sesi tidak sah. Muat semula halaman.':
     'Invalid session. Reload the page.', 'Tunggu sebentar sebelum membuat laporan lain.': 'Please wait before making another report.',
   'Anda sudah mengundi laporan ini.': 'You already voted on this report.',
@@ -1273,7 +1275,11 @@ if (window.ResizeObserver) { const ro = new ResizeObserver(layout); ['home', 'pa
 // Aplikasi mesti dibuka semasa ada internet. Selepas itu, navigasi, GPS, suara dan amaran
 // laporan yang sudah dimuat turun terus berfungsi walaupun liputan hilang.
 let offline = !navigator.onLine;
-const isNetErr = e => !navigator.onLine || /network|connection|http 0|failed to fetch|timeout/i.test(String(e && e.message || e));
+// "Lock timeout" dari server BUKAN masalah liputan — jangan paparkan 📵 atau masukkan laporan ke barisan tunggu
+const isNetErr = e => {
+  const m = String(e && e.message || e);
+  return !navigator.onLine || (/network|connection|http 0|failed to fetch|timeout/i.test(m) && !/lock/i.test(m));
+};
 
 function setOffline(v) {
   if (v === offline) return;
@@ -1290,11 +1296,16 @@ function renderNet() {
 window.addEventListener('offline', () => setOffline(true));
 window.addEventListener('online', () => setOffline(false));
 
+// Had masa panggilan server: tanpanya, panggilan yang tergantung membiarkan shareBusy / fasterBusy kekal true selama-lamanya
+// (perkongsian & semakan laluan berhenti tanpa notis). Mesej sengaja BUKAN ralat rangkaian — ia tidak menukar status liputan.
+const CALL_TIMEOUT_MS = 60000, SLOW_MSG = 'Pelayan lambat menjawab. Cuba lagi.';
 function call(fn, ...args) {
   return new Promise((resolve, reject) => {
+    let done = false;
+    const timer = setTimeout(() => { if (!done) { done = true; reject(new Error(SLOW_MSG)); } }, CALL_TIMEOUT_MS);
     google.script.run
-      .withSuccessHandler(v => { setOffline(false); resolve(v); })
-      .withFailureHandler(e => { if (isNetErr(e)) setOffline(true); reject(e); })[fn](...args);
+      .withSuccessHandler(v => { clearTimeout(timer); setOffline(false); if (!done) { done = true; resolve(v); } })
+      .withFailureHandler(e => { clearTimeout(timer); if (isNetErr(e)) setOffline(true); if (!done) { done = true; reject(e); } })[fn](...args);
   });
 }
 
@@ -1321,7 +1332,7 @@ async function flushQueue() {
     refresh();
   } catch (e) {
     // Rangkaian gagal atau had 30 saat: cuba lagi nanti. Ralat lain (cth. laporan tidak sah): buang.
-    if (!isNetErr(e) && !/tunggu|terlalu banyak/i.test(String(e && e.message || e))) {
+    if (!isNetErr(e) && !/tunggu|terlalu banyak|sibuk|lambat/i.test(String(e && e.message || e))) {
       saveQueue(loadQueue().slice(1));
     }
   }
@@ -2130,6 +2141,7 @@ setInterval(() => {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) return;
   startGeo();
+  refresh();
   if (state.navigating) { requestWakeLock(); if (state.follow) followMe(false); }
 });
 
@@ -2167,17 +2179,21 @@ function updateStreet() {
 }
 function setStreet(s) { s = s || ''; if (state.streetShown !== s) { state.streetShown = s; $('street').textContent = s; } }
 
+// Server anggap pengguna aktif selama 180 s, dan had 'location' ialah 400/jam. Dahulu lokasi dihantar setiap 50 m —
+// pada 60 km/j itu ~1,200 panggilan sejam (had habis dalam ~20 minit, dan setiap panggilan memegang kunci skrip).
+const LOC_MIN_MS = 30000, LOC_IDLE_MS = 90000;
 function maybeSendLocation() {
   const me = state.me; if (!me || !token || hidden) return;
-  const now = Date.now();
-  if (state.lastSent && now - state.lastSent.t < 20000 && dist(me, state.lastSent) < 50) return;
+  const now = Date.now(), last = state.lastSent;
+  if (last && now - last.t < LOC_MIN_MS) return;                             // maks 120/jam
+  if (last && now - last.t < LOC_IDLE_MS && dist(me, last) < 50) return;     // berhenti: cukup setiap 90 s
   state.lastSent = { lat: me.lat, lng: me.lng, t: now };
   call('updateLocation', token, { name: userName, lat: me.lat, lng: me.lng, speed: me.speed, heading: me.heading, mood: S.mood }).catch(() => {});
 }
 
 // ------------------------------------------------------------ Data langsung
 async function refresh() {
-  if (!token) return;
+  if (!token || TRACK || document.hidden) return;   // tab tersembunyi: jangan bazir kuota (disegar bila kembali)
   try {
     const me = state.me || {};
     const d = await call('getLiveData', token, me.lat, me.lng);
@@ -2189,7 +2205,15 @@ async function refresh() {
   } catch (e) { console.warn(e); }
 }
 
+// Jangan lukis semula laporan semasa popup terbuka — clearLayers() menutupnya (pengguna mungkin hendak tekan 👍/👎).
+// Lukisan ditangguh dan dibuat sebaik sahaja popup ditutup.
+map.on('popupopen', () => { state.popupOpen = true; });
+map.on('popupclose', () => {
+  state.popupOpen = false;
+  if (state.reportsDirty) { state.reportsDirty = false; drawReports(); }
+});
 function drawReports() {
+  if (state.popupOpen) { state.reportsDirty = true; return; }
   reportLayer.clearLayers();
   state.reports.filter(r => S.repTypes.indexOf(r.type) >= 0).forEach(r => {
     const t = TYPES[r.type] || { icon: '❓', label: r.type };
@@ -2714,10 +2738,19 @@ function markAsked(id) {
   const keep = Object.keys(a).filter(k => now - a[k] < ASKED_KEEP_MS).sort((x, y) => a[y] - a[x]).slice(0, 300);
   store.set('jk_asked', JSON.stringify(keep.reduce((o, k) => (o[k] = a[k], o), {})));
 }
+// Dipanggil pada setiap bacaan GPS: parse JSON hanya bila teks dalam storan berubah. Hasilnya untuk dibaca sahaja.
+const jsonMemo = {};
+function getJSONMemo(k, d) {
+  const raw = store.get(k), m = jsonMemo[k];
+  if (m && m.raw === raw) return m.v;
+  let v; try { v = JSON.parse(raw) || d; } catch (e) { v = d; }
+  jsonMemo[k] = { raw, v };
+  return v;
+}
 function checkStillThere() {
   const me = state.me;
   if (!S.askStill || S.travel === 'walk' || !me || (me.speed || 0) < 10 || askBusy() || !token) return;
-  const asked = getJSON('jk_asked', {}), mine = getJSON('jk_mine', []);
+  const asked = getJSONMemo('jk_asked', {}), mine = getJSONMemo('jk_mine', []);
   const rep = state.reports.find(x => !asked[x.id] && mine.indexOf(x.id) < 0 && dist(me, x) < ASK_RADIUS_M &&
     sameDirection(x, state.heading));
   if (!rep) return;
@@ -2743,9 +2776,11 @@ function maybeCheckFaster(r, along) {
 }
 
 /** Peratus titik laluan 'a' (di hadapan) yang berada di atas laluan 'b' — untuk kenal pasti laluan yang sama. */
+// Maks ~100 sampel: perjalanan 300 km dahulu = 1,500 sampel × imbas penuh laluan × 3 laluan → UI tersekat semasa memandu.
 function routeOverlap(a, b) {
   let n = 0, on = 0;
-  for (let d = 0; d <= a.total; d += 200) {
+  const step = Math.max(200, a.total / 100);
+  for (let d = 0; d <= a.total; d += step) {
     const p = slicePts(a, d, d)[0], l = locate({ lat: p[0], lng: p[1] }, b, 0);
     n++; if (l.off < 40) on++;
   }
@@ -2828,8 +2863,9 @@ function closeTurns() { $('turnsModal').style.display = 'none'; }
 function setTurnsTab(t) { state.turnsTab = t; renderTurns(); }
 
 function reportsAhead() {
-  const r = state.routes[state.selRoute], along = state.meAlong || 0;
-  return state.reports.map(rep => {
+  const r = state.routes[state.selRoute], along = state.meAlong || 0, box = routeBox(r);
+  // Tapis kotak sempadan laluan dahulu — locate() mahal dan dipanggil setiap bacaan GPS bila senarai dibuka
+  return state.reports.filter(rep => rep.lat >= box[0] && rep.lat <= box[1] && rep.lng >= box[2] && rep.lng <= box[3]).map(rep => {
     const l = locate(rep, r, state.meSeg || 0);
     const a = r.pts[l.seg], b = r.pts[Math.min(l.seg + 1, r.pts.length - 1)];
     const segBearing = a && b && (a.lat !== b.lat || a.lng !== b.lng) ? bearing(a, b) : null;
