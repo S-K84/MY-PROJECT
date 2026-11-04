@@ -27,11 +27,12 @@ test('merentas sempadan sel: 14 km kelihatan, 16 km tidak', () => {
   assert.strictEqual(seen('g_A'), 'g_N14');
 });
 
-test('data awam dikaburkan: ~100 m, laju dibundarkan, tiada id atau arah', () => {
+test('data awam dikaburkan: ~100 m, laju dibundarkan, arah kasar (8 mata angin), tiada id', () => {
   const { ctx, up } = setup();
-  up('g_B', 3.15012, 101.70033, { heading: 90 });
+  up('g_B', 3.15012, 101.70033, { heading: 97 });
   const u = ctx.getActiveUsers_('g_A', KL)[0];
-  assert.strictEqual(JSON.stringify(Object.keys(u).sort()), JSON.stringify(['lat', 'lng', 'mood', 'name', 'speed']));
+  assert.strictEqual(JSON.stringify(Object.keys(u).sort()), JSON.stringify(['dir', 'lat', 'lng', 'mood', 'name', 'speed']));
+  assert.strictEqual(u.dir, 90);                 // 97° → Timur (90°), untuk kesesakan automatik ikut arah
   assert.strictEqual(u.lat, 3.15);
   assert.strictEqual(u.lng, 101.7);
   assert.strictEqual(u.speed, 60);
@@ -86,4 +87,11 @@ test('1,600 pengguna dalam satu sel: nilai cache < 100 KB, respons maks 200', ()
   }
   assert.strictEqual(ctx.getActiveUsers_('g_Z', KL).length, 200);
   assert.ok(cache.maxValue < 100000, 'nilai terbesar ' + cache.maxValue);
+});
+
+test('arah tidak diketahui → tiada "dir"', () => {
+  const { ctx, up } = setup();
+  up('g_C', 3.150, 101.700, { heading: null });
+  const u = ctx.getActiveUsers_('g_A', KL)[0];
+  assert.ok(!('dir' in u));
 });

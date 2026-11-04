@@ -94,3 +94,39 @@ test('Index.html: pembaikan kelipan (disahkan di iPhone melalui saluran uji) —
   assert.match(s, /function moveMeMarker\(/);
   assert.ok(!/reportLayer\.clearLayers\(\)/.test(s), 'pin laporan masih dicipta semula setiap kali');
 });
+
+test('saluran uji: had laju automatik — tafsir maxspeed & pilih selang pada laluan', () => {
+  const s = clientScript('IndexUji.html');
+  const vm = require('vm');
+  const fn = name => s.match(new RegExp('function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}'))[0];
+  const ctx = {};
+  vm.runInNewContext(fn('parseMaxspeed') + fn('speedAt') + ';this.p = parseMaxspeed; this.at = speedAt;', ctx);
+  assert.strictEqual(ctx.p('90'), 90);
+  assert.strictEqual(ctx.p('110 km/h'), 110);
+  assert.strictEqual(ctx.p('50 mph'), 80);
+  assert.strictEqual(ctx.p('MY:urban'), 0);
+  const iv = [{ s: 0, e: 5000, v: 90 }, { s: 1000, e: 1200, v: 60 }];
+  assert.strictEqual(ctx.at(iv, 500), 90);
+  assert.strictEqual(ctx.at(iv, 1100), 60);       // selang terpendek (jalan kecil di dalam) diutamakan
+  assert.strictEqual(ctx.at(iv, 9000), 0);
+  assert.match(s, /speedLimit: -1,/);              // lalai: Automatik untuk pengguna baharu
+});
+
+test('saluran uji: lapor satu tekan (Polis, Kemalangan, Sesak, Bahaya)', () => {
+  const s = clientScript('IndexUji.html');
+  assert.match(s, /const QUICK_TYPES = \['POLIS', 'KEMALANGAN', 'SESAK', 'BAHAYA'\]/);
+  assert.match(s, /sendReport\(\[\{ type: b\.dataset\.quick/);
+});
+
+test('saluran uji: jimat bateri — GPS ketepatan rendah & segar 60 s bila diam lama', () => {
+  const s = clientScript('IndexUji.html');
+  assert.match(s, /enableHighAccuracy: false/);
+  assert.match(s, /if \(!isIdle\(\) \|\| Date\.now\(\) - \(state\.lastRefreshAt \|\| 0\) >= 60000\) refresh\(\)/);
+});
+
+test('saluran uji: kesesakan automatik dari pengguna lain (arah sama, ≥ 2 perlahan)', () => {
+  const s = clientScript('IndexUji.html');
+  assert.match(s, /function autoJams\(r, box\)/);
+  assert.match(s, /autoJams\(r, box\)\.forEach\(x => raw\.push\(x\)\)/);
+  assert.match(s, /sameDirection\(\{ heading: u\.dir \}/);
+});

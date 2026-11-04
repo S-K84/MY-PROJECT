@@ -7,7 +7,7 @@
 
 // Versi aplikasi — SATU-SATUNYA tempat versi ditulis. Ia disuntik ke Index.html oleh doGet() (menu ☰ & skrin ralat).
 // Naikkan setiap kali kod berubah supaya mudah semak telefon sudah guna kod terkini.
-const APP_VERSION = '2026.11.04-n';
+const APP_VERSION = '2026.11.04-p';
 
 const CONFIG = {
   // ttlMin = berapa minit laporan kekal aktif sebelum luput
@@ -615,11 +615,14 @@ function updateLocation(token, u) {
 
   const cache = CacheService.getScriptCache(), now = Date.now(), nowSec = Math.floor(now / 1000);
   const prev = parseJson_(cache.get('u_' + userId));
-  // Simpan koordinat dibundarkan (~10 m) — cukup untuk peta, kurang tepat untuk penjejakan. Arah tidak disimpan.
+  // Simpan koordinat dibundarkan (~10 m) — cukup untuk peta, kurang tepat untuk penjejakan. Arah hanya disimpan kasar
+  // (8 mata angin) untuk mengesan kesesakan automatik pada arah yang betul (lebuh raya dua hala).
+  const hd = Number(u.heading);
   const rec = {
     n: String(u.name == null ? '' : u.name).replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 30) || 'Tanpa Nama',
     lat: round_(lat, 4), lng: round_(lng, 4), v: clamp_(Number(u.speed) || 0, 0, 300),
     m: MOODS.indexOf(String(u.mood)) >= 0 ? String(u.mood) : '', t: now,
+    h: u.heading != null && isFinite(hd) && hd >= 0 && hd <= 360 ? Math.round(hd / 45) % 8 : -1,
     s: prev && nowSec - Number(prev.s || 0) < USER_SEEN_SEC_ ? Number(prev.s) : 0
   };
   if (!rec.s) {
@@ -662,9 +665,13 @@ function getActiveUsers_(myId, near) {
     });
   }
   return found.sort((a, b) => a.d - b.d).slice(0, USERS_SENT_MAX_)
-    // Data awam dikaburkan: koordinat ~100 m, kelajuan dibundarkan, tiada arah atau ID.
-    .map(x => ({ name: String(x.r.n || ''), lat: round_(Number(x.r.lat), 3), lng: round_(Number(x.r.lng), 3),
-      speed: Math.round(Number(x.r.v) / 10) * 10, mood: MOODS.indexOf(String(x.r.m)) >= 0 ? String(x.r.m) : '' }));
+    // Data awam dikaburkan: koordinat ~100 m, kelajuan dibundarkan, arah kasar (8 mata angin), tiada ID.
+    .map(x => {
+      const h = Number(x.r.h), o = { name: String(x.r.n || ''), lat: round_(Number(x.r.lat), 3), lng: round_(Number(x.r.lng), 3),
+        speed: Math.round(Number(x.r.v) / 10) * 10, mood: MOODS.indexOf(String(x.r.m)) >= 0 ? String(x.r.m) : '' };
+      if (h >= 0 && h <= 7) o.dir = h * 45;
+      return o;
+    });
 }
 
 /** Satu panggilan untuk segarkan semua data peta (jimat kuota). */
