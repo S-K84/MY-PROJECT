@@ -7,7 +7,7 @@
 
 // Versi aplikasi — SATU-SATUNYA tempat versi ditulis. Ia disuntik ke Index.html oleh doGet() (menu ☰ & skrin ralat).
 // Naikkan setiap kali kod berubah supaya mudah semak telefon sudah guna kod terkini.
-const APP_VERSION = '2026.11.04-r';
+const APP_VERSION = '2026.11.04-s';
 
 const CONFIG = {
   // ttlMin = berapa minit laporan kekal aktif sebelum luput
@@ -533,6 +533,30 @@ function rebuildReports_() {
 }
 
 /** up = true ("masih ada") memanjangkan tempoh; false ("tiada lagi") menambah undi tidak. */
+/**
+ * Pelapor memadam laporannya sendiri (cth. tersalah tekan lapor pantas, atau polis sudah tiada).
+ * Hanya pengguna yang membuat laporan (lajur PenggunaID) dibenarkan — semakan di server, bukan di klien.
+ */
+function deleteMyReport(token, id) {
+  const userId = verify_(token);
+  id = String(id || '');
+  if (!/^[0-9a-f-]{8,36}$/i.test(id)) throw new Error('Laporan tidak dijumpai.');
+  rateLimitAll_([['vote', userId], ['G_vote']]);
+  const lock = lock_();
+  try {
+    const sh = getSheet_(SHEET_REPORTS), last = sh.getLastRow();
+    const rows = last < 2 ? [] : sh.getRange(2, 1, last - 1, 6).getValues();
+    const i = rows.findIndex(v => String(v[0]) === id);
+    if (i < 0) throw new Error('Laporan tidak dijumpai.');
+    if (String(rows[i][5]) !== userId) throw new Error('Hanya pelapor boleh memadam laporan ini.');
+    sh.deleteRow(i + 2);
+    rebuildReports_();
+    return { ok: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function voteReport(token, id, up) {
   const userId = verify_(token);
   id = String(id || '');

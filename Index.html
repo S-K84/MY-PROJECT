@@ -1000,7 +1000,8 @@ const EN = {
   'Boleh pilih lebih daripada satu (maks 5)': 'You can pick more than one (max 5)',
   'Atau pilih jenis & butiran (boleh lebih daripada satu, maks 5)': 'Or choose type & details (more than one allowed, max 5)',
   'Versi baharu tersedia': 'New version available', 'Muat semula untuk kemas kini JalanKita': 'Reload to update JalanKita',
-  'Nanti': 'Later', 'Seterusnya': 'Next', 'Hantar': 'Send', 'Batal': 'Cancel',
+  'Nanti': 'Later', '🗑️ Padam laporan saya': '🗑️ Delete my report',
+  'Hanya pelapor boleh memadam laporan ini.': 'Only the person who reported this can delete it.', 'Seterusnya': 'Next', 'Hantar': 'Send', 'Batal': 'Cancel',
   'Tambah komen (pilihan)': 'Add a comment (optional)', 'Maksimum 5 jenis dalam satu laporan.': 'Maximum 5 types in one report.',
   'Pilih jenis laporan.': 'Choose a report type.', 'Laporan dihantar. Terima kasih! 🙏': 'Report sent. Thank you! 🙏',
   'Polis': 'Police', 'Kemalangan': 'Accident', 'Kesesakan': 'Traffic jam', 'Bahaya': 'Hazard', 'Banjir': 'Flood',
@@ -2383,7 +2384,10 @@ function reportPopup(r) {       // dibina semasa popup dibuka, jadi "x min lalu"
       ${r.heading != null ? `<span class="pop-muted">➤ Arah ke ${compassName(Number(r.heading))}</span><br>` : ''}
       <span class="pop-muted">oleh ${esc(r.name)} · ${ago(r.time)} · 👍${Number(r.up)} 👎${Number(r.down)}</span><br>
       <button data-vote="1" data-id="${esc(r.id)}">👍 Masih ada</button>
-      <button data-vote="0" data-id="${esc(r.id)}">👎 Tiada lagi</button>`;
+      <button data-vote="0" data-id="${esc(r.id)}">👎 Tiada lagi</button>` +
+    // Laporan saya sendiri (diingat di telefon ini) → boleh dipadam terus; server menyemak pelapor sebenar
+    (getJSONMemo('jk_mine', []).indexOf(String(r.id)) >= 0
+      ? `<br><button data-del-mine="${esc(r.id)}" style="margin-top:6px">🗑️ Padam laporan saya</button>` : '');
 }
 function drawReports() {
   if (state.popupOpen) { state.reportsDirty = true; return; }
@@ -3960,7 +3964,17 @@ $('btnSound').onclick = () => { setSound(!soundOn); toast(soundOn ? '🔊 Suara 
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-vote]');
   if (b) vote(b.dataset.id, b.dataset.vote === '1');
+  const d = e.target.closest('[data-del-mine]');
+  if (d) deleteMine(d.dataset.delMine, d);
 });
+async function deleteMine(id, btn) {
+  if (btn.dataset.sure !== '1') { btn.dataset.sure = '1'; btn.textContent = 'Pasti? Tekan lagi'; return; }
+  btn.disabled = true;
+  try {
+    await call('deleteMyReport', token, id);
+    toast('🗑️ Laporan dipadam.'); map.closePopup(); refresh();
+  } catch (e) { btn.disabled = false; toast(isNetErr(e) ? '📵 Tiada liputan.' : (e.message || e)); }
+}
 $('btnName').onclick = () => {
   userName = $('nameInput').value.trim() || 'Pemandu';
   store.set('jk_name', userName);

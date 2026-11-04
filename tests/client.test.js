@@ -149,3 +149,11 @@ test('Index.html: ciri yang disahkan di jalan (had laju & kesesakan automatik, l
   assert.match(s, /function photonDirect\(/);
   assert.ok(!/call\('updateLocation'/.test(s));
 });
+
+test('popup laporan: butang "Padam laporan saya" untuk laporan sendiri (Index & IndexUji)', () => {
+  ['Index.html', 'IndexUji.html'].forEach(f => {
+    const s = clientScript(f);
+    assert.match(s, /data-del-mine=/, f);
+    assert.match(s, /call\('deleteMyReport', token, id\)/, f);
+  });
+});
