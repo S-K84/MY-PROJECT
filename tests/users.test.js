@@ -95,3 +95,24 @@ test('arah tidak diketahui → tiada "dir"', () => {
   const u = ctx.getActiveUsers_('g_A', KL)[0];
   assert.ok(!('dir' in u));
 });
+
+test('getLiveData: lokasi ikut sekali (satu pelaksanaan, bukan dua) & versi server dipulangkan', () => {
+  const { ctx, seen } = setup();
+  const d = ctx.getLiveData('g_B', KL.lat, KL.lng, { lat: 3.150, lng: 101.700, name: 'g_B', speed: 40, mood: '😎' });
+  assert.ok(Array.isArray(d.reports) && Array.isArray(d.users));
+  assert.strictEqual(d.v, require('vm').runInContext('APP_VERSION', ctx));
+  assert.strictEqual(seen('g_A'), 'g_B');          // lokasi g_B disimpan melalui getLiveData
+  // tanpa loc: tiada perubahan, tetap berfungsi
+  assert.ok(Array.isArray(ctx.getLiveData('g_A', KL.lat, KL.lng).users));
+});
+
+test('getLiveData: had lokasi habis → data peta tetap dipulangkan', () => {
+  const { ctx } = setup();
+  let limited = false;
+  for (let i = 0; i < 450 && !limited; i++) {
+    try { ctx.updateLocation('g_Z', { lat: 3.15, lng: 101.70 }); } catch (e) { limited = /Terlalu banyak/.test(e.message); }
+  }
+  assert.ok(limited, 'had lokasi sepatutnya dicapai');
+  const d = ctx.getLiveData('g_Z', KL.lat, KL.lng, { lat: 3.15, lng: 101.70 });
+  assert.ok(Array.isArray(d.reports));
+});

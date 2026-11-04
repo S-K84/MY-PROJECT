@@ -130,3 +130,11 @@ test('saluran uji: kesesakan automatik dari pengguna lain (arah sama, ≥ 2 perl
   assert.match(s, /autoJams\(r, box\)\.forEach\(x => raw\.push\(x\)\)/);
   assert.match(s, /sameDirection\(\{ heading: u\.dir \}/);
 });
+
+test('saluran uji: lokasi ikut getLiveData, tunda bila server sibuk, tawar muat semula versi baharu', () => {
+  const s = clientScript('IndexUji.html');
+  assert.ok(!/call\('updateLocation'/.test(s), 'lokasi masih dihantar dalam panggilan berasingan');
+  assert.match(s, /call\('getLiveData', token, me\.lat, me\.lng, loc\)/);
+  assert.match(s, /state\.liveBackoffUntil = Date\.now\(\) \+ state\.liveBackoff/);
+  assert.match(s, /function checkVersion\(v\)/);
+});
