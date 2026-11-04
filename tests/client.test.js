@@ -9,11 +9,17 @@ test('skrip utama Index.html tiada ralat sintaks', () => {
   assert.doesNotThrow(() => new vm.Script(clientScript(), { filename: 'Index.html' }));
 });
 
+test('saluran uji: IndexUji.html (jika ada) tiada ralat sintaks dan dihantar oleh clasp', () => {
+  if (!fs.existsSync(path.join(ROOT, 'IndexUji.html'))) return;
+  assert.doesNotThrow(() => new vm.Script(clientScript('IndexUji.html'), { filename: 'IndexUji.html' }));
+  assert.match(fs.readFileSync(path.join(ROOT, '.claspignore'), 'utf8'), /^!IndexUji\.html$/m);
+});
+
 test('versi ditulis di satu tempat sahaja (Code.gs) dan disuntik ke Index.html', () => {
   const code = fs.readFileSync(path.join(ROOT, 'Code.gs'), 'utf8');
   const html = fs.readFileSync(path.join(ROOT, 'Index.html'), 'utf8');
   assert.match(code, /^const APP_VERSION = '\d{4}\.\d{2}\.\d{2}-[a-z]';$/m);
-  assert.match(code, /t\.versionJson = jsonForScript_\(APP_VERSION\)/);
+  assert.match(code, /t\.versionJson = jsonForScript_\(APP_VERSION\b/);
   assert.ok(!/\d{4}\.\d{2}\.\d{2}-[a-z]/.test(html), 'Index.html masih ada versi yang ditulis terus');
   assert.strictEqual((html.match(/<\?!= versionJson \?>/g) || []).length, 2);
 });
