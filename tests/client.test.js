@@ -85,3 +85,12 @@ test('saluran uji: garisan laluan & trafik dilukis pada Canvas (SVG berkelip di 
   assert.ok(lines.length >= 2, 'garisan laluan/trafik tidak dijumpai');
   lines.forEach(x => assert.match(x, /renderer: lineRenderer/));
 });
+
+test('Index.html: pembaikan kelipan (disahkan di iPhone melalui saluran uji) — jubin & garisan laluan', () => {
+  const s = clientScript();
+  assert.match(s, /L\.map\('map', \{[^}]*fadeAnimation: false/);
+  assert.match(s, /L\.tileLayer\([^)]*updateWhenIdle: false/);
+  assert.match(s, /const lineRenderer = L\.canvas\(/);
+  assert.match(s, /function moveMeMarker\(/);
+  assert.ok(!/reportLayer\.clearLayers\(\)/.test(s), 'pin laporan masih dicipta semula setiap kali');
+});
