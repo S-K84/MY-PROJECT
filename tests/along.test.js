@@ -30,3 +30,18 @@ test('saluran uji: Overpass dari telefon ditanya serentak (bukan satu demi satu)
   assert.ok(!/for \(let k = 0; k < OVERPASS\.length; k\+\+\)/.test(s), 'pelayan Overpass masih dicuba satu demi satu');
   assert.match(s, /const hedge = setTimeout\(startDirect, 5000\)/);
 });
+
+test('saluran uji: pertanyaan Overpass guna kotak kecil sepanjang laluan (bukan "around" 60 km yang tamat masa)', () => {
+  const s = clientScript('IndexUji.html');
+  const vm = require('vm');
+  const ctx = {};
+  vm.runInNewContext(s.match(/function alongQuery\(c, pts\) \{[\s\S]*?\n\}/)[0] + ';this.f = alongQuery;', ctx);
+  const pts = Array.from({ length: 60 }, (_, i) => [3.1 + i * 0.009, 101.7 + i * 0.002]);
+  const q = ctx.f(['["amenity"="fuel"]', 300, 'Stesen minyak'], pts);
+  assert.ok(!/around:/.test(q));
+  const boxes = q.match(/nw\["amenity"="fuel"\]\(([\d.,-]+)\);/g);
+  assert.ok(boxes.length >= 14 && boxes.length <= 16, 'bilangan kotak: ' + boxes.length);
+  // setiap titik laluan berada dalam sekurang-kurangnya satu kotak
+  const bb = boxes.map(b => b.match(/\(([^)]*)\)/)[1].split(',').map(Number));
+  pts.forEach(p => assert.ok(bb.some(b => p[0] >= b[0] && p[0] <= b[2] && p[1] >= b[1] && p[1] <= b[3])));
+});
