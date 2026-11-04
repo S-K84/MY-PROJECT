@@ -7,7 +7,7 @@
 
 // Versi aplikasi — SATU-SATUNYA tempat versi ditulis. Ia disuntik ke Index.html oleh doGet() (menu ☰ & skrin ralat).
 // Naikkan setiap kali kod berubah supaya mudah semak telefon sudah guna kod terkini.
-const APP_VERSION = '2026.11.04-c';
+const APP_VERSION = '2026.11.04-d';
 
 const CONFIG = {
   // ttlMin = berapa minit laporan kekal aktif sebelum luput
@@ -79,7 +79,10 @@ const MOODS = ['🙂', '😎', '🤠', '😇', '🥳', '😴', '🤓', '😤', '
 // ---------------------------------------------------------------- Web app
 
 function doGet(e) {
-  const t = HtmlService.createTemplateFromFile('Index');
+  // Saluran uji: PEMILIK boleh buka .../exec?uji=1 untuk mencuba IndexUji.html di telefon sebelum perubahan berisiko
+  // dihantar kepada semua pengguna (Index.html). Pengguna lain sentiasa mendapat Index.html.
+  const uji = !!(e && e.parameter && e.parameter.uji === '1') && isOwner_();
+  const t = HtmlService.createTemplateFromFile(uji ? 'IndexUji' : 'Index');
   t.typesJson = jsonForScript_(CONFIG.REPORT_TYPES);
   // Pautan kongsi: .../exec?to=3.1390,101.6869&name=KLCC → terus kira laluan
   t.initialJson = jsonForScript_(startParam_(e && e.parameter));
@@ -87,7 +90,7 @@ function doGet(e) {
   const tr = String((e && e.parameter && e.parameter.track) || '');
   t.trackJson = jsonForScript_(SHARE_ID_RE_.test(tr) ? tr : null);
   t.appUrlJson = jsonForScript_(ScriptApp.getService().getUrl() || '');
-  t.versionJson = jsonForScript_(APP_VERSION);
+  t.versionJson = jsonForScript_(APP_VERSION + (uji ? ' (uji)' : ''));
   // Tiada setXFrameOptionsMode(ALLOWALL): halaman tidak boleh dibenam oleh laman lain (clickjacking).
   return t.evaluate()
     .setTitle('JalanKita')

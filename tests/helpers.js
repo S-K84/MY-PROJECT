@@ -113,8 +113,8 @@ function loadCode(extraGlobals) {
 }
 
 /** Skrip utama Index.html, dengan tag templat HtmlService diganti nilai contoh. */
-function clientScript() {
-  const html = fs.readFileSync(path.join(ROOT, 'Index.html'), 'utf8');
+function clientScript(file) {
+  const html = fs.readFileSync(path.join(ROOT, file || 'Index.html'), 'utf8');
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
   const main = scripts[scripts.length - 1];
   return main.replace('<?!= typesJson ?>', '{}').replace('<?!= initialJson ?>', 'null')

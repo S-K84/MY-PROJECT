@@ -20,6 +20,9 @@ JalanKita ialah aplikasi navigasi & laporan trafik komuniti (ala Waze): **Google
    Ia satu-satunya tempat versi ditulis, dan disuntik ke `Index.html` melalui `<?!= versionJson ?>`.
    Pemilik menyemak versi di telefon (menu ☰, bahagian bawah).
 6. Tambah ujian dalam `tests/` untuk setiap pembaikan atau ciri baharu, dan pastikan ujian itu **gagal pada kod lama**.
+7. **Saluran uji** untuk perubahan klien yang berisiko: letak kod baharu dalam `IndexUji.html`, merge, kemudian pemilik buka
+   `.../exec?uji=1` di telefon (hanya pemilik; versi ditanda "(uji)"). Bila sudah disahkan di telefon sebenar, salin ke
+   `Index.html` dalam PR berasingan. Lulus ujian Chromium/Node **tidak** menjamin Safari iPhone berfungsi (lihat PR #5/#6).
 
 ## Keselamatan
 - **Jangan minta** isi `.clasprc.json` atau nilai secret GitHub (`CLASPRC_JSON`, `SCRIPT_ID`, `DEPLOYMENT_ID` dalam
@@ -55,6 +58,9 @@ JalanKita ialah aplikasi navigasi & laporan trafik komuniti (ala Waze): **Google
 - **Setiap mesej ralat server baharu mesti ada terjemahan** dalam `EN` (`Index.html`). `tests/i18n.test.js` akan gagal jika tiada.
 - Peraturan `EN_RULES` disemak sebelum pemecahan `' · '`. Jangan tulis corak yang menelan seluruh baris (contoh `^oleh (.+)$`).
 - Teks paparan ditulis dalam BM dalam kod; terjemahan English berlaku pada DOM (MutationObserver). Teks dinamik perlukan corak dalam `EN_RULES`.
+- **PR #5 (2026.11.04-b) gagal di Safari iPhone** dengan `SyntaxError: Unexpected EOF (baris 1946)` walaupun lulus semua ujian
+  dan sah dalam V8/acorn/esprima/QuickJS; ditarik balik dalam PR #6. Skrin ralat kini memaparkan diagnostik (panjang & hujung
+  skrip yang diterima pelayar) untuk siasatan melalui saluran uji.
 
 ## Ujian
 ```bash

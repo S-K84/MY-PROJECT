@@ -30,6 +30,14 @@
       pre.textContent = 'Versi: ' + <?!= versionJson ?> + '\nPustaka peta (Leaflet): ' + (window.L ? 'dimuat' : 'TIDAK DIMUAT') +
         '\nPutaran peta: ' + (window.L && L.Map && L.Map.prototype.setBearing ? 'dimuat' : 'tiada') +
         '\nRalat:\n' + (window.__bootErrors.length ? window.__bootErrors.join('\n') : '(tiada ralat dilaporkan)');
+      // Diagnostik: apa yang sebenarnya diterima pelayar (skrip paling panjang = skrip utama aplikasi)
+      try {
+        var sc = document.getElementsByTagName('script'), big = null;
+        for (var i = 0; i < sc.length; i++) if (!big || sc[i].text.length > big.text.length) big = sc[i];
+        if (big) pre.textContent += '\n\nSkrip utama: ' + big.text.length + ' aksara, ' + big.text.split('\n').length +
+          ' baris\nHujung skrip: ' + JSON.stringify(big.text.slice(-70)) +
+          '\nHalaman: ' + document.documentElement.outerHTML.length + ' aksara, ' + sc.length + ' skrip';
+      } catch (x) { pre.textContent += '\n(diagnostik gagal: ' + x.message + ')'; }
       var p = document.createElement('p'); p.textContent = 'Tangkap skrin mesej ini dan hantar kepada pembangun.';
       var btn = document.createElement('button'); btn.textContent = 'Muat semula';
       btn.style.cssText = 'width:100%;padding:14px;border:0;border-radius:999px;background:#33ccff;font-weight:700;font-size:17px';
