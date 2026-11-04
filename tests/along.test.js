@@ -35,7 +35,8 @@ test('saluran uji: pertanyaan Overpass guna kotak kecil sepanjang laluan (bukan 
   const s = clientScript('IndexUji.html');
   const vm = require('vm');
   const ctx = {};
-  vm.runInNewContext(s.match(/function alongQuery\(c, pts\) \{[\s\S]*?\n\}/)[0] + ';this.f = alongQuery;', ctx);
+  const fn = name => s.match(new RegExp('function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}'))[0];
+  vm.runInNewContext(fn('alongQuery') + fn('routeBoxes') + ';this.f = alongQuery;', ctx);
   const pts = Array.from({ length: 60 }, (_, i) => [3.1 + i * 0.009, 101.7 + i * 0.002]);
   const q = ctx.f(['["amenity"="fuel"]', 300, 'Stesen minyak'], pts);
   assert.ok(!/around:/.test(q));
