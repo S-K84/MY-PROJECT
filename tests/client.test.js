@@ -66,3 +66,11 @@ test('skrip dalam halaman: tiada "//" atau "/*" di dalam teks (selamat daripada 
     assert.deepStrictEqual(bad, []);
   });
 });
+
+test('saluran uji: peta tidak berkelip semasa bergerak (tiada pudar jubin, jubin dimuat semasa bergerak)', () => {
+  const f = path.join(ROOT, 'IndexUji.html');
+  if (!fs.existsSync(f)) return;
+  const s = clientScript('IndexUji.html');
+  assert.match(s, /L\.map\('map', \{[^}]*fadeAnimation: false/);
+  assert.match(s, /L\.tileLayer\([^)]*updateWhenIdle: false/);
+});
