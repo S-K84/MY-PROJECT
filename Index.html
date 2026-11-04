@@ -866,7 +866,7 @@ function applyBearing() {
   state.smoothHead = state.smoothHead == null ? state.heading
     : (state.smoothHead + angDiff(state.smoothHead, state.heading) * 0.5 + 360) % 360;
   const target = (360 - state.smoothHead) % 360;
-  if (Math.abs(angDiff(mapBearing(), target)) > 2) map.setBearing(target);
+  if (Math.abs(angDiff(mapBearing(), target)) > 3) map.setBearing(target);   // abaikan goyangan kecil arah GPS
 }
 
 /** Anak panah kereta & jarum kompas mengikut putaran peta (sudut skrin = arah + putaran peta). */
@@ -922,7 +922,8 @@ function followMe(snap) {
     const pt = map.project(target, zoom).add([-d * Math.sin(b), -d * Math.cos(b)]);
     target = map.unproject(pt, zoom);
   }
-  map.setView(target, zoom, { animate: !snap });
+  map.setView(target, zoom, snap || !state.glideMs ? { animate: !snap }
+    : { animate: true, pan: { duration: state.glideMs / 1000, easeLinearity: 1 } });   // seiring dengan anak panah
   updateArrow();
 }
 
@@ -2133,11 +2134,30 @@ function setHidden(v) {
 }
 
 // ------------------------------------------------------------ Lokasi
+// Gerakan lancar seperti Google Maps: anak panah & peta meluncur ke kedudukan baharu sepanjang selang antara dua bacaan GPS
+// (biasanya ~1 s). Dahulu anak panah melompat dan peta beranjak dalam 0.25 s lalu berhenti — kelihatan tersentak/berkelip.
+let meAnim = 0;
+function moveMeMarker(lat, lng, ms) {
+  cancelAnimationFrame(meAnim);
+  const from = meMarker.getLatLng();
+  if (!ms || !map.hasLayer(meMarker) || dist(from, { lat, lng }) > 300) { meMarker.setLatLng([lat, lng]); return; }
+  const t0 = performance.now();
+  const step = now => {
+    const k = Math.min(1, (now - t0) / ms);
+    meMarker.setLatLng([from.lat + (lat - from.lat) * k, from.lng + (lng - from.lng) * k]);
+    if (k < 1) meAnim = requestAnimationFrame(step);
+  };
+  meAnim = requestAnimationFrame(step);
+}
+
 function setMe(pos) {
-  const first = !state.me;
+  const first = !state.me, prev = state.me;
   if (state.me && pos.heading == null && dist(state.me, pos) > 8) pos.heading = bearing(state.me, pos);
+  // Luncur hanya bila bergerak & peta mengikut kereta; tempoh = selang antara bacaan GPS (0.3–1 s)
+  state.glideMs = prev && prev.t && pos.t && state.follow && (pos.speed || 0) > 3
+    ? Math.min(1000, Math.max(300, pos.t - prev.t)) : 0;
   state.me = pos;
-  meMarker.setLatLng([pos.lat, pos.lng]);
+  moveMeMarker(pos.lat, pos.lng, state.glideMs);
   if (pos.heading != null && !isNaN(pos.heading)) { state.heading = pos.heading; state.headingAt = Date.now(); }
   if (!map.hasLayer(meMarker)) meMarker.addTo(map);
   updateArrow();
@@ -2280,33 +2300,59 @@ map.on('popupclose', () => {
   state.popupOpen = false;
   if (state.reportsDirty) { state.reportsDirty = false; drawReports(); }
 });
-function drawReports() {
-  if (state.popupOpen) { state.reportsDirty = true; return; }
-  reportLayer.clearLayers();
-  state.reports.filter(r => S.repTypes.indexOf(r.type) >= 0).forEach(r => {
-    const t = TYPES[r.type] || { icon: '❓', label: r.type };
-    const color = COLORS[r.type] || '#607d8b';
-    const m = L.marker([r.lat, r.lng], {
-      icon: L.divIcon({ className: '', html: `<div class="rep-pin" style="background:${color}">${t.icon}</div>`,
-        iconSize: [38, 38], iconAnchor: [19, 19] })
-    });
-    m.bindPopup(`<b>${t.icon} ${esc(t.label)}</b><br>
+// Pin dikemas kini secara berperingkat (bukan clearLayers + cipta semula setiap 15 s, yang membuat pin berkelip):
+// pin yang tidak berubah dikekalkan, yang berubah dikemas kini, yang hilang dibuang.
+const repMarkers = new Map();   // id laporan → { m: marker, key }
+function reportPopup(r) {       // dibina semasa popup dibuka, jadi "x min lalu" & undian sentiasa terkini
+  const t = TYPES[r.type] || { icon: '❓', label: r.type };
+  return `<b>${t.icon} ${esc(t.label)}</b><br>
       ${r.desc ? esc(r.desc) + '<br>' : ''}
       ${r.heading != null ? `<span class="pop-muted">➤ Arah ke ${compassName(Number(r.heading))}</span><br>` : ''}
       <span class="pop-muted">oleh ${esc(r.name)} · ${ago(r.time)} · 👍${Number(r.up)} 👎${Number(r.down)}</span><br>
       <button data-vote="1" data-id="${esc(r.id)}">👍 Masih ada</button>
-      <button data-vote="0" data-id="${esc(r.id)}">👎 Tiada lagi</button>`);
-    reportLayer.addLayer(m);
+      <button data-vote="0" data-id="${esc(r.id)}">👎 Tiada lagi</button>`;
+}
+function drawReports() {
+  if (state.popupOpen) { state.reportsDirty = true; return; }
+  const keep = new Set();
+  state.reports.filter(r => S.repTypes.indexOf(r.type) >= 0).forEach(r => {
+    keep.add(r.id);
+    const key = [r.type, r.lat, r.lng].join('|'), cur = repMarkers.get(r.id);
+    if (cur && cur.key === key) { cur.r = r; return; }            // tiada perubahan pada pin
+    if (cur) reportLayer.removeLayer(cur.m);
+    const t = TYPES[r.type] || { icon: '❓', label: r.type }, color = COLORS[r.type] || '#607d8b';
+    const entry = { key, r };
+    entry.m = L.marker([r.lat, r.lng], {
+      icon: L.divIcon({ className: '', html: `<div class="rep-pin" style="background:${color}">${t.icon}</div>`,
+        iconSize: [38, 38], iconAnchor: [19, 19] })
+    }).bindPopup(() => reportPopup(entry.r));
+    reportLayer.addLayer(entry.m);
+    repMarkers.set(r.id, entry);
   });
+  repMarkers.forEach((v, id) => { if (!keep.has(id)) { reportLayer.removeLayer(v.m); repMarkers.delete(id); } });
 }
 
+const userMarkers = [];         // pengguna lain tiada ID (privasi) → dipadankan ikut nama & mood, kemudian dialihkan
 function drawUsers(users) {
-  userLayer.clearLayers();
+  const pool = userMarkers.splice(0), used = [];
   users.forEach(u => {
-    const face = esc(MOODS.indexOf(u.mood) >= 0 ? u.mood : '🚙');
-    L.marker([u.lat, u.lng], { icon: L.divIcon({ className: '', html: `<div class="wazer">${face}</div>`, iconSize: [24, 24] }) })
-      .bindTooltip(esc(u.name) + (u.speed ? ` · ${fmtSpeed(u.speed)} ${speedUnit()}` : '')).addTo(userLayer);
+    const face = MOODS.indexOf(u.mood) >= 0 ? u.mood : '🚙';
+    const tip = esc(u.name) + (u.speed ? ` · ${fmtSpeed(u.speed)} ${speedUnit()}` : '');
+    const i = pool.findIndex(x => x.name === u.name && x.face === face);
+    let e;
+    if (i >= 0) {
+      e = pool.splice(i, 1)[0];
+      const ll = e.m.getLatLng();
+      if (ll.lat !== u.lat || ll.lng !== u.lng) e.m.setLatLng([u.lat, u.lng]);
+      if (e.tip !== tip) { e.tip = tip; e.m.setTooltipContent(tip); }
+    } else {
+      e = { name: u.name, face, tip, m: L.marker([u.lat, u.lng], { icon: L.divIcon({ className: '',
+        html: `<div class="wazer">${esc(face)}</div>`, iconSize: [24, 24] }) }).bindTooltip(tip).addTo(userLayer) };
+    }
+    used.push(e);
   });
+  pool.forEach(e => userLayer.removeLayer(e.m));
+  userMarkers.push(...used);
 }
 
 async function vote(id, up) {
@@ -2417,6 +2463,7 @@ function hazardsOnRoute(route) {
 }
 
 function drawRoutes() {
+  state.trafficKey = null;            // garisan laluan dilukis semula → trafik mesti dilukis semula di atasnya
   state.routeLayers.forEach(l => l.remove());
   state.routeLayers = [];
   state.routes.forEach((r, i) => {
@@ -2489,33 +2536,43 @@ function slicePts(r, s, e) {
 }
 
 function drawTraffic() {
+  const r = state.routes[state.selRoute];
+  const segs = r ? trafficSegs(r) : [];
+  if (r) r.traffic = segs;
+  // Lukis semula hanya bila bahagian sesak berubah (dahulu dibuang & dilukis semula setiap 15 s → garisan berkelip)
+  const key = r ? JSON.stringify([r.polyline, segs.map(t => [Math.round(t.s), Math.round(t.e), t.lvl])]) : '';
+  if (key === state.trafficKey && (state.trafficLayers || []).every(l => map.hasLayer(l))) return;
+  state.trafficKey = key;
   (state.trafficLayers || []).forEach(l => l.remove());
   state.trafficLayers = [];
-  const r = state.routes[state.selRoute]; if (!r) return;
-  r.traffic = trafficSegs(r);
-  r.traffic.forEach(t => {
+  if (!r) return;
+  segs.forEach(t => {
     const pts = slicePts(r, t.s, t.e); if (pts.length < 2) return;
     state.trafficLayers.push(L.polyline(pts, { color: JAM_COLOR[t.lvl], weight: 8, opacity: .95, interactive: false }).addTo(map));
   });
 }
 
 /** Ringkasan lewat akibat trafik (dari Google): 🟢 lancar / 🟠 / 🔴 +n min. */
-function delayHtml(sec) {
-  if (sec == null || isNaN(sec)) return '';
+function delayInfo(sec) {           // { c: warna, t: teks } atau null
+  if (sec == null || isNaN(sec)) return null;
   const m = Math.round(sec / 60);
-  if (m < 2) return '<span style="color:var(--t-green)">🟢 Trafik lancar</span>';
-  return `<span style="color:${m >= 10 ? 'var(--t-red)' : 'var(--t-orange)'}">${m >= 10 ? '🔴' : '🟠'} +${m} min akibat trafik</span>`;
+  if (m < 2) return { c: 'var(--t-green)', t: '🟢 Trafik lancar' };
+  return { c: m >= 10 ? 'var(--t-red)' : 'var(--t-orange)', t: `${m >= 10 ? '🔴' : '🟠'} +${m} min akibat trafik` };
+}
+function delayHtml(sec) {
+  const d = delayInfo(sec);
+  return d ? `<span style="color:${d.c}">${esc(d.t)}</span>` : '';
 }
 
-/** Status trafik semasa navigasi: kesesakan seterusnya di hadapan, atau ringkasan lewat. */
-function navTrafficHtml(r, frac) {
+/** Status trafik semasa navigasi: kesesakan seterusnya di hadapan, atau ringkasan lewat. { c, t } atau null. */
+function navTrafficInfo(r, frac) {
   const j = state.jamAhead;
   if (j) {
-    const c = JAM_TEXT[j.lvl], word = j.lvl > 1 ? 'Sesak' : 'Perlahan';
-    return `<span style="color:${c}">${j.lvl > 1 ? '🔴' : '🟠'} ${j.d > 0 ? word + ' dalam ' + fmtDist(j.d) : word + ' di sini'}</span>`;
+    const word = j.lvl > 1 ? 'Sesak' : 'Perlahan';
+    return { c: JAM_TEXT[j.lvl], t: `${j.lvl > 1 ? '🔴' : '🟠'} ${j.d > 0 ? word + ' dalam ' + fmtDist(j.d) : word + ' di sini'}` };
   }
   const delay = r.fresh ? r.fresh.delay : r.delaySec;
-  return delay == null ? '' : delayHtml(delay * (r.fresh ? freshRatio(r) : frac));
+  return delay == null ? null : delayInfo(delay * (r.fresh ? freshRatio(r) : frac));
 }
 
 function renderRouteChoices() {
@@ -2906,21 +2963,37 @@ function navHeader(t) {
     ${t.st.exit ? `<span class="exit-badge">EXIT ${esc(t.st.exit)}</span>` : ''}`;
 }
 
+/** Tukar teks elemen hanya bila nilainya berubah (dibanding nilai BM asal — terjemahan English menukar textContent). */
+function setText(el, t) { if (el && el.__jkText !== t) { el.__jkText = t; el.textContent = t; } }
+
+// Semasa memandu, renderNav dipanggil pada SETIAP bacaan GPS (~sesaat). Dahulu banner & panel dibina semula sepenuhnya
+// (innerHTML) setiap kali jarak/masa berubah — elemen & ikon SVG dicipta semula setiap saat, punca skrin "berkelip" di
+// telefon. Kini struktur dibina sekali (banner: bila belokan berubah; panel: sekali setiap navigasi) dan hanya teks dikemas kini.
 function renderNav() {
   const r = state.routes[state.selRoute]; if (!r) return;
-  const turns = upcomingTurns();
-  const top = navHeader(turns[0]) + (turns[1] ? `<div class="nav-then">Kemudian ${arrowSvg(turns[1].st.maneuver, 18)}</div>` : '');
-  if (state.navTopHtml !== top) { state.navTopHtml = top; $('navTop').innerHTML = top; }
+  const turns = upcomingTurns(), t0 = turns[0];
+  const topKey = JSON.stringify([t0.st.maneuver, stepLabel(t0.st), t0.st.exit || '', turns[1] ? turns[1].st.maneuver : null]);
+  if (state.navTopKey !== topKey) {
+    state.navTopKey = topKey;
+    $('navTop').innerHTML = navHeader(t0) +
+      (turns[1] ? `<div class="nav-then">Kemudian ${arrowSvg(turns[1].st.maneuver, 18)}</div>` : '');
+  }
+  setText($('navTop').querySelector('.nav-dist'), fmtDist(Math.max(0, t0.d)));
 
   const frac = Math.max(0, 1 - (state.meAlong || 0) / r.total);
   const leftM = r.distanceM * frac, leftSec = remainingSec(r);
   showPanel(`<div class="navbar">
       <button class="round" onclick="cancelRoute()" aria-label="Tamat navigasi">${ICON.x}</button>
-      <div class="mid"><div class="big">${fmtMin(leftSec)}</div>
-        <div class="small">Tiba ${clock(Date.now() + leftSec * 1000)} · ${fmtDist(leftM)}</div>
-        ${(th => th ? `<div class="small">${th}</div>` : '')(navTrafficHtml(r, frac))}</div>
+      <div class="mid"><div class="big" id="navLeft"></div><div class="small" id="navEta"></div>
+        <div class="small" id="navTraffic"><span id="navTrafficTxt"></span></div></div>
       <button class="round" onclick="openTurns()" aria-label="Senarai belokan">${ICON.list}</button>
-    </div>`);
+    </div>`);                                    // sama setiap kali → showPanel tidak menyentuh DOM
+  setText($('navLeft'), fmtMin(leftSec));
+  setText($('navEta'), 'Tiba ' + clock(Date.now() + leftSec * 1000) + ' · ' + fmtDist(leftM));
+  const ti = navTrafficInfo(r, frac), tEl = $('navTrafficTxt');
+  setText(tEl, ti ? ti.t : '');
+  if (ti && tEl.__jkColor !== ti.c) { tEl.__jkColor = ti.c; tEl.style.color = ti.c; }
+  $('navTraffic').style.display = ti ? '' : 'none';
   layout();
 }
 
@@ -2993,7 +3066,7 @@ function cancelRoute() {
   state.navigating = false; state.routes = []; state.autoStart = false;
   store.del('jk_active');
   state.routeLayers.forEach(l => l.remove()); state.routeLayers = [];
-  (state.trafficLayers || []).forEach(l => l.remove()); state.trafficLayers = [];
+  (state.trafficLayers || []).forEach(l => l.remove()); state.trafficLayers = []; state.trafficKey = null;
   state.navId = (state.navId || 0) + 1; hideAsk();
   clearVia();
   if (state.share && state.share.mode === 'arrive') stopTripShare();
