@@ -138,3 +138,14 @@ test('saluran uji: lokasi ikut getLiveData, tunda bila server sibuk, tawar muat 
   assert.match(s, /state\.liveBackoffUntil = Date\.now\(\) \+ state\.liveBackoff/);
   assert.match(s, /function checkVersion\(v\)/);
 });
+
+test('Index.html: ciri yang disahkan di jalan (had laju & kesesakan automatik, lapor pantas, jimat bateri, versi, Photon)', () => {
+  const s = clientScript();
+  assert.match(s, /function updateRoadLimit\(\)/);
+  assert.match(s, /function autoJams\(r, box\)/);
+  assert.match(s, /const QUICK_TYPES = /);
+  assert.match(s, /enableHighAccuracy: false/);
+  assert.match(s, /function checkVersion\(v\)/);
+  assert.match(s, /function photonDirect\(/);
+  assert.ok(!/call\('updateLocation'/.test(s));
+});
