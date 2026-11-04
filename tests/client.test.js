@@ -123,3 +123,10 @@ test('saluran uji: jimat bateri — GPS ketepatan rendah & segar 60 s bila diam 
   assert.match(s, /enableHighAccuracy: false/);
   assert.match(s, /if \(!isIdle\(\) \|\| Date\.now\(\) - \(state\.lastRefreshAt \|\| 0\) >= 60000\) refresh\(\)/);
 });
+
+test('saluran uji: kesesakan automatik dari pengguna lain (arah sama, ≥ 2 perlahan)', () => {
+  const s = clientScript('IndexUji.html');
+  assert.match(s, /function autoJams\(r, box\)/);
+  assert.match(s, /autoJams\(r, box\)\.forEach\(x => raw\.push\(x\)\)/);
+  assert.match(s, /sameDirection\(\{ heading: u\.dir \}/);
+});

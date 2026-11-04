@@ -2353,7 +2353,9 @@ function maybeSendLocation() {
   if (last && now - last.t < LOC_MIN_MS) return;                             // maks 120/jam
   if (last && now - last.t < LOC_IDLE_MS && dist(me, last) < 50) return;     // berhenti: cukup setiap 90 s
   state.lastSent = { lat: me.lat, lng: me.lng, t: now };
-  call('updateLocation', token, { name: userName, lat: me.lat, lng: me.lng, speed: me.speed, heading: me.heading, mood: S.mood }).catch(() => {});
+  // Arah terakhir yang diketahui (≤ 2 minit) — semasa berhenti dalam kesesakan GPS tidak memberi arah
+  const hd = me.heading != null ? me.heading : reportHeading(false);
+  call('updateLocation', token, { name: userName, lat: me.lat, lng: me.lng, speed: me.speed, heading: hd, mood: S.mood }).catch(() => {});
 }
 
 // ------------------------------------------------------------ Data langsung
@@ -2364,7 +2366,8 @@ async function refresh() {
     state.lastRefreshAt = Date.now();
     const d = await call('getLiveData', token, me.lat, me.lng);
     state.reports = d.reports;
-    drawReports(); drawUsers(d.users);
+    state.users = d.users || [];
+    drawReports(); drawUsers(state.users);
     checkHazards();
     if (state.routes.length) drawTraffic();
     if (state.routes.length && !state.navigating) renderRouteChoices();
@@ -2585,6 +2588,7 @@ function trafficSegs(r) {
     if (!sameDirection(rep, a && b && (a.lat !== b.lat || a.lng !== b.lng) ? bearing(a, b) : null)) return;
     raw.push({ s: Math.max(0, l.along - j.back), e: Math.min(r.total, l.along + j.fwd), lvl: j.lvl, ids: [rep.id], types: [rep.type] });
   });
+  autoJams(r, box).forEach(x => raw.push(x));
   raw.sort((x, y) => x.s - y.s);
   const out = [];
   raw.forEach(x => {
@@ -2593,6 +2597,37 @@ function trafficSegs(r) {
       p.e = Math.max(p.e, x.e); p.lvl = Math.max(p.lvl, x.lvl); p.ids = p.ids.concat(x.ids); p.types = p.types.concat(x.types);
     } else out.push(x);
   });
+  return out;
+}
+
+/**
+ * Kesesakan automatik (seperti Waze): pengguna lain yang bergerak PERLAHAN ke arah yang SAMA di atas laluan.
+ * ≥ 2 pengguna ≤ 20 km/j dalam 300 m → 🟠 perlahan; ≥ 3 pengguna semuanya ≤ 10 km/j → 🔴 sesak.
+ * Arah wajib (lebuh raya dua hala: kesesakan di seberang tidak dikira). Kedudukan pengguna dikaburkan ~100 m.
+ */
+function autoJams(r, box) {
+  const slow = [];
+  (state.users || []).forEach(u => {
+    if (!(u.speed <= 20) || u.dir == null || u.lat < box[0] || u.lat > box[1] || u.lng < box[2] || u.lng > box[3]) return;
+    const l = locate(u, r, 0);
+    if (l.off > 120) return;
+    const a = r.pts[l.seg], b = r.pts[Math.min(l.seg + 1, r.pts.length - 1)];
+    if (!a || !b || (a.lat === b.lat && a.lng === b.lng) || !sameDirection({ heading: u.dir }, bearing(a, b))) return;
+    slow.push({ a: l.along, v: u.speed });
+  });
+  slow.sort((x, y) => x.a - y.a);
+  const out = [];
+  for (let i = 0; i < slow.length;) {
+    let j = i;
+    while (j + 1 < slow.length && slow[j + 1].a - slow[i].a <= 300) j++;
+    const g = slow.slice(i, j + 1);
+    if (g.length >= 2) {
+      const red = g.length >= 3 && g.every(x => x.v <= 10);
+      out.push({ s: Math.max(0, g[0].a - 100), e: Math.min(r.total, g[g.length - 1].a + 100), lvl: red ? 2 : 1,
+        ids: ['auto-' + Math.round(g[0].a / 500)], types: ['SESAK'] });
+    }
+    i = j + 1;
+  }
   return out;
 }
 
