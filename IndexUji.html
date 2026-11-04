@@ -1038,7 +1038,8 @@ const EN = {
   'Boleh pilih lebih daripada satu (maks 5)': 'You can pick more than one (max 5)',
   'Atau pilih jenis & butiran (boleh lebih daripada satu, maks 5)': 'Or choose type & details (more than one allowed, max 5)',
   'Versi baharu tersedia': 'New version available', 'Muat semula untuk kemas kini JalanKita': 'Reload to update JalanKita',
-  'Nanti': 'Later', 'Anggaran kos minyak': 'Fuel cost estimate', 'Penggunaan minyak': 'Fuel consumption',
+  'Nanti': 'Later', 'Buka versi uji': 'Open test version', 'Kembali ke versi biasa': 'Back to normal version',
+  'Pemilik sahaja · ciri baharu sebelum dilancar': 'Owner only · new features before release', 'Anggaran kos minyak': 'Fuel cost estimate', 'Penggunaan minyak': 'Fuel consumption',
   'Harga minyak': 'Fuel price', 'Kongsi JalanKita': 'Share JalanKita', 'Kod QR & WhatsApp untuk rakan': 'QR code & WhatsApp for friends',
   '💬 Hantar ke WhatsApp': '💬 Send to WhatsApp', '📋 Salin pautan': '📋 Copy link',
   'Minta rakan imbas kod QR ini dengan kamera telefon, atau hantar pautan melalui WhatsApp.':
@@ -2160,7 +2161,11 @@ function renderDrawer() {
         sub: state.navigating ? 'Lokasi & anggaran tiba melalui WhatsApp' : 'Melalui WhatsApp' }),
       sRow({ doAct: 'liveShare', icon: '📡', color: '#2e7d32', label: 'Kongsi perjalanan langsung',
         sub: state.share ? 'Sedang berkongsi' : 'Rakan nampak kereta anda bergerak' })])}
-    ${state.isOwner ? list([sRow({ doAct: 'admin', icon: '🛡️', color: '#e53935', label: 'Panel pentadbir' })]) : ''}
+    ${state.isOwner ? list([sRow({ doAct: 'admin', icon: '🛡️', color: '#e53935', label: 'Panel pentadbir' }),
+      // Pemilik sahaja: bertukar antara aplikasi biasa & saluran uji (?uji=1) tanpa perlu cari pautan
+      / \(uji\)$/.test(APP_VERSION)
+        ? sRow({ doAct: 'ujiOff', icon: '↩️', color: '#607d8b', label: 'Kembali ke versi biasa' })
+        : sRow({ doAct: 'ujiOn', icon: '🧪', color: '#7b1fa2', label: 'Buka versi uji', sub: 'Pemilik sahaja · ciri baharu sebelum dilancar' })]) : ''}
     ${list([sRow({ go: 'invite', icon: '🤝', color: '#00897b', label: 'Kongsi JalanKita', sub: 'Kod QR & WhatsApp untuk rakan' })])}
     ${list([sRow({ go: 'sos', icon: '🆘', color: '#d32f2f', label: 'Kecemasan', sub: 'Telefon 999 · hantar lokasi ke keluarga' })])}
     ${list([sRow({ go: 'homescreen', icon: '📲', color: '#5c6bc0', label: 'Tambah ke skrin utama', sub: 'Buka JalanKita seperti app' }),
@@ -2255,6 +2260,7 @@ function onSettingsClick(e) {
     else if (a === 'share') { closeDrawer(); shareMyLocation(); }
     else if (a === 'liveShare') { closeDrawer(); openShare(); }
     else if (a === 'admin') { closeDrawer(); openAdmin(); }
+    else if (a === 'ujiOn' || a === 'ujiOff') { if (APP_URL) window.open(APP_URL + (a === 'ujiOn' ? '?uji=1' : ''), '_top'); }
     else if (a === 'sosShare') sosShare();
     else if (a === 'inviteWa') openWhatsApp('🚗 Jom guna JalanKita — navigasi & laporan trafik komuniti Malaysia (percuma, tanpa muat turun app):\n' + APP_URL);
     else if (a === 'inviteCopy') {

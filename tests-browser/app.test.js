@@ -155,3 +155,23 @@ test('IndexUji.html: anggaran kos minyak pada pilihan laluan & halaman Kongsi Ja
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+
+for (const [file, row, url] of [['Index.html', 'ujiOn', /\?uji=1$/], ['IndexUji.html', 'ujiOff', /\/exec$/]]) {
+  test(`${file}: pemilik boleh bertukar antara versi biasa & versi uji dari menu`, async () => {
+    const { page, errors, close } = await open(file);
+    try {
+      const r = await page.evaluate(row => {
+        state.isOwner = true; let opened = null; window.open = u => { opened = u; };
+        openDrawer();
+        const b = document.querySelector(`#drawerPane [data-do="${row}"]`);
+        if (b) b.click();
+        const notOwner = (() => { state.isOwner = false; renderDrawer(); return !!document.querySelector('[data-do^="uji"]'); })();
+        return { found: !!b, opened, notOwner };
+      }, row);
+      assert.ok(r.found);
+      assert.match(r.opened || '', url);
+      assert.strictEqual(r.notOwner, false);          // pengguna biasa tidak nampak butang ini
+      assert.deepStrictEqual(errors, []);
+    } finally { await close(); }
+  });
+}
