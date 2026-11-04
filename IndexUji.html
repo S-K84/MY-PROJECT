@@ -50,7 +50,7 @@
           parts.push(n + '/' + ln);
           pre.textContent += '\nBahagian: ' + parts.join(' ');
           // Baris di sekitar ralat. MAIN_AT = nombor baris <script> utama dalam IndexUji.html (disemak oleh ujian).
-          var MAIN_AT = 733, bl = window.__bootLine;
+          var MAIN_AT = 740, bl = window.__bootLine;
           if (bl) {
             pre.textContent += '\nSkrip sekitar baris ' + bl + ' (dianggap baris fail ' + bl + '):';
             for (var j = Math.max(1, bl - MAIN_AT - 3); j <= Math.min(SL.length - 1, bl - MAIN_AT + 1); j++)
@@ -420,6 +420,13 @@
     .sub { padding:10px 16px; border-radius:999px; border:1.5px solid var(--line); font-weight:600; }
     .sub.on { border-color:var(--accent); background:var(--accent); color:var(--accent-ink); }
     .rbtn { position:relative; }
+    /* Tulisan besar: panel, banner & menu dibesarkan (peta tidak — zoom pada peta mengganggu koordinat Leaflet) */
+    body.big-text #navTop, body.big-text #panel, body.big-text #home, body.big-text #setSheet, body.big-text #drawer .pane,
+    body.big-text #askCard, body.big-text #toast, body.big-text .modal .sheet { zoom:1.18; }
+    .sos-btn { display:block; width:calc(100% - 24px); margin-left:12px !important; box-sizing:border-box; text-align:center; text-decoration:none; border:0; border-radius:16px;
+      padding:18px; margin:0 0 10px; font-size:20px; font-weight:800; color:#fff; background:#d32f2f; }
+    .sos-btn.wa { background:#25d366; color:#04260f; }
+    .sos-btn.alt { background:var(--sheet); color:var(--fg); font-size:17px; font-weight:700; }
     .hs { background:var(--sheet); border-radius:14px; padding:6px 12px; margin:0 0 6px; }
     .hs-step { display:flex; gap:12px; align-items:flex-start; padding:8px 0; font-size:15px; line-height:1.4; }
     .hs-step .n { flex:none; width:26px; height:26px; border-radius:50%; background:var(--accent); color:#000; font-style:normal;
@@ -805,7 +812,9 @@ let voiceLang = store.get('jk_voice') === 'en' ? 'en' : 'ms';
 const VOICE = {
   ms: { code: 'ms-MY', prefer: ['ms', 'id'], inDist: d => `Dalam ${d}, `, arrive: 'Anda telah tiba di destinasi.',
     near: d => `Destinasi anda ${d} di hadapan.`, reroute: 'Mengira semula laluan.',
-    speeding: 'Awas, anda melebihi had laju.', camera: d => `Kamera laju ${d} di hadapan.`, limit: n => `Had laju ${n}.`, child: 'Jangan lupa periksa tempat duduk belakang.', mi: 'batu', ft: 'kaki',
+    speeding: 'Awas, anda melebihi had laju.', rest: h => `Anda sudah memandu ${h} jam. Berehatlah sebentar.`,
+    rain: d => `Hujan lebat dijangka ${d} di hadapan.`, storm: d => `Ribut petir dijangka ${d} di hadapan.`,
+    prayer: n => `Masuk waktu ${n}.`, prayerSoon: (n, m) => `Waktu ${n} dalam ${m} minit.`, camera: d => `Kamera laju ${d} di hadapan.`, limit: n => `Had laju ${n}.`, child: 'Jangan lupa periksa tempat duduk belakang.', mi: 'batu', ft: 'kaki',
     hazard: (l, d) => `Awas, ${l} dilaporkan ${d} di hadapan.`, test: 'Arahan suara dalam Bahasa Melayu.',
     jam: d => d ? `Kesesakan ${d} di hadapan.` : 'Anda memasuki kawasan sesak.',
     still: l => `${l} di sini. Masih ada?`, faster: m => `Laluan lebih pantas dijumpai. Jimat ${m} minit.`,
@@ -813,7 +822,9 @@ const VOICE = {
     m: 'meter', km: 'kilometer' },
   en: { code: 'en-GB', prefer: ['en-gb', 'en'], inDist: d => `In ${d}, `, arrive: 'You have arrived at your destination.',
     near: d => `Your destination is ${d} ahead.`, reroute: 'Recalculating route.',
-    speeding: 'Caution, you are over the speed limit.', camera: d => `Speed camera ${d} ahead.`, limit: n => `Speed limit ${n}.`, child: 'Remember to check the back seat.', mi: 'miles', ft: 'feet',
+    speeding: 'Caution, you are over the speed limit.', rest: h => `You have been driving for ${h} hours. Take a break.`,
+    rain: d => `Heavy rain expected ${d} ahead.`, storm: d => `Thunderstorm expected ${d} ahead.`,
+    prayer: n => `It is now time for ${n} prayer.`, prayerSoon: (n, m) => `${n} prayer in ${m} minutes.`, camera: d => `Speed camera ${d} ahead.`, limit: n => `Speed limit ${n}.`, child: 'Remember to check the back seat.', mi: 'miles', ft: 'feet',
     hazard: (l, d) => `Caution, ${l} reported ${d} ahead.`, test: 'Voice guidance in English.',
     jam: d => d ? `Traffic jam ${d} ahead.` : 'You are entering a traffic jam.',
     still: l => `${l} here. Is it still there?`, faster: m => `Faster route found. Save ${m} minutes.`,
@@ -829,7 +840,8 @@ const MOODS = ['🙂', '😎', '🤠', '😇', '🥳', '😴', '🤓', '😤', '
 const SETTINGS_DEFAULT = { units: 'km', wake: true, dark: 'auto', autoZoom: true, carIcon: 'arrow', vehicle: 'private',
   repTypes: Object.keys(TYPES), alertTypes: Object.keys(TYPES), alertDist: 600, showSpeedo: true, showUsers: true,
   voiceName: '', voiceMode: 'normal', volume: 1, avoidFerries: false, avoidHighways: false, speedLimit: -1,
-  childReminder: false, mood: '🙂', trips: 0, syncPlaces: true, askStill: true, fasterRoute: true, travel: 'car' };
+  childReminder: false, mood: '🙂', trips: 0, syncPlaces: true, askStill: true, fasterRoute: true, travel: 'car',
+  restRemind: true, rainAlert: true, prayerRemind: true, textSize: 'normal' };
 const S = Object.assign({}, SETTINGS_DEFAULT, getJSON('jk_settings', {}));
 /** Pastikan setiap tetapan bernilai sah (data dari telefon atau server tidak dipercayai bulat-bulat). */
 function validateSettings() {
@@ -838,7 +850,7 @@ function validateSettings() {
     S[k] = S[k].filter(t => Object.prototype.hasOwnProperty.call(TYPES, t));
   });
   const oneOf = (k, list) => { if (list.indexOf(S[k]) < 0) S[k] = SETTINGS_DEFAULT[k]; };
-  oneOf('units', ['km', 'mi']); oneOf('dark', ['auto', 'night', 'always', 'never']);
+  oneOf('units', ['km', 'mi']); oneOf('dark', ['auto', 'night', 'always', 'never']); oneOf('textSize', ['normal', 'large']);
   oneOf('carIcon', ['arrow', 'car', 'moto']); oneOf('vehicle', ['private', 'taxi', 'moto']);
   oneOf('voiceMode', ['normal', 'less', 'alerts', 'off']); oneOf('mood', MOODS); oneOf('travel', ['car', 'moto', 'walk']);
   ['alertDist', 'speedLimit', 'volume', 'trips'].forEach(k => { if (typeof S[k] !== 'number' || !isFinite(S[k])) S[k] = SETTINGS_DEFAULT[k]; });
@@ -1039,7 +1051,18 @@ const EN = {
   'Boleh pilih lebih daripada satu (maks 5)': 'You can pick more than one (max 5)',
   'Atau pilih jenis & butiran (boleh lebih daripada satu, maks 5)': 'Or choose type & details (more than one allowed, max 5)',
   'Versi baharu tersedia': 'New version available', 'Muat semula untuk kemas kini JalanKita': 'Reload to update JalanKita',
-  'Nanti': 'Later', 'Laporan dihantar': 'Report sent', 'Laporan dibatalkan.': 'Report cancelled.', 'OK': 'OK',
+  'Nanti': 'Later', 'Saiz tulisan': 'Text size', 'Biasa': 'Normal', 'Besar': 'Large', 'Peringatan rehat': 'Rest reminder',
+  'Selepas 2 jam memandu tanpa henti': 'After 2 hours of non-stop driving', 'Amaran hujan lebat': 'Heavy rain alert',
+  'Ramalan cuaca di sepanjang laluan (Open-Meteo)': 'Weather forecast along the route (Open-Meteo)',
+  'Peringatan waktu solat': 'Prayer time reminder', 'Semasa navigasi · masjid / surau di hadapan': 'While navigating · mosque / surau ahead',
+  'Waktu solat dikira di telefon (kaedah JAKIM: Subuh 20°, Isyak 18°) — anggaran, boleh berbeza beberapa minit daripada jadual rasmi.':
+    'Prayer times are calculated on the phone (JAKIM method: Fajr 20°, Isha 18°) — estimates that may differ by a few minutes from the official schedule.',
+  'Masa untuk berehat': 'Time for a break', 'Cari R&R': 'Find R&R', 'Cari masjid / surau di hadapan?': 'Find a mosque / surau ahead?',
+  'Cari': 'Search', 'Kecemasan': 'Emergency', 'Telefon 999 · hantar lokasi ke keluarga': 'Call 999 · send location to family',
+  '📞 Telefon 999': '📞 Call 999', '📍 Hantar lokasi saya ke WhatsApp': '📍 Send my location to WhatsApp',
+  '📞 112 (dari telefon bimbit)': '📞 112 (from a mobile phone)',
+  '999: polis, ambulans & bomba. 112 boleh didail dari telefon bimbit walaupun tiada kredit. PLUSLine untuk kerosakan / kemalangan di lebuh raya PLUS.':
+    '999: police, ambulance & fire. 112 can be dialled from a mobile phone even without credit. PLUSLine for breakdowns / accidents on PLUS highways.', 'Laporan dihantar': 'Report sent', 'Laporan dibatalkan.': 'Report cancelled.', 'OK': 'OK',
   'Tambah ke skrin utama': 'Add to home screen', 'Buka JalanKita seperti app': 'Open JalanKita like an app',
   'Selepas ini JalanKita boleh dibuka terus dari ikon di skrin utama, seperti app — tidak perlu cari pautan dalam WhatsApp.':
     'After this, JalanKita opens straight from an icon on your home screen, like an app — no need to find the link in WhatsApp.',
@@ -1274,6 +1297,12 @@ const EN = {
 };
 // Corak untuk teks bernombor / berstruktur. Fungsi menerima padanan; tr() menterjemah bahagian dalam.
 const EN_RULES = [
+  [/^🌧️ Hujan lebat dijangka · (.+) di hadapan$/, m => '🌧️ Heavy rain expected · ' + m[1] + ' ahead'],
+  [/^⛈️ Ribut petir dijangka · (.+) di hadapan$/, m => '⛈️ Thunderstorm expected · ' + m[1] + ' ahead'],
+  [/^☕ Anda sudah memandu (\d+) jam\. Berehatlah sebentar\.$/, m => '☕ You have been driving for ' + m[1] + ' hours. Take a break.'],
+  [/^Anda sudah memandu (\d+) jam$/, m => 'You have been driving for ' + m[1] + ' hours'],
+  [/^Waktu (Subuh|Zohor|Asar|Maghrib|Isyak)$/, m => ({ Subuh: 'Fajr', Zohor: 'Zuhr', Asar: 'Asr', Maghrib: 'Maghrib',
+    Isyak: 'Isha' })[m[1]] + ' prayer time'],
   [/^Tiba (.+)$/, m => 'Arrive ' + tr(m[1])], [/^melalui (.+)$/, m => 'via ' + m[1]], [/^lagi (.+)$/, m => m[1] + ' left'],
   [/^(\d+) j (\d+) min$/, m => m[1] + ' h ' + m[2] + ' min'], [/^(.+) di hadapan$/, m => tr(m[1]) + ' ahead'],
   [/^(.+) dari jalan$/, m => m[1] + ' from the road'], [/^(\d+) (min|jam|hari|bulan|tahun) lalu$/, m =>
@@ -1808,9 +1837,10 @@ const CHOICES = {
     note: 'Automatik: semasa navigasi, had laju diambil dari peta OpenStreetMap (tidak semua jalan ada data). ' +
       'Meter laju bertukar merah dan suara memberi amaran bila anda melebihinya.' }
 };
-const SEGS = { units: [['km', 'km'], ['mi', 'Batu']], voiceLang: [['ms', 'Bahasa Melayu'], ['en', 'English']] };
+const SEGS = { units: [['km', 'km'], ['mi', 'Batu']], voiceLang: [['ms', 'Bahasa Melayu'], ['en', 'English']],
+  textSize: [['normal', 'Biasa'], ['large', 'Besar']] };
 const TOGGLE_KEYS = ['wake', 'autoZoom', 'showSpeedo', 'showUsers', 'avoidFerries', 'avoidHighways', 'childReminder',
-  'syncPlaces', 'askStill', 'fasterRoute'];
+  'syncPlaces', 'askStill', 'fasterRoute', 'restRemind', 'rainAlert', 'prayerRemind'];
 const MULTI_KEYS = ['repTypes', 'alertTypes'];
 
 function getVal(k) { return k === 'voiceLang' ? voiceLang : S[k]; }
@@ -1859,6 +1889,13 @@ const typeRows = key => Object.keys(TYPES).map(t => sRow({ multi: key + '|' + t,
 
 // ---- Halaman
 const PAGES = {
+  sos: () => ({ title: 'Kecemasan', html:
+    `<a class="sos-btn" href="tel:999" target="_top">📞 Telefon 999</a>` +
+    `<button class="sos-btn wa" data-do="sosShare">📍 Hantar lokasi saya ke WhatsApp</button>` +
+    `<a class="sos-btn alt" href="tel:112" target="_top">📞 112 (dari telefon bimbit)</a>` +
+    `<a class="sos-btn alt" href="tel:1800880000" target="_top">🛣️ PLUSLine 1800-88-0000</a>` +
+    note('999: polis, ambulans & bomba. 112 boleh didail dari telefon bimbit walaupun tiada kredit. ' +
+      'PLUSLine untuk kerosakan / kemalangan di lebuh raya PLUS.') }),
   homescreen: () => {
     const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua), crios = /CriOS/.test(ua), android = /Android/.test(ua);
     // Ditulis penuh dalam bahasa paparan (bukan diterjemah perkataan demi perkataan — hasilnya bercampur BM/English)
@@ -1902,7 +1939,8 @@ const PAGES = {
       sRow({ go: 'planned', icon: '🗓️', color: '#26a69a', label: 'Pemanduan dirancang' })]) }),
 
   general: () => ({ title: 'Umum', html:
-    `<div class="slist">${segRow('voiceLang', 'Bahasa / Language')}${segRow('units', 'Unit jarak')}</div>` +
+    `<div class="slist">${segRow('voiceLang', 'Bahasa / Language')}${segRow('units', 'Unit jarak')}` +
+    `${segRow('textSize', 'Saiz tulisan')}</div>` +
     note('Paparan dan suara menggunakan bahasa yang sama.') +
     list([sRow({ toggle: 'wake', label: 'Halang skrin kunci semasa navigasi',
       sub: 'wakeLock' in navigator ? '' : 'Pelayar ini tidak menyokong — tetapkan Auto-Lock: Never dalam Settings iPhone' })]) }),
@@ -1987,11 +2025,19 @@ const PAGES = {
     list([sRow({ go: 'alertTypes', icon: '⚠️', color: '#fb8c00', label: 'Amaran laporan di hadapan',
         value: S.alertTypes.length ? 'Hidup' : 'Mati' }),
       sRow({ go: 'speedo', icon: '⏱️', color: '#ff7043', label: 'Amaran had laju', value: S.speedLimit ? 'Hidup' : 'Mati' }),
-      sRow({ go: 'reminders', icon: '👶', color: '#5c6bc0', label: 'Peringatan anak', value: S.childReminder ? 'Hidup' : 'Mati' })]) }),
+      sRow({ go: 'reminders', icon: '⏰', color: '#5c6bc0', label: 'Peringatan',
+        value: [S.childReminder, S.restRemind, S.rainAlert, S.prayerRemind].filter(Boolean).length + ' / 4' })]) }),
 
   reminders: () => ({ title: 'Peringatan', html:
     list([sRow({ toggle: 'childReminder', icon: '👶', color: '#5c6bc0', label: 'Peringatan anak' })]) +
-    note('Bila tiba di destinasi, JalanKita mengingatkan anda (paparan & suara) supaya memeriksa tempat duduk belakang.') }),
+    note('Bila tiba di destinasi, JalanKita mengingatkan anda (paparan & suara) supaya memeriksa tempat duduk belakang.') +
+    list([sRow({ toggle: 'restRemind', icon: '☕', color: '#8d6e63', label: 'Peringatan rehat',
+        sub: 'Selepas 2 jam memandu tanpa henti' }),
+      sRow({ toggle: 'rainAlert', icon: '🌧️', color: '#1e88e5', label: 'Amaran hujan lebat',
+        sub: 'Ramalan cuaca di sepanjang laluan (Open-Meteo)' }),
+      sRow({ toggle: 'prayerRemind', icon: '🕌', color: '#2e7d32', label: 'Peringatan waktu solat',
+        sub: 'Semasa navigasi · masjid / surau di hadapan' })]) +
+    note('Waktu solat dikira di telefon (kaedah JAKIM: Subuh 20°, Isyak 18°) — anggaran, boleh berbeza beberapa minit daripada jadual rasmi.') }),
 
   planned: () => ({ title: 'Pemanduan dirancang', html:
     note('Belum tersedia. Peringatan "masa untuk bertolak" memerlukan notifikasi push dan akses kalendar, ' +
@@ -2097,6 +2143,7 @@ function renderDrawer() {
       sRow({ doAct: 'liveShare', icon: '📡', color: '#2e7d32', label: 'Kongsi perjalanan langsung',
         sub: state.share ? 'Sedang berkongsi' : 'Rakan nampak kereta anda bergerak' })])}
     ${state.isOwner ? list([sRow({ doAct: 'admin', icon: '🛡️', color: '#e53935', label: 'Panel pentadbir' })]) : ''}
+    ${list([sRow({ go: 'sos', icon: '🆘', color: '#d32f2f', label: 'Kecemasan', sub: 'Telefon 999 · hantar lokasi ke keluarga' })])}
     ${list([sRow({ go: 'homescreen', icon: '📲', color: '#5c6bc0', label: 'Tambah ke skrin utama', sub: 'Buka JalanKita seperti app' }),
       sRow({ go: 'root', icon: '⚙️', color: '#78909c', label: 'Tetapan' })])}
     <p class="pop-muted" style="margin:16px 4px">JalanKita · Peta © OpenStreetMap · Laluan oleh Google<br>Versi ${APP_VERSION}</p>`;
@@ -2118,6 +2165,7 @@ function renderSpeedSign() {
 }
 function applySetting(k) {
   if (k === 'dark') applyTheme();
+  if (k === 'textSize') document.body.classList.toggle('big-text', S.textSize === 'large');
   if (k === 'showSpeedo' || k === 'speedLimit' || k === 'units') {
     $('speedWrap').style.visibility = S.showSpeedo ? 'visible' : 'hidden';
     $('speedUnit').textContent = speedUnit();
@@ -2188,6 +2236,7 @@ function onSettingsClick(e) {
     else if (a === 'share') { closeDrawer(); shareMyLocation(); }
     else if (a === 'liveShare') { closeDrawer(); openShare(); }
     else if (a === 'admin') { closeDrawer(); openAdmin(); }
+    else if (a === 'sosShare') sosShare();
     else if (a === 'testVoice') speak(VOICE[voiceLang].test, 'test');
     else if (a === 'clearHist') { const p = places(); p.recent = []; savePlaces(p); toast('Sejarah carian dipadam.'); }
     else if (a === 'delPrefs') {
@@ -2290,6 +2339,7 @@ function setMe(pos) {
   else updateStreet();
   checkHazards();
   checkStillThere();
+  checkRest(pos);
   maybeSendShare();
   maybeSendLocation();
 }
@@ -2817,6 +2867,13 @@ function shareDest() {
   const l = shareLink(d);
   openWhatsApp(`📍 ${d.title || 'Lokasi'}\n` + (l.app ? `Buka dengan JalanKita: ${l.app}\n` : '') + `Google Maps: ${l.gmaps}`);
 }
+/** Kecemasan: hantar lokasi semasa (Google Maps) ke WhatsApp — pengguna pilih kenalan sendiri. */
+function sosShare() {
+  if (!state.me) return toast('Lokasi anda belum diketahui.');
+  const l = shareLink({ lat: state.me.lat, lng: state.me.lng, title: 'KECEMASAN' });
+  openWhatsApp(`🆘 KECEMASAN — saya perlukan bantuan.\n📍 Lokasi saya: ${l.gmaps}` +
+    (state.me.acc ? `\n(ketepatan GPS ~${Math.round(state.me.acc)} m)` : ''));
+}
 function shareMyLocation() {
   if (!state.me) return toast('Lokasi anda belum diketahui.');
   const l = shareLink({ lat: state.me.lat, lng: state.me.lng, title: (userName || 'Kawan') + ' di sini' });
@@ -2983,6 +3040,8 @@ function onNavTick() {
     }
   }
   checkJams(r, loc.along);
+  checkRain(r, loc.along);
+  checkPrayer();
   maybeCheckFaster(r, loc.along);
   renderNav();
   if ($('turnsModal').style.display === 'flex') renderTurns();
@@ -3139,6 +3198,133 @@ async function checkFaster() {
       } });
     speak(VOICE[voiceLang].faster(mins), 'reroute');
   } catch (e) { /* senyap: cuba lagi 10 minit kemudian */ } finally { state.fasterBusy = false; }
+}
+
+// ---- Buka "Cari di sepanjang laluan" terus pada satu kategori (dari peringatan rehat / solat)
+function openAlongCat(cat) {
+  if (!state.navigating) return;
+  openAlong();
+  document.querySelectorAll('#alongCats .rbtn').forEach(x => x.classList.toggle('sel', x.dataset.along === cat));
+  searchAlong(cat);
+}
+
+// ---- Peringatan rehat: 2 jam memandu tanpa henti (berhenti ≥ 10 minit = rehat). Diulang setiap jam selepas itu.
+const REST_MS = 2 * 3600000, REST_BREAK_MS = 10 * 60000;
+function checkRest(pos) {
+  if (!S.restRemind || state.manualLoc) return;
+  const now = Date.now(), moving = (pos.speed || 0) >= 10;
+  if (moving) { if (!state.driveStart) state.driveStart = now; state.stopAt = 0; }
+  else if (state.driveStart) {
+    if (!state.stopAt) state.stopAt = now;
+    else if (now - state.stopAt >= REST_BREAK_MS) { state.driveStart = 0; state.restSaidAt = 0; state.stopAt = 0; }
+  }
+  if (!state.driveStart || !moving) return;
+  const due = state.restSaidAt ? state.restSaidAt + 3600000 : state.driveStart + REST_MS;
+  if (now < due || askBusy()) return;
+  state.restSaidAt = now;
+  const h = Math.max(2, Math.floor((now - state.driveStart) / 3600000));
+  speak(VOICE[voiceLang].rest(h), 'info');
+  if (state.navigating) {
+    showAsk({ icon: '☕', text: 'Masa untuk berehat', sub: `Anda sudah memandu ${h} jam`, yes: 'Cari R&R', no: 'Nanti', ms: 15000,
+      onYes: () => openAlongCat('rest') });
+  } else toast(`☕ Anda sudah memandu ${h} jam. Berehatlah sebentar.`, true);
+}
+
+// ---- Amaran hujan lebat: ramalan Open-Meteo (percuma, dari telefon) di titik laluan setiap 10 km sehingga 100 km di hadapan,
+// pada anggaran masa tiba di titik itu. Disemak setiap 30 minit; satu amaran bagi setiap kawasan (~10 km).
+const RAIN_EVERY_MS = 30 * 60000, RAIN_MM = 4, STORM_CODES = [95, 96, 99], HEAVY_CODES = [65, 82];
+function checkRain(r, along) {
+  if (!S.rainAlert || offline || state.rainBusy || !window.fetch) return;
+  if (state.rainRoute === r && Date.now() - (state.rainAt || 0) < RAIN_EVERY_MS) return;
+  state.rainBusy = true; state.rainAt = Date.now(); state.rainRoute = r;
+  const navId = state.navId, pts = [];
+  for (let d = along + 2000; d < Math.min(r.total, along + 100000); d += 10000) {
+    const p = slicePts(r, d, d)[0];
+    pts.push({ d, lat: p[0].toFixed(2), lng: p[1].toFixed(2), eta: (d - along) / r.total * r.durationSec });
+  }
+  if (!pts.length) { state.rainBusy = false; return; }
+  const url = 'https:\/\/api.open-meteo.com/v1/forecast?latitude=' + pts.map(p => p.lat).join(',') +
+    '&longitude=' + pts.map(p => p.lng).join(',') + '&hourly=precipitation,weather_code&forecast_hours=6&timezone=UTC';
+  fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer' }).then(res => (res.ok ? res.json() : null)).then(data => {
+    if (!data || navId !== state.navId) return;
+    const list = Array.isArray(data) ? data : [data];
+    const hit = rainAhead(pts, list, Date.now());
+    if (!hit) return;
+    const said = state.rainSaid || (state.rainSaid = new Set()), key = Math.round((hit.d) / 10000);
+    if (said.has(key)) return;
+    said.add(key);
+    const dist = Math.max(0, hit.d - (state.meAlong || 0));
+    toast(`${hit.storm ? '⛈️ Ribut petir' : '🌧️ Hujan lebat'} dijangka · ${fmtDist(dist)} di hadapan`, true);
+    speak(VOICE[voiceLang][hit.storm ? 'storm' : 'rain'](sayDist(dist)), 'hazard');
+  }).catch(() => {}).finally(() => { state.rainBusy = false; });
+}
+/** Titik pertama di hadapan dengan hujan lebat / ribut pada masa tiba. pts[i] sepadan dengan list[i] (Open-Meteo). */
+function rainAhead(pts, list, now) {
+  for (let i = 0; i < pts.length; i++) {
+    const h = list[i] && list[i].hourly; if (!h || !h.time) continue;
+    const t = now + pts[i].eta * 1000;
+    let k = -1;
+    for (let j = 0; j < h.time.length; j++) if (Date.parse(h.time[j] + 'Z') <= t) k = j;
+    if (k < 0) continue;
+    const mm = Number(h.precipitation && h.precipitation[k]) || 0, code = Number(h.weather_code && h.weather_code[k]) || 0;
+    const storm = STORM_CODES.indexOf(code) >= 0;
+    if (storm || mm >= RAIN_MM || HEAVY_CODES.indexOf(code) >= 0) return { d: pts[i].d, storm, mm };
+  }
+  return null;
+}
+
+// ---- Waktu solat (anggaran, kaedah JAKIM: Subuh 20°, Isyak 18°, Asar mazhab Syafie, +2 minit ihtiyat). Tanpa rangkaian.
+const PRAYERS = [['subuh', 'Subuh', 'Fajr'], ['zohor', 'Zohor', 'Zuhr'], ['asar', 'Asar', 'Asr'], ['maghrib', 'Maghrib', 'Maghrib'],
+  ['isyak', 'Isyak', 'Isha']];
+function prayerTimes(date, lat, lng) {
+  const d2r = Math.PI / 180, r2d = 180 / Math.PI, fix = (a, b) => ((a % b) + b) % b;
+  const y = date.getFullYear(), m = date.getMonth(), d = date.getDate();
+  const jd0 = Date.UTC(y, m, d) / 864e5 + 2440587.5 - lng / 360;
+  const sun = jd => {
+    const D = jd - 2451545.0, g = fix(357.529 + 0.98560028 * D, 360), q = fix(280.459 + 0.98564736 * D, 360);
+    const L = fix(q + 1.915 * Math.sin(g * d2r) + 0.020 * Math.sin(2 * g * d2r), 360), e = 23.439 - 0.00000036 * D;
+    const RA = fix(Math.atan2(Math.cos(e * d2r) * Math.sin(L * d2r), Math.cos(L * d2r)) * r2d / 15, 24);
+    return { decl: Math.asin(Math.sin(e * d2r) * Math.sin(L * d2r)) * r2d, eqt: q / 15 - RA };
+  };
+  const noon = t => fix(12 - sun(jd0 + t).eqt, 24);
+  const angleTime = (ang, t, ccw) => {
+    const dec = sun(jd0 + t).decl;
+    const T = Math.acos((-Math.sin(ang * d2r) - Math.sin(dec * d2r) * Math.sin(lat * d2r)) /
+      (Math.cos(dec * d2r) * Math.cos(lat * d2r))) * r2d / 15;
+    return noon(t) + (ccw ? -T : T);
+  };
+  const asrTime = t => {
+    const dec = sun(jd0 + t).decl, ang = -Math.atan(1 / (1 + Math.tan(Math.abs(lat - dec) * d2r))) * r2d;
+    return angleTime(ang, t);
+  };
+  const h = { subuh: angleTime(20, 5 / 24, true), zohor: noon(12 / 24), asar: asrTime(13 / 24),
+    maghrib: angleTime(0.833, 18 / 24), isyak: angleTime(18, 18 / 24) };
+  const out = {};
+  // Jam UT → masa tempatan sebenar (Date); +2 minit ihtiyat seperti jadual JAKIM
+  Object.keys(h).forEach(k => { out[k] = new Date(Date.UTC(y, m, d) + ((h[k] - lng / 15) * 3600 + 120) * 1000); });
+  return out;
+}
+function checkPrayer() {
+  if (!S.prayerRemind || !state.me || !state.navigating) return;
+  const now = Date.now(), me = state.me, day = new Date(now + 8 * 3600e3).toISOString().slice(0, 10);
+  const c = state.prayerCache;
+  if (!c || c.day !== day || dist(c, me) > 50000) {
+    const local = new Date(now + 8 * 3600e3);
+    state.prayerCache = { day, lat: me.lat, lng: me.lng,
+      t: prayerTimes(new Date(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()), me.lat, me.lng) };
+  }
+  const said = state.prayerSaid || (state.prayerSaid = new Set());
+  for (const [k, ms, en] of PRAYERS) {
+    const t = state.prayerCache.t[k].getTime(), key = day + k;
+    if (said.has(key) || now < t - 10 * 60000 || now > t + 20 * 60000) continue;
+    if (askBusy()) return;                                   // cuba lagi pada bacaan GPS seterusnya
+    said.add(key);
+    const name = voiceLang === 'en' ? en : ms, mins = Math.round((t - now) / 60000);
+    speak(mins > 0 ? VOICE[voiceLang].prayerSoon(name, mins) : VOICE[voiceLang].prayer(name), 'info');
+    showAsk({ icon: '🕌', text: 'Waktu ' + ms, sub: 'Cari masjid / surau di hadapan?', yes: 'Cari', no: 'Tidak',
+      ms: 15000, onYes: () => openAlongCat('mosque') });
+    return;
+  }
 }
 
 /** Belokan akan datang: [{st, d}] — d = jarak dari belokan sebelumnya (pertama: dari kedudukan anda). */
@@ -4165,7 +4351,7 @@ function applyPrefs(p) {
 setUiLang(voiceLang);
 setSound(soundOn);
 applyTheme();
-['showSpeedo', 'showUsers'].forEach(applySetting);
+['showSpeedo', 'showUsers', 'textSize'].forEach(applySetting);
 if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = refreshMenus;
 renderHome();
 setMode('idle');
