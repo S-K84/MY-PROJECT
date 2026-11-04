@@ -61,17 +61,17 @@
     };
     window.__SRI_L = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
     window.__SRI_R = 'sha256-Ta4E5oRGbcJDRqmfp6qbzK7uDvaQyR0yDOGP6Bi1Ng8=';
-    window.L || __cdnTag('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js', __SRI_L);
+    window.L || __cdnTag('https:\/\/cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js', __SRI_L);
   </script>
   <script>
-    window.L || __cdnTag('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js', __SRI_L);
+    window.L || __cdnTag('https:\/\/cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js', __SRI_L);
   </script>
   <!-- Putaran peta (heading-up). Versi 0.2.8 (2023) dipin + SRI; kod diperiksa: tiada panggilan rangkaian. -->
   <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate.js"
     integrity="sha256-Ta4E5oRGbcJDRqmfp6qbzK7uDvaQyR0yDOGP6Bi1Ng8=" crossorigin="anonymous"></script>
   <script>
     if (window.L && !(L.Map && L.Map.prototype.setBearing)) {
-      __cdnTag('https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate.js', __SRI_R);
+      __cdnTag('https:\/\/cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate.js', __SRI_R);
     }
   </script>
   <script>
@@ -822,7 +822,7 @@ const map = L.map('map', { zoomControl: false, rotate: true, bearing: 0,
   touchRotate: false, shiftKeyRotate: false, rotateControl: false }).setView([3.139, 101.6869], 13); // KL
 // Jika plugin putaran gagal dimuat, aplikasi tetap berfungsi dengan "utara di atas"
 const canRotate = typeof map.setBearing === 'function';
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+L.tileLayer('https:\/\/{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19, attribution: '&copy; OpenStreetMap',
   keepBuffer: 4 // simpan lebih banyak jubin di sekeliling: tepi peta tidak kosong sekejap semasa bergerak/berputar
 }).addTo(map);
@@ -1879,8 +1879,8 @@ const PAGES = {
     note('Waze boleh mengawal Spotify dan app lain kerana ia app yang dipasang. ' +
       'Aplikasi web tidak boleh mengawal app lain, jadi butang di bawah hanya membuka app muzik.<br>' +
       '<b>⚠️ GPS pelayar mungkin berhenti bila anda keluar dari JalanKita.</b> Mulakan muzik sebelum memandu.') +
-    `<div class="slist">${[['Spotify', 'https://open.spotify.com', '#1db954'],
-      ['YouTube Music', 'https://music.youtube.com', '#ff0000'], ['Apple Music', 'https://music.apple.com', '#fa2d48']]
+    `<div class="slist">${[['Spotify', 'https:\/\/open.spotify.com', '#1db954'],
+      ['YouTube Music', 'https:\/\/music.youtube.com', '#ff0000'], ['Apple Music', 'https:\/\/music.apple.com', '#fa2d48']]
       .map(a => `<a class="srow" href="${a[1]}" target="_blank" rel="noopener noreferrer" style="color:inherit; text-decoration:none">
         <span class="sic" style="background:${a[2]}; color:#fff">♪</span>
         <span class="stx"><div>${a[0]}</div></span><span class="chev">↗</span></a>`).join('')}</div>` }),
@@ -2575,11 +2575,11 @@ function favDest() { toggleFav(state.dest); renderRouteChoices(); }
 function shareLink(pl) {
   const ll = Number(pl.lat).toFixed(6) + ',' + Number(pl.lng).toFixed(6);
   return { app: APP_URL ? APP_URL + '?to=' + ll + '&name=' + encodeURIComponent(pl.title || '') : '',
-    gmaps: 'https://maps.google.com/?q=' + ll };
+    gmaps: 'https:\/\/maps.google.com/?q=' + ll };
 }
 function openWhatsApp(text) {
   // wa.me berfungsi di telefon (buka app WhatsApp) dan desktop (WhatsApp Web)
-  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener');
+  window.open('https:\/\/wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener');
 }
 function shareDest() {
   const d = state.dest; if (!d) return;
@@ -3214,8 +3214,8 @@ const ALONG_Q = { fuel: ['["amenity"="fuel"]', 300, 'Stesen minyak'], rest: ['["
   food: ['["amenity"~"^(restaurant|fast_food|cafe|food_court)$"]', 300, 'Makan'], atm: ['["amenity"="atm"]', 300, 'ATM'],
   ev: ['["amenity"="charging_station"]', 500, 'Caj EV'], train: ['["railway"~"^(station|halt)$"]', 800, 'Stesen tren'],
   bus: ['["amenity"="bus_station"]', 800, 'Stesen bas'] };
-const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter',
-  'https://overpass.private.coffee/api/interpreter'];
+const OVERPASS = ['https:\/\/overpass-api.de/api/interpreter', 'https:\/\/overpass.kumi.systems/api/interpreter',
+  'https:\/\/overpass.private.coffee/api/interpreter'];
 const OVERPASS_TIMEOUT_MS = 8000;
 
 const errText = e => String(e && e.message || e).replace(/^(Error|Exception):\s*/i, '');

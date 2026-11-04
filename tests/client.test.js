@@ -45,3 +45,24 @@ test('saluran uji: MAIN_AT dalam diagnostik sama dengan baris <script> utama Ind
   if (!m) return;
   assert.strictEqual(lines.lastIndexOf('<script>') + 1, Number(m[1]));
 });
+
+// Google Apps Script membuang komen JS sebelum menghantar halaman. Pembuang itu mudah keliru (sebahagian kod dianggap
+// teks, dan sebaliknya); bila keliru, "//" dalam teks seperti 'https://maps…' dianggap komen dan baki baris dipadam →
+// "SyntaxError: Unexpected EOF" di iPhone (PR #5). Peraturan: "//" dan "/*" hanya boleh muncul sebagai permulaan komen
+// sebenar (didahului ruang atau awal baris). Dalam teks, tulis 'https:\/\/…'.
+test('skrip dalam halaman: tiada "//" atau "/*" di dalam teks (selamat daripada pembuang komen Google)', () => {
+  ['Index.html', 'IndexUji.html'].forEach(f => {
+    if (!fs.existsSync(path.join(ROOT, f))) return;
+    const h = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    const bad = [];
+    for (const m of h.matchAll(/<script>([\s\S]*?)<\/script>/g)) {
+      const start = h.slice(0, m.index).split('\n').length;
+      m[1].split('\n').forEach((l, i) => {
+        for (const x of l.matchAll(/\/\/|\/\*/g)) {
+          if (x.index > 0 && !/\s/.test(l[x.index - 1])) bad.push(f + ':' + (start + i) + ': ' + l.trim().slice(0, 80));
+        }
+      });
+    }
+    assert.deepStrictEqual(bad, []);
+  });
+});
