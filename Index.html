@@ -385,6 +385,12 @@
     .sub { padding:10px 16px; border-radius:999px; border:1.5px solid var(--line); font-weight:600; }
     .sub.on { border-color:var(--accent); background:var(--accent); color:var(--accent-ink); }
     .rbtn { position:relative; }
+    .quick-rep { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin:4px 0 6px; }
+    .quick-rep button { border:0; border-radius:16px; padding:12px 4px; min-height:84px; color:#fff; font-weight:700; font-size:13px;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+    .quick-rep button .e { font-size:30px; line-height:1; }
+    .quick-rep button:active { transform:scale(.95); }
+    .quick-rep button:disabled { opacity:.5; }
     .rbtn.sel .c { box-shadow:0 0 0 4px var(--sheet), 0 0 0 7px var(--accent); }
     .rbtn .tick { position:absolute; top:-4px; right:calc(50% - 44px); width:24px; height:24px; border-radius:50%;
       background:var(--accent); color:var(--accent-ink); font-weight:800; font-size:14px; display:none;
@@ -634,7 +640,9 @@
       <span class="handle"></span>
       <div id="reportStep1">
         <h3>Laporkan</h3>
-        <p class="pop-muted" style="margin:-6px 0 8px">Boleh pilih lebih daripada satu (maks 5)</p>
+        <!-- Lapor pantas: satu tekan terus dihantar (selamat semasa memandu) -->
+        <div class="quick-rep" id="quickRep"></div>
+        <p class="pop-muted" style="margin:6px 0 8px">Atau pilih jenis & butiran (boleh lebih daripada satu, maks 5)</p>
         <div class="rgrid" id="typeGrid"></div>
         <button class="btn btn-accent" id="reportNext" style="width:100%; display:none">Seterusnya</button>
       </div>
@@ -781,7 +789,7 @@ const MOODS = ['🙂', '😎', '🤠', '😇', '🥳', '😴', '🤓', '😤', '
   '🤩', '👻', '🐱', '🦁', '🐼', '🚗', '🏍️', '🚕', '🚚'];
 const SETTINGS_DEFAULT = { units: 'km', wake: true, dark: 'auto', autoZoom: true, carIcon: 'arrow', vehicle: 'private',
   repTypes: Object.keys(TYPES), alertTypes: Object.keys(TYPES), alertDist: 600, showSpeedo: true, showUsers: true,
-  voiceName: '', voiceMode: 'normal', volume: 1, avoidFerries: false, avoidHighways: false, speedLimit: 0,
+  voiceName: '', voiceMode: 'normal', volume: 1, avoidFerries: false, avoidHighways: false, speedLimit: -1,
   childReminder: false, mood: '🙂', trips: 0, syncPlaces: true, askStill: true, fasterRoute: true, travel: 'car' };
 const S = Object.assign({}, SETTINGS_DEFAULT, getJSON('jk_settings', {}));
 /** Pastikan setiap tetapan bernilai sah (data dari telefon atau server tidak dipercayai bulat-bulat). */
@@ -989,7 +997,10 @@ const EN = {
   'Tekan lama kotak carian di atas → pilih "Tampal".': 'Long-press the search box above → choose "Paste".',
   'Berdekatan': 'Nearby', 'Semua cadangan': 'All suggestions', 'Anggaran': 'Approximate',
   // Lapor
-  'Boleh pilih lebih daripada satu (maks 5)': 'You can pick more than one (max 5)', 'Seterusnya': 'Next', 'Hantar': 'Send', 'Batal': 'Cancel',
+  'Boleh pilih lebih daripada satu (maks 5)': 'You can pick more than one (max 5)',
+  'Atau pilih jenis & butiran (boleh lebih daripada satu, maks 5)': 'Or choose type & details (more than one allowed, max 5)',
+  'Versi baharu tersedia': 'New version available', 'Muat semula untuk kemas kini JalanKita': 'Reload to update JalanKita',
+  'Nanti': 'Later', 'Seterusnya': 'Next', 'Hantar': 'Send', 'Batal': 'Cancel',
   'Tambah komen (pilihan)': 'Add a comment (optional)', 'Maksimum 5 jenis dalam satu laporan.': 'Maximum 5 types in one report.',
   'Pilih jenis laporan.': 'Choose a report type.', 'Laporan dihantar. Terima kasih! 🙏': 'Report sent. Thank you! 🙏',
   'Polis': 'Police', 'Kemalangan': 'Accident', 'Kesesakan': 'Traffic jam', 'Bahaya': 'Hazard', 'Banjir': 'Flood',
@@ -1042,9 +1053,10 @@ const EN = {
   'Bila melepasi laporan. Bantu buang laporan lama': 'When passing a report. Helps remove old reports', 'Amaran had laju': 'Speed limit alert',
   'Amaran laporan': 'Report alerts', 'Pilih laporan yang diberi amaran suara & paparan bila di hadapan anda.':
     'Choose which reports trigger voice & screen alerts when ahead of you.', 'Tunjuk meter laju': 'Show speedometer', 'Hidup': 'On', 'Mati': 'Off',
-  ['Tiada data had laju jalan untuk Malaysia, jadi anda tetapkan had sendiri. ' +
+  ['Automatik: semasa navigasi, had laju diambil dari peta OpenStreetMap (tidak semua jalan ada data). ' +
     'Meter laju bertukar merah dan suara memberi amaran bila anda melebihinya.']:
-    'There is no road speed-limit data for Malaysia, so set your own limit. The speedometer turns red and the voice warns you when you exceed it.',
+    'Automatic: while navigating, the speed limit comes from the OpenStreetMap map (not every road has data). ' +
+    'The speedometer turns red and the voice warns you when you exceed it.', 'Automatik (ikut jalan)': 'Automatic (follow road)',
   'Notifikasi dalam aplikasi': 'In-app notifications', 'Amaran laporan di hadapan': 'Alerts for reports ahead', 'Peringatan anak': 'Child reminder',
   'Bila tiba di destinasi, JalanKita mengingatkan anda (paparan & suara) supaya memeriksa tempat duduk belakang.':
     'When you arrive, JalanKita reminds you (screen & voice) to check the back seat.',
@@ -1746,8 +1758,9 @@ const CHOICES = {
     note: 'Servis laluan Google dalam Apps Script tiada mod khas teksi atau motosikal, jadi laluan adalah sama. ' +
       'Pilihan ini menukar ikon kenderaan anda.' },
   alertDist: { title: 'Jarak amaran', opts: [[300, 'Dekat · 300 m'], [600, 'Biasa · 600 m'], [1000, 'Jauh · 1 km']] },
-  speedLimit: { title: 'Amaran had laju', unit: true, opts: [[0, 'Mati'], [60, '60'], [80, '80'], [90, '90'], [110, '110'], [120, '120']],
-    note: 'Tiada data had laju jalan untuk Malaysia, jadi anda tetapkan had sendiri. ' +
+  speedLimit: { title: 'Amaran had laju', unit: true,
+    opts: [[0, 'Mati'], [-1, 'Automatik (ikut jalan)'], [60, '60'], [80, '80'], [90, '90'], [110, '110'], [120, '120']],
+    note: 'Automatik: semasa navigasi, had laju diambil dari peta OpenStreetMap (tidak semua jalan ada data). ' +
       'Meter laju bertukar merah dan suara memberi amaran bila anda melebihinya.' }
 };
 const SEGS = { units: [['km', 'km'], ['mi', 'Batu']], voiceLang: [['ms', 'Bahasa Melayu'], ['en', 'English']] };
@@ -1759,7 +1772,7 @@ function getVal(k) { return k === 'voiceLang' ? voiceLang : S[k]; }
 function choiceLabel(k) {
   const c = CHOICES[k], o = c.opts.find(x => String(x[0]) === String(S[k]));
   if (!o) return '';
-  return c.unit && o[0] ? fmtSpeed(o[0]) + ' ' + speedUnit() : o[1];
+  return c.unit && o[0] > 0 ? fmtSpeed(o[0]) + ' ' + speedUnit() : o[1];
 }
 function getToggle(k) {
   if (k === 'hidden') return hidden;
@@ -1983,7 +1996,7 @@ function renderSet() {
   if (id.indexOf('choice:') === 0) {
     const k = id.slice(7), c = CHOICES[k];
     pg = { title: c.title, html: list(c.opts.map((o, i) => sRow({ pick: k + '|' + i,
-      label: c.unit && o[0] ? fmtSpeed(o[0]) + ' ' + speedUnit() : o[1],
+      label: c.unit && o[0] > 0 ? fmtSpeed(o[0]) + ' ' + speedUnit() : o[1],
       check: String(S[k]) === String(o[0]) }))) + (c.note ? note(c.note) : '') };
   } else pg = (PAGES[id] || PAGES.root)();
   $('setTitle').textContent = pg.title;
@@ -2026,7 +2039,7 @@ function applyTheme() {
   clearTimeout(themeTimer); themeTimer = setTimeout(applyTheme, 300000); // semak semula setiap 5 minit (malam/siang)
 }
 function renderSpeedSign() {
-  const lim = Number(S.speedLimit) || 0;
+  const lim = curLimit();
   $('speedSign').textContent = lim ? fmtSpeed(lim) : '';
   $('speedSign').style.display = lim && S.showSpeedo ? 'flex' : 'none';
 }
@@ -2174,13 +2187,19 @@ function setMe(pos) {
   state.glideMs = prev && prev.t && pos.t && state.follow && (pos.speed || 0) > 3
     ? Math.min(1000, Math.max(300, pos.t - prev.t)) : 0;
   state.me = pos;
+  // Jimat bateri: kesan bila telefon diam lama (bukan navigasi) → GPS ketepatan rendah & segar data jarang-jarang
+  if ((pos.speed || 0) >= 5) state.stillSince = 0; else if (!state.stillSince) state.stillSince = Date.now();
+  if (!state.manualLoc && navigator.geolocation) {
+    if (!geoLow && isIdle()) startGeo(true);
+    else if (geoLow && (state.navigating || (pos.speed || 0) >= 8)) startGeo(false);
+  }
   moveMeMarker(pos.lat, pos.lng, state.glideMs);
   if (pos.heading != null && !isNaN(pos.heading)) { state.heading = pos.heading; state.headingAt = Date.now(); }
   if (!map.hasLayer(meMarker)) meMarker.addTo(map);
   updateArrow();
   $('speedNum').textContent = fmtSpeed(pos.speed || 0);
   // Amaran had laju peribadi
-  const lim = Number(S.speedLimit) || 0, over = lim > 0 && (pos.speed || 0) > lim + 2;
+  const lim = curLimit(), over = lim > 0 && (pos.speed || 0) > lim + 2;
   $('speedo').classList.toggle('over', over);
   if (over && Date.now() - (state.speedWarnAt || 0) > 60000) { state.speedWarnAt = Date.now(); speak(VOICE[voiceLang].speeding, 'speed'); }
 
@@ -2204,12 +2223,18 @@ function setMe(pos) {
 
 // GPS. Di iPhone, watchPosition boleh berhenti selepas satu ralat (cth. masa tamat) atau bila skrin dikunci,
 // jadi ia dimulakan semula secara automatik dan dipantau oleh "watchdog".
-let watchId = null, lastFixAt = 0, gpsWarnAt = 0;
-function startGeo() {
+let watchId = null, lastFixAt = 0, gpsWarnAt = 0, geoLow = false;
+/** Diam > 3 minit dan tidak menavigasi → mod jimat bateri. */
+const IDLE_MS = 180000;
+function isIdle() { return !state.navigating && !!state.stillSince && Date.now() - state.stillSince > IDLE_MS; }
+/** low = true: GPS ketepatan rendah (Wi-Fi/menara sel, jauh lebih jimat bateri) — hanya bila telefon diam lama. */
+function startGeo(low) {
   if (!navigator.geolocation) return geoFallback();
   if (watchId != null) navigator.geolocation.clearWatch(watchId);
-  watchId = navigator.geolocation.watchPosition(onFix, onGeoError,
-    { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 });
+  geoLow = !!low;
+  watchId = navigator.geolocation.watchPosition(onFix, onGeoError, geoLow
+    ? { enableHighAccuracy: false, maximumAge: 15000, timeout: 30000 }
+    : { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 });
 }
 
 function onFix(p) {
@@ -2230,14 +2255,15 @@ function onFix(p) {
 
 function onGeoError(err) {
   if (err && err.code === 1) return geoFallback(); // kebenaran lokasi ditolak
-  setTimeout(startGeo, 2000);                      // masa tamat / tiada isyarat → cuba semula
+  setTimeout(() => startGeo(geoLow), 2000);        // masa tamat / tiada isyarat → cuba semula
   if (!state.me) geoFallback();
 }
 
 setInterval(() => {
   if (state.manualLoc || !navigator.geolocation || document.hidden) return;
-  if (Date.now() - lastFixAt > 12000) {
-    startGeo();
+  // Mod jimat: telefon diam jarang memberi bacaan baharu — jangan mulakan semula GPS setiap 12 s
+  if (Date.now() - lastFixAt > (geoLow ? 90000 : 12000)) {
+    startGeo(geoLow);
     if (state.navigating && Date.now() - gpsWarnAt > 30000) { gpsWarnAt = Date.now(); toast('📡 Mencari isyarat GPS…'); }
   }
 }, 6000);
@@ -2245,7 +2271,8 @@ setInterval(() => {
 // Kembali ke aplikasi (cth. selepas buka WhatsApp / skrin dikunci) → mulakan semula GPS & kunci skrin
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) return;
-  startGeo();
+  state.stillSince = 0;
+  startGeo(false);
   refresh();
   if (state.navigating) { requestWakeLock(); if (state.follow) followMe(false); }
 });
@@ -2293,7 +2320,10 @@ function maybeSendLocation() {
   if (last && now - last.t < LOC_MIN_MS) return;                             // maks 120/jam
   if (last && now - last.t < LOC_IDLE_MS && dist(me, last) < 50) return;     // berhenti: cukup setiap 90 s
   state.lastSent = { lat: me.lat, lng: me.lng, t: now };
-  call('updateLocation', token, { name: userName, lat: me.lat, lng: me.lng, speed: me.speed, heading: me.heading, mood: S.mood }).catch(() => {});
+  // Arah terakhir yang diketahui (≤ 2 minit) — semasa berhenti dalam kesesakan GPS tidak memberi arah
+  const hd = me.heading != null ? me.heading : reportHeading(false);
+  // Tidak dihantar sendiri: ikut bersama segar data seterusnya (getLiveData) — satu pelaksanaan server, bukan dua
+  state.locPending = { name: userName, lat: me.lat, lng: me.lng, speed: me.speed, heading: hd, mood: S.mood };
 }
 
 // ------------------------------------------------------------ Data langsung
@@ -2301,13 +2331,39 @@ async function refresh() {
   if (!token || TRACK || document.hidden) return;   // tab tersembunyi: jangan bazir kuota (disegar bila kembali)
   try {
     const me = state.me || {};
-    const d = await call('getLiveData', token, me.lat, me.lng);
+    state.lastRefreshAt = Date.now();
+    const loc = hidden ? null : state.locPending;
+    const d = await call('getLiveData', token, me.lat, me.lng, loc);
+    if (loc && state.locPending === loc) state.locPending = null;
+    state.liveBackoff = 0; state.liveBackoffUntil = 0;
+    checkVersion(d.v);
     state.reports = d.reports;
-    drawReports(); drawUsers(d.users);
+    state.users = d.users || [];
+    drawReports(); drawUsers(state.users);
     checkHazards();
     if (state.routes.length) drawTraffic();
     if (state.routes.length && !state.navigating) renderRouteChoices();
-  } catch (e) { console.warn(e); }
+  } catch (e) {
+    console.warn(e);
+    // Server penuh / had kuota → beri ruang: tangguh segar seterusnya 30 s, 60 s, sehingga 2 minit
+    if (!isNetErr(e) && /sibuk|too many|terlalu banyak|invoked|lock|lambat/i.test(String(e && e.message))) {
+      state.liveBackoff = Math.min(120000, (state.liveBackoff || 15000) * 2);
+      state.liveBackoffUntil = Date.now() + state.liveBackoff;
+    }
+  }
+}
+
+// ---- Versi baharu di server (selepas deploy): tawar muat semula, sekali sahaja, bukan semasa navigasi
+function checkVersion(v) {
+  if (!v || state.verOffered || String(v) === APP_VERSION.replace(/ \(uji\)$/, '')) return;
+  if (state.navigating || askBusy()) return;              // cuba lagi pada segar seterusnya
+  state.verOffered = true;
+  showAsk({ icon: '🆕', text: 'Versi baharu tersedia', sub: 'Muat semula untuk kemas kini JalanKita', yes: 'Muat semula',
+    no: 'Nanti', ms: 15000, onYes: reloadApp });
+}
+function reloadApp() {
+  const uji = / \(uji\)$/.test(APP_VERSION);
+  if (APP_URL) window.open(APP_URL + (uji ? '?uji=1' : ''), '_top'); else location.reload();
 }
 
 // Jangan lukis semula laporan semasa popup terbuka — clearLayers() menutupnya (pengguna mungkin hendak tekan 👍/👎).
@@ -2524,6 +2580,7 @@ function trafficSegs(r) {
     if (!sameDirection(rep, a && b && (a.lat !== b.lat || a.lng !== b.lng) ? bearing(a, b) : null)) return;
     raw.push({ s: Math.max(0, l.along - j.back), e: Math.min(r.total, l.along + j.fwd), lvl: j.lvl, ids: [rep.id], types: [rep.type] });
   });
+  autoJams(r, box).forEach(x => raw.push(x));
   raw.sort((x, y) => x.s - y.s);
   const out = [];
   raw.forEach(x => {
@@ -2532,6 +2589,37 @@ function trafficSegs(r) {
       p.e = Math.max(p.e, x.e); p.lvl = Math.max(p.lvl, x.lvl); p.ids = p.ids.concat(x.ids); p.types = p.types.concat(x.types);
     } else out.push(x);
   });
+  return out;
+}
+
+/**
+ * Kesesakan automatik (seperti Waze): pengguna lain yang bergerak PERLAHAN ke arah yang SAMA di atas laluan.
+ * ≥ 2 pengguna ≤ 20 km/j dalam 300 m → 🟠 perlahan; ≥ 3 pengguna semuanya ≤ 10 km/j → 🔴 sesak.
+ * Arah wajib (lebuh raya dua hala: kesesakan di seberang tidak dikira). Kedudukan pengguna dikaburkan ~100 m.
+ */
+function autoJams(r, box) {
+  const slow = [];
+  (state.users || []).forEach(u => {
+    if (!(u.speed <= 20) || u.dir == null || u.lat < box[0] || u.lat > box[1] || u.lng < box[2] || u.lng > box[3]) return;
+    const l = locate(u, r, 0);
+    if (l.off > 120) return;
+    const a = r.pts[l.seg], b = r.pts[Math.min(l.seg + 1, r.pts.length - 1)];
+    if (!a || !b || (a.lat === b.lat && a.lng === b.lng) || !sameDirection({ heading: u.dir }, bearing(a, b))) return;
+    slow.push({ a: l.along, v: u.speed });
+  });
+  slow.sort((x, y) => x.a - y.a);
+  const out = [];
+  for (let i = 0; i < slow.length;) {
+    let j = i;
+    while (j + 1 < slow.length && slow[j + 1].a - slow[i].a <= 300) j++;
+    const g = slow.slice(i, j + 1);
+    if (g.length >= 2) {
+      const red = g.length >= 3 && g.every(x => x.v <= 10);
+      out.push({ s: Math.max(0, g[0].a - 100), e: Math.min(r.total, g[g.length - 1].a + 100), lvl: red ? 2 : 1,
+        ids: ['auto-' + Math.round(g[0].a / 500)], types: ['SESAK'] });
+    }
+    i = j + 1;
+  }
   return out;
 }
 
@@ -2729,6 +2817,7 @@ function stepLabel(st) { return st.road || st.text; }
 function startNav() {
   if (!state.routes.length || !state.me) return;
   state.navigating = true; state.follow = true;
+  if (geoLow) startGeo(false);
   state.routePts = state.routes[state.selRoute].pts;
   state.stepIdx = 0; state.meSeg = 0; state.spoken = {};
   state.maxAlong = 0; state.offCount = 0; state.backCount = 0; state.stopSince = 0; state.saidNear = false; state.lastTickT = 0;
@@ -2759,6 +2848,7 @@ function onNavTick() {
   const loc = locate(me, r, Math.max(0, (state.meSeg || 0) - 10), ahead,
     { along: (state.meAlong || 0) + (me.speed || 0) / 3.6 * dt, heading: moving ? state.heading : null });
   state.meSeg = loc.seg; state.meAlong = loc.along;
+  updateRoadLimit();
   const offLimit = Math.max(60, Math.min(150, (me.acc || 0) * 1.5));
   if (loc.off <= offLimit) state.maxAlong = Math.max(state.maxAlong || 0, loc.along);   // hanya bacaan yang di atas laluan
   const toDest = dist(me, state.dest), remaining = r.total - loc.along;
@@ -3082,6 +3172,7 @@ function cancelRoute() {
   state.routeReq = (state.routeReq || 0) + 1; // batalkan permintaan laluan yang masih berjalan
   releaseWakeLock(); clearTimeout(followTimer);
   state.navigating = false; state.routes = []; state.autoStart = false;
+  state.roadLimit = 0; state.slRoute = null; state.slInt = []; state.shownLimit = 0; renderSpeedSign();
   store.del('jk_active');
   state.routeLayers.forEach(l => l.remove()); state.routeLayers = [];
   (state.trafficLayers || []).forEach(l => l.remove()); state.trafficLayers = []; state.trafficKey = null;
@@ -3307,15 +3398,89 @@ const OVERPASS_TIMEOUT_MS = 15000;
  * masa / HTTP 502. Tempat yang jauh dari laluan ditapis di telefon (locate(), off < 800 m).
  */
 function alongQuery(c, pts) {
+  return `[out:json][timeout:25];(${routeBoxes(pts, c[1]).map(b => `nw${c[0]}(${b});`).join('')});out center 300;`;
+}
+/** Kotak kecil (s,w,n,e) di sepanjang titik laluan: setiap ~4 titik, ditambah padM meter di setiap sisi. */
+function routeBoxes(pts, padM) {
   const boxes = [];
   for (let i = 0; i < pts.length - 1; i += 4) {
     const g = pts.slice(i, i + 5), la = g.map(p => p[0]), ln = g.map(p => p[1]);
-    const dLa = c[1] / 111320, dLn = c[1] / (111320 * Math.cos(la[0] * Math.PI / 180));
+    const dLa = padM / 111320, dLn = padM / (111320 * Math.cos(la[0] * Math.PI / 180));
     // dibundarkan KELUAR ke 0.001° (~100 m): privasi, dan kotak tidak mengecil
     const lo = v => (Math.floor(v * 1000) / 1000).toFixed(3), hi = v => (Math.ceil(v * 1000) / 1000).toFixed(3);
     boxes.push([lo(Math.min(...la) - dLa), lo(Math.min(...ln) - dLn), hi(Math.max(...la) + dLa), hi(Math.max(...ln) + dLn)].join(','));
   }
-  return `[out:json][timeout:25];(${boxes.map(b => `nw${c[0]}(${b});`).join('')});out center 300;`;
+  return boxes;
+}
+
+// ---- Had laju automatik (OpenStreetMap "maxspeed") semasa navigasi
+// Jalan ber-"maxspeed" dalam ~30 km di hadapan dimuat sekali (kotak kecil, sama seperti carian sepanjang laluan).
+// Setiap nod jalan yang berada di atas laluan (≤ 25 m, arah selari) memberi selang [mula, akhir] pada laluan.
+const SL_AHEAD = 30000;
+function parseMaxspeed(v) {
+  const m = String(v || '').match(/^\s*(\d{2,3})\s*(mph)?/i);
+  if (!m) return 0;
+  return m[2] ? Math.round(Number(m[1]) * 1.609) : Number(m[1]);
+}
+/** Selang had laju pada laluan r daripada jalan OSM (elements dengan geometry). Pulangkan [{ s, e, v }]. */
+function speedIntervals(r, elements, fromSeg, maxAlong) {
+  const out = [];
+  (elements || []).forEach(w => {
+    const v = parseMaxspeed(w.tags && w.tags.maxspeed), g = w.geometry || [];
+    if (!v || v > 130 || g.length < 2) return;
+    let s = Infinity, e = -Infinity;
+    for (let k = 0; k < g.length; k++) {
+      const p = { lat: g[k].lat, lng: g[k].lon }, l = locate(p, r, fromSeg, maxAlong);
+      if (!(l.off <= 25)) continue;
+      const q = g[k + 1] || g[k - 1], o = g[k + 1] ? p : { lat: q.lat, lng: q.lon };
+      const wb = g[k + 1] ? bearing(p, { lat: q.lat, lng: q.lon }) : bearing(o, p);
+      const a = r.pts[l.seg], b = r.pts[Math.min(l.seg + 1, r.pts.length - 1)];
+      if (a && b && (a.lat !== b.lat || a.lng !== b.lng)) {
+        const d = Math.abs(angDiff(wb, bearing(a, b)));
+        if (d > 35 && d < 145) continue;   // jalan bersilang / susur — bukan jalan yang dilalui
+      }
+      s = Math.min(s, l.along); e = Math.max(e, l.along);
+    }
+    if (s <= e) out.push({ s, e, v });
+  });
+  return out;
+}
+/** Had laju jalan semasa (0 = tidak diketahui) pada kedudukan 'along'. Selang terpendek yang meliputinya diutamakan. */
+function speedAt(intervals, along) {
+  let best = null;
+  (intervals || []).forEach(x => {
+    if (x.s - 30 <= along && along <= x.e + 30 && (!best || x.e - x.s < best.e - best.s)) best = x;
+  });
+  return best ? best.v : 0;
+}
+function updateRoadLimit() {
+  const r = state.routes[state.selRoute];
+  if (!r || !state.navigating || S.speedLimit !== -1) return;
+  const along = state.meAlong || 0;
+  // Muat (semula) bila laluan bertukar atau kedudukan menghampiri hujung kawasan yang sudah dimuat
+  if (!state.slBusy && (state.slRoute !== r || state.slTo < Math.min(r.total, along + 10000))) {
+    state.slBusy = true;
+    const navId = state.navId, from = Math.max(0, along - 200), to = Math.min(r.total, along + SL_AHEAD), pts = [];
+    for (let d = from; d < to; d += 1000) pts.push(slicePts(r, d, d)[0]);
+    pts.push(slicePts(r, to, to)[0]);
+    const q = `[out:json][timeout:25];(${routeBoxes(pts, 40).map(b => `way["highway"]["maxspeed"](${b});`).join('')});out tags geom;`;
+    overpassRaw(q, []).then(data => {
+      if (navId !== state.navId || state.routes[state.selRoute] !== r) return;
+      const keep = state.slRoute === r ? (state.slInt || []).filter(x => x.e < from) : [];
+      state.slInt = keep.concat(speedIntervals(r, data.elements, Math.max(0, (state.meSeg || 0) - 5), to + 100));
+      state.slRoute = r; state.slTo = to;
+      updateRoadLimit();
+    }, () => { state.slRetryAt = Date.now() + 60000; })
+      .finally(() => { setTimeout(() => { state.slBusy = false; }, Math.max(0, (state.slRetryAt || 0) - Date.now())); });
+  }
+  const v = state.slRoute === r ? speedAt(state.slInt, along) : 0;
+  if (v) { state.roadLimit = v; state.roadLimitAt = along; }
+  else if (state.roadLimit && along - (state.roadLimitAt || 0) > 300) state.roadLimit = 0;   // tiada data lagi
+  if (state.shownLimit !== curLimit()) { state.shownLimit = curLimit(); renderSpeedSign(); }
+}
+/** Had laju yang digunakan: tetapan sendiri, atau had jalan (Automatik, semasa navigasi sahaja). */
+function curLimit() {
+  return S.speedLimit === -1 ? (state.navigating ? state.roadLimit || 0 : 0) : Math.max(0, Number(S.speedLimit) || 0);
 }
 
 const errText = e => String(e && e.message || e).replace(/^(Error|Exception):\s*/i, '');
@@ -3327,8 +3492,19 @@ const errText = e => String(e && e.message || e).replace(/^(Error|Exception):\s*
  */
 function overpassDirect(cat, pts, diag) {
   const c = ALONG_Q[cat];
-  if (!c || !window.fetch || !window.AbortController) return Promise.reject(new Error('tiada'));
-  const q = alongQuery(c, pts);
+  if (!c) return Promise.reject(new Error('tiada'));
+  return overpassRaw(alongQuery(c, pts), diag).then(data => (data.elements || []).map(el => {
+    const t = el.tags || {}, lat = Number(el.lat != null ? el.lat : el.center && el.center.lat);
+    const lng = Number(el.lon != null ? el.lon : el.center && el.center.lon);
+    const txt = v => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, '').trim().slice(0, 80);
+    const title = txt(t.name || t.brand || t.operator || c[2]);
+    if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180 || !title) return null;
+    return { title, sub: txt([t.brand && t.brand !== title ? t.brand : '', t['addr:street'] || ''].filter(Boolean).join(' · ')), lat, lng };
+  }).filter(Boolean));
+}
+/** Hantar pertanyaan ke pelayan Overpass (berlumba, lihat di atas). Pulangkan JSON jawapan pertama yang sah. */
+function overpassRaw(q, diag) {
+  if (!window.fetch || !window.AbortController) return Promise.reject(new Error('tiada'));
   const first = (Number(store.get('jk_ovok')) || 0) % OVERPASS.length;
   const order = OVERPASS.map((u, k) => (first + k) % OVERPASS.length);
   const ctls = [], timers = [];
@@ -3340,29 +3516,71 @@ function overpassDirect(cat, pts, diag) {
       if (done) return fail();
       const ctl = new AbortController(); ctls.push(ctl);
       const timer = setTimeout(() => ctl.abort(), OVERPASS_TIMEOUT_MS); timers.push(timer);
-      const host = OVERPASS[i].split('/')[2];
+      const host = OVERPASS[i].split('/')[2], t0 = Date.now();
       try {
         // Borang biasa (tanpa pengepala khas) → tiada "preflight" CORS
         const res = await fetch(OVERPASS[i], { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctl.signal,
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, credentials: 'omit', referrerPolicy: 'no-referrer' });
-        if (!res.ok) { diag.push(host + ': HTTP ' + res.status); return fail(); }
+        if (!res.ok) { diag.push(host + ': HTTP ' + res.status + ' · ' + (Date.now() - t0) + ' ms'); return fail(); }
         const data = await res.json();
         if (done) return;
         store.set('jk_ovok', String(i));
         finish();
-        resolve((data.elements || []).map(el => {
-          const t = el.tags || {}, lat = Number(el.lat != null ? el.lat : el.center && el.center.lat);
-          const lng = Number(el.lon != null ? el.lon : el.center && el.center.lon);
-          const txt = v => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, '').trim().slice(0, 80);
-          const title = txt(t.name || t.brand || t.operator || c[2]);
-          if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180 || !title) return null;
-          return { title, sub: txt([t.brand && t.brand !== title ? t.brand : '', t['addr:street'] || ''].filter(Boolean).join(' · ')), lat, lng };
-        }).filter(Boolean));
+        resolve(data);
       } catch (e) {        // lambat / disekat / jawapan rosak
-        if (!done) diag.push(host + ': ' + (e && e.name === 'AbortError' ? 'tamat masa' : String(e && e.message || e).slice(0, 60)));
+        if (!done) diag.push(host + ': ' + (e && e.name === 'AbortError' ? 'tamat masa' : String(e && e.message || e).slice(0, 60)) +
+          ' · ' + (Date.now() - t0) + ' ms');
         fail();
       } finally { clearTimeout(timer); }
     }, k === 0 ? 0 : 2000)));
+  });
+}
+// Photon terus dari telefon (sumber percuma kedua). Server Google mungkin disekat oleh Photon, tetapi telefon tidak.
+const PHOTON_TAGS = { fuel: ['amenity:fuel'], rest: ['highway:services', 'highway:rest_area'],
+  mosque: ['amenity:place_of_worship'], toilet: ['amenity:toilets'], atm: ['amenity:atm'], ev: ['amenity:charging_station'],
+  food: ['amenity:restaurant', 'amenity:fast_food', 'amenity:cafe', 'amenity:food_court'],
+  train: ['railway:station', 'railway:halt'], bus: ['amenity:bus_station'] };
+function photonDirect(cat, pts, diag) {
+  const tags = PHOTON_TAGS[cat];
+  if (!tags || !window.fetch || !window.AbortController) return Promise.reject(new Error('tiada'));
+  const every = Math.max(1, Math.ceil(pts.length / 10)), seen = {};
+  const pick = pts.filter((p, i) => i % every === 0).map(p => [p[0].toFixed(2), p[1].toFixed(2)])
+    .filter(p => !seen[p] && (seen[p] = true)).slice(0, 10);
+  const t0 = Date.now(), ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), OVERPASS_TIMEOUT_MS);
+  const qs = tags.map(t => '&osm_tag=' + encodeURIComponent(t)).join('');
+  let ok = 0, codes = {};
+  return Promise.all(pick.map(p => fetch('https:\/\/photon.komoot.io/reverse?lat=' + p[0] + '&lon=' + p[1] + '&radius=2&limit=15' + qs,
+    { signal: ctl.signal, credentials: 'omit', referrerPolicy: 'no-referrer' })
+    .then(r => { codes[r.status] = (codes[r.status] || 0) + 1; return r.ok ? r.json() : null; })
+    .then(d => { if (d) ok++; return (d && d.features) || []; })
+    .catch(e => { const k = e && e.name === 'AbortError' ? 'tamat masa' : String(e && e.message || e).slice(0, 40);
+      codes[k] = (codes[k] || 0) + 1; return []; })))
+    .then(all => {
+      clearTimeout(timer);
+      diag.push('photon (telefon): ' + Object.keys(codes).map(k => k + '×' + codes[k]).join(', ') + ' · ' + (Date.now() - t0) + ' ms');
+      if (!ok) throw new Error('tiada');
+      const out = [], dup = {};
+      [].concat(...all).forEach(f => {
+        const pr = f.properties || {}, g = (f.geometry && f.geometry.coordinates) || [];
+        if (pr.osm_key && tags.indexOf(pr.osm_key + ':' + pr.osm_value) < 0) return;
+        if (cat === 'mosque' && !/masjid|surau|mosque|musol+a|musal+a/i.test(String(pr.name || ''))) return;
+        const lat = Number(g[1]), lng = Number(g[0]);
+        const title = String(pr.name || ALONG_Q[cat][2]).replace(/[\u0000-\u001f]/g, '').trim().slice(0, 80);
+        const k = title + '|' + lat.toFixed(3) + ',' + lng.toFixed(3);
+        if (!isFinite(lat) || !isFinite(lng) || dup[k]) return;
+        dup[k] = true;
+        out.push({ title, sub: [pr.street, pr.city].filter(Boolean).join(', ').slice(0, 80), lat, lng });
+      });
+      return out;
+    });
+}
+/** Sumber percuma dari telefon: Overpass & Photon serentak — hasil pertama yang berjaya digunakan. */
+function directAlong(cat, pts, diag) {
+  return new Promise((resolve, reject) => {
+    let left = 2;
+    const no = () => { if (--left === 0) reject(new Error('tiada')); };
+    overpassDirect(cat, pts, diag).then(resolve, no);
+    photonDirect(cat, pts, diag).then(resolve, no);
   });
 }
 function openAlong() {
@@ -3414,7 +3632,7 @@ async function searchAlong(cat) {
       let direct = null, serverDone = false, errs = 0, netErr = null;
       const startDirect = () => {
         if (direct || req !== state.alongReq) return;
-        direct = overpassDirect(cat, pts, diag).then(resolve, () => { if (++errs === 2 || serverDone) reject(netErr || new Error('tiada')); });
+        direct = directAlong(cat, pts, diag).then(resolve, () => { if (++errs === 2 || serverDone) reject(netErr || new Error('tiada')); });
       };
       const hedge = setTimeout(startDirect, 5000);
       call('alongRoute', token, cat, pts.map(p => [Number(p[0].toFixed(5)), Number(p[1].toFixed(5))])).then(l => {
@@ -3424,7 +3642,7 @@ async function searchAlong(cat) {
         if (isNetErr(e)) netErr = e;
         // Termasuk "Terlalu banyak permintaan" (kuota server): telefon cuba sendiri — tidak guna kuota server
         state.alongLimited = /Terlalu banyak/.test(String(e && e.message));
-        diag.push('Server: ' + errText(e).slice(0, 80));
+        diag.push('Server: ' + errText(e).slice(0, 160));
         if (direct) { if (++errs === 2) reject(netErr || new Error('tiada')); } else { errs++; startDirect(); }
       });
     });
@@ -3440,7 +3658,19 @@ async function searchAlong(cat) {
   } catch (e) {
     if (req !== state.alongReq) return;
     if (isNetErr(e)) box.innerHTML = '<div class="hint">📵 Tiada liputan.</div>';
-    else box.innerHTML = failBox();
+    else {
+      box.innerHTML = failBox();
+      // Diagnostik: pertanyaan Overpass paling kecil — beza "pelayan sibuk" dengan "sambungan disekat"
+      const t0 = Date.now(), ctl = window.AbortController && new AbortController(), tm = setTimeout(() => ctl && ctl.abort(), 8000);
+      fetch(OVERPASS[0] + '?data=' + encodeURIComponent('[out:json][timeout:5];node(1);out;'),
+        { signal: ctl && ctl.signal, credentials: 'omit', referrerPolicy: 'no-referrer' })
+        .then(r => 'HTTP ' + r.status, x => (x && x.name === 'AbortError' ? 'tamat masa' : String(x && x.message || x).slice(0, 40)))
+        .then(t => {
+          clearTimeout(tm);
+          diag.push('ping overpass-api.de: ' + t + ' · ' + (Date.now() - t0) + ' ms');
+          if (req === state.alongReq && /tidak menjawab|Terlalu banyak/.test(box.textContent)) box.innerHTML = failBox();
+        });
+    }
   } finally { clearTimeout(slow); clearTimeout(giveUp); }
 }
 
@@ -3600,9 +3830,20 @@ function openReport() {
   $('typeGrid').innerHTML = Object.keys(TYPES).map(k =>
     `<button class="rbtn" data-type="${k}"><span class="tick">✓</span>` +
     `<span class="c" style="background:${COLORS[k] || '#607d8b'}">${TYPES[k].icon}</span>${esc(TYPES[k].label)}</button>`).join('');
+  $('quickRep').innerHTML = QUICK_TYPES.filter(k => TYPES[k]).map(k =>
+    `<button data-quick="${k}" style="background:${COLORS[k] || '#607d8b'}"><span class="e">${TYPES[k].icon}</span>` +
+    `${esc(TYPES[k].label)}</button>`).join('');
   renderReportNext();
   $('reportModal').style.display = 'flex';
 }
+// Lapor pantas: jenis yang paling kerap dilapor semasa memandu — satu tekan, terus dihantar tanpa langkah kedua
+const QUICK_TYPES = ['POLIS', 'KEMALANGAN', 'SESAK', 'BAHAYA'];
+$('quickRep').addEventListener('click', e => {
+  const b = e.target.closest('[data-quick]'); if (!b || !TYPES[b.dataset.quick] || !state.me) return;
+  $('quickRep').querySelectorAll('button').forEach(x => { x.disabled = true; });
+  sendReport([{ type: b.dataset.quick, desc: '', heading: reportHeading(false) }])
+    .finally(() => $('quickRep').querySelectorAll('button').forEach(x => { x.disabled = false; }));
+});
 function renderReportNext() {
   const n = state.pickedTypes.length;
   $('reportNext').style.display = n ? 'block' : 'none';
@@ -3650,8 +3891,13 @@ $('btnSend').onclick = async () => {
     const sub = state.pickedSubs[k];
     return { type: k, desc: [sub, note].filter(Boolean).join(' · '), heading: reportHeading(sub === 'Arah bertentangan') };
   });
-  const payload = { lat: state.me.lat, lng: state.me.lng, name: userName, items };
   $('btnSend').disabled = true;
+  await sendReport(items);
+  $('btnSend').disabled = false;
+};
+
+async function sendReport(items) {
+  const payload = { lat: state.me.lat, lng: state.me.lng, name: userName, items };
   try {
     const res = await call('submitReports', token, payload);
     rememberMine(res && res.ids);
@@ -3670,8 +3916,7 @@ $('btnSend').onclick = async () => {
       toast('📵 Tiada liputan. Laporan disimpan & akan dihantar bila ada internet.');
     } else toast(e.message || e);
   }
-  $('btnSend').disabled = false;
-};
+}
 
 // ------------------------------------------------------------ Kawalan
 document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('.modal').style.display = 'none');
@@ -3843,7 +4088,14 @@ call('getSession', prevToken, pendingOld).then(async s => {
 });
 renderNet();
 if (TRACK) document.body.dataset.mode = 'track';
-else { restoreShare(); startGeo(); setInterval(refresh, 15000); }
+else {
+  restoreShare(); startGeo(false);
+  // Segar laporan & pengguna setiap 15 s; bila telefon diam lama (bukan navigasi) hanya setiap 60 s (jimat bateri & kuota)
+  setInterval(() => {
+    if (Date.now() < (state.liveBackoffUntil || 0)) return;   // server sibuk: tunggu
+    if (!isIdle() || Date.now() - (state.lastRefreshAt || 0) >= 60000) refresh();
+  }, 15000);
+}
 window.__appStarted = true; // pengesan permulaan di <head> tahu aplikasi berjaya bermula
 </script>
 </body>

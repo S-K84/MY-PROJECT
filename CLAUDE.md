@@ -58,6 +58,12 @@ JalanKita ialah aplikasi navigasi & laporan trafik komuniti (ala Waze): **Google
 - **Setiap mesej ralat server baharu mesti ada terjemahan** dalam `EN` (`Index.html`). `tests/i18n.test.js` akan gagal jika tiada.
 - Peraturan `EN_RULES` disemak sebelum pemecahan `' · '`. Jangan tulis corak yang menelan seluruh baris (contoh `^oleh (.+)$`).
 - Teks paparan ditulis dalam BM dalam kod; terjemahan English berlaku pada DOM (MutationObserver). Teks dinamik perlukan corak dalam `EN_RULES`.
+- **Google membuang komen JS sebelum menghantar halaman**, dan pembuang itu mudah keliru. Bila keliru, `//` dalam teks
+  (cth. `'https://maps…'`) dianggap komen dan baki baris dipadam → `SyntaxError: Unexpected EOF` di iPhone (punca PR #5).
+  Peraturan: dalam skrip, `//` dan `/*` hanya sebagai permulaan komen; dalam teks tulis `'https:\/\/…'`. Diuji oleh
+  `tests/client.test.js`.
+- Pelayan percuma (Overpass, Photon) sering menyekat server Google → carian sepanjang laluan & had laju dibuat dari
+  TELEFON (kotak kecil, pelayan ditanya serentak), server hanya cuba Photon sekali.
 - **PR #5 (2026.11.04-b) gagal di Safari iPhone** dengan `SyntaxError: Unexpected EOF (baris 1946)` walaupun lulus semua ujian
   dan sah dalam V8/acorn/esprima/QuickJS; ditarik balik dalam PR #6. Skrin ralat kini memaparkan diagnostik (panjang & hujung
   skrip yang diterima pelayar) untuk siasatan melalui saluran uji.
