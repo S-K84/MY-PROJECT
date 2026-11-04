@@ -54,7 +54,7 @@ Ujian memerlukan Node.js 20+ dan tiada pakej tambahan. Ia memuatkan `Code.gs` de
 5. Untuk deploy automatik dari GitHub, ikut [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ## Had yang diketahui
-- **ID pengguna bertukar setiap 30 hari.** `Session.getTemporaryActiveUserKey()` dirotasi oleh Google, jadi tetapan, mata dan sekatan "hilang" sebulan sekali.
+- **ID pengguna bertukar setiap 30 hari.** `Session.getTemporaryActiveUserKey()` dirotasi oleh Google. Selagi pelayar masih menyimpan token lama, aplikasi bertanya *"Pulihkan data anda?"* dan memindah mata & data (`migrateData`); sekatan dipindah secara automatik. Kalau storan pelayar sudah dibuang (biasa di iPhone), data lama tidak dapat dipulihkan.
 - **Kuota Google pada akaun pemilik**: ~1,000 laluan sehari untuk Gmail biasa, dan ~30 pelaksanaan serentak. Had kadar dalam `CONFIG.LIMITS` menjaga kuota ini.
 - **Jubin peta `tile.openstreetmap.org`** tidak sesuai untuk penggunaan berat. Tukar ke pembekal lain bila pengguna bertambah.
 - Aplikasi web tidak boleh berjalan bila ditutup: tiada notifikasi push, dan GPS mungkin berhenti bila bertukar app.

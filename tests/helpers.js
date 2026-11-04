@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const crypto = require('crypto');
 
 const ROOT = path.join(__dirname, '..');
 
@@ -74,17 +75,33 @@ function loadCode(extraGlobals) {
     getId: () => 'sheet-ujian'
   };
   let uuid = 0;
+  const props = { SHEET_ID: 'sheet-ujian', TOKEN_SECRET: 'rahsia-ujian' };
+  const session = { key: 'kunci-google-A', email: 'pengguna@example.com', owner: 'pemilik@example.com' };
+  const bytes = buf => Array.from(buf).map(b => (b > 127 ? b - 256 : b));   // seperti Apps Script: Byte[] bertanda
   const ctx = vm.createContext(Object.assign({
     CacheService: { getScriptCache: () => cache },
-    PropertiesService: { getScriptProperties: () => ({ getProperty: k => (k === 'SHEET_ID' ? 'sheet-ujian' : null) }) },
+    PropertiesService: { getScriptProperties: () => ({
+      getProperty: k => (k in props ? props[k] : null), setProperty: (k, v) => { props[k] = String(v); } }) },
+    Session: {
+      getTemporaryActiveUserKey: () => session.key,
+      getActiveUser: () => ({ getEmail: () => session.email }),
+      getEffectiveUser: () => ({ getEmail: () => session.owner })
+    },
     SpreadsheetApp: { openById: () => spreadsheet },
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock() {} }) },
-    Utilities: { getUuid: () => '00000000-0000-4000-8000-' + String(++uuid).padStart(12, '0') },
+    Utilities: {
+      getUuid: () => '00000000-0000-4000-8000-' + String(++uuid).padStart(12, '0'),
+      computeHmacSha256Signature: (v, k) => bytes(crypto.createHmac('sha256', k).update(v).digest()),
+      computeDigest: (alg, v) => bytes(crypto.createHash('sha256').update(v).digest()),
+      DigestAlgorithm: { SHA_256: 'SHA_256' },
+      base64EncodeWebSafe: b => Buffer.from(b.map(x => x & 255)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_')
+    },
     Date: FakeDate,
     console: { log: m => logs.push(String(m)), warn: m => logs.push(String(m)), error: m => logs.push(String(m)) }
   }, extraGlobals || {}));
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'Code.gs'), 'utf8'), ctx, { filename: 'Code.gs' });
-  ctx.verify_ = token => token;           // ujian: token = id pengguna (tandatangan HMAC tidak diuji di sini)
+  ctx.realVerify_ = ctx.verify_;
+  ctx.verify_ = token => token;           // kebanyakan ujian: token = id pengguna (ujian pindah guna realVerify_)
   // Cipta helaian dengan tajuk sebenar dari Code.gs
   ['SHEET_REPORTS:REPORT_HEADERS', 'SHEET_STATS:STATS_HEADERS', 'SHEET_PREFS:PREFS_HEADERS', 'SHEET_SHARES:SHARE_HEADERS',
     'SHEET_USERS:USER_HEADERS'].forEach(p => {
@@ -92,7 +109,7 @@ function loadCode(extraGlobals) {
     const name = vm.runInContext(n, ctx), headers = vm.runInContext(h, ctx);
     sheets[name] = new FakeSheet(Array.from(headers));
   });
-  return { ctx, cache, clock, logs, sheets, sheet: n => sheets[vm.runInContext(n, ctx)] };
+  return { ctx, cache, clock, logs, sheets, props, session, sheet: n => sheets[vm.runInContext(n, ctx)] };
 }
 
 /** Skrip utama Index.html, dengan tag templat HtmlService diganti nilai contoh. */
