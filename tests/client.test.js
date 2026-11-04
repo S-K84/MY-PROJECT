@@ -197,3 +197,39 @@ test('saluran uji: kesesakan merah baharu di hadapan → semak laluan lain serta
   assert.match(s, /function jamPenalty\(r, along\)/);
   assert.match(s, /const leftNow = remainingSec\(cur\) \+ jamPenalty\(cur, along\)/);
 });
+
+test('saluran uji: waktu solat (anggaran JAKIM) munasabah untuk Kuala Lumpur', () => {
+  const s = clientScript('IndexUji.html');
+  const vm = require('vm');
+  const fn = name => s.match(new RegExp('function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}'))[0];
+  const ctx = {};
+  vm.runInNewContext(fn('prayerTimes') + ';this.f = prayerTimes;', ctx);
+  const t = ctx.f(new Date(2026, 10, 4), 3.139, 101.687);
+  const hm = k => { const d = new Date(t[k].getTime() + 8 * 3600e3); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
+  const near = (k, h, m) => assert.ok(Math.abs(hm(k) - (h * 60 + m)) <= 10, k + ' ' + hm(k));
+  near('subuh', 5, 44); near('zohor', 12, 58); near('asar', 16, 14); near('maghrib', 18, 57); near('isyak', 20, 7);
+});
+
+test('saluran uji: hujan lebat di hadapan dikesan pada masa tiba (Open-Meteo)', () => {
+  const s = clientScript('IndexUji.html');
+  const vm = require('vm');
+  const fn = name => s.match(new RegExp('function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}'))[0];
+  const ctx = { RAIN_MM: 4, STORM_CODES: [95, 96, 99], HEAVY_CODES: [65, 82] };
+  vm.runInNewContext(fn('rainAhead') + ';this.f = rainAhead;', ctx);
+  const now = Date.UTC(2026, 10, 4, 6, 10);
+  const hourly = (mm, code) => ({ hourly: { time: ['2026-11-04T06:00', '2026-11-04T07:00'], precipitation: mm, weather_code: code } });
+  const pts = [{ d: 2000, eta: 0 }, { d: 12000, eta: 3600 }];
+  assert.strictEqual(ctx.f(pts, [hourly([0, 0], [1, 1]), hourly([0.5, 0.5], [61, 61])], now), null);
+  const hit = ctx.f(pts, [hourly([0, 0], [1, 1]), hourly([0, 7], [3, 63])], now);    // titik 2, jam ke-2 (tiba ~07:10)
+  assert.strictEqual(hit.d, 12000);
+  assert.strictEqual(ctx.f(pts, [hourly([0, 0], [95, 1]), hourly([0, 0], [1, 1])], now).storm, true);
+});
+
+test('saluran uji: peringatan rehat, kecemasan & saiz tulisan', () => {
+  const s = clientScript('IndexUji.html');
+  assert.match(s, /const REST_MS = 2 \* 3600000/);
+  assert.match(s, /href="tel:999"/);
+  assert.match(s, /function sosShare\(\)/);
+  assert.match(s, /textSize: \[\['normal', 'Biasa'\], \['large', 'Besar'\]\]/);
+  assert.match(s, /'https:\\\/\\\/api\.open-meteo\.com/);
+});
