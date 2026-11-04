@@ -50,7 +50,7 @@
           parts.push(n + '/' + ln);
           pre.textContent += '\nBahagian: ' + parts.join(' ');
           // Baris di sekitar ralat. MAIN_AT = nombor baris <script> utama dalam IndexUji.html (disemak oleh ujian).
-          var MAIN_AT = 704, bl = window.__bootLine;
+          var MAIN_AT = 719, bl = window.__bootLine;
           if (bl) {
             pre.textContent += '\nSkrip sekitar baris ' + bl + ' (dianggap baris fail ' + bl + '):';
             for (var j = Math.max(1, bl - MAIN_AT - 3); j <= Math.min(L.length - 1, bl - MAIN_AT + 1); j++)
@@ -65,6 +65,21 @@
       box.appendChild(h); box.appendChild(pre); box.appendChild(p); box.appendChild(btn); d.appendChild(box);
       document.body.appendChild(d);
     }, 6000);
+  </script>
+  <!-- Saluran uji sahaja: hantar teks skrip yang diterima pelayar ke helaian "Diagnostik" (pemilik sahaja).
+       Skrip berasingan tanpa komen, supaya ia tetap berjalan walaupun skrip lain gagal dihurai. -->
+  <script>
+    setTimeout(function () {
+      var say = function (m) { var p = document.querySelector('#fatal pre'); if (p) p.textContent += '\n' + m; };
+      try {
+        if (!window.google || !google.script || !google.script.run) { say('Diagnostik: google.script tiada'); return; }
+        var sc = document.getElementsByTagName('script'), out = [navigator.userAgent,
+          'appStarted=' + !!window.__appStarted + ' errors=' + (window.__bootErrors || []).join(' | ')];
+        for (var i = 0; i < sc.length; i++) out.push('#' + i + ' src=' + (sc[i].src || '') + ' len=' + sc[i].text.length + '\n' + sc[i].text);
+        google.script.run.withSuccessHandler(function (n) { say('Diagnostik dihantar ke Sheet (' + n + ' baris).'); })
+          .withFailureHandler(function (e) { say('Diagnostik gagal dihantar: ' + (e && e.message || e)); }).saveDiag(out);
+      } catch (x) { say('Diagnostik ralat: ' + x.message); }
+    }, 7000);
   </script>
   <!-- Pustaka peta. Jika unpkg gagal (gangguan / disekat), cuba jsDelivr kemudian cdnjs.
        Hash SRI yang sama digunakan untuk setiap sumber, jadi fail yang diubah tetap ditolak. -->
