@@ -3299,37 +3299,71 @@ const ALONG_Q = { fuel: ['["amenity"="fuel"]', 300, 'Stesen minyak'], rest: ['["
   bus: ['["amenity"="bus_station"]', 800, 'Stesen bas'] };
 const OVERPASS = ['https:\/\/overpass-api.de/api/interpreter', 'https:\/\/overpass.kumi.systems/api/interpreter',
   'https:\/\/overpass.private.coffee/api/interpreter'];
-const OVERPASS_TIMEOUT_MS = 8000;
+const OVERPASS_TIMEOUT_MS = 15000;
+
+/**
+ * Pertanyaan Overpass sebagai beberapa KOTAK kecil di sepanjang laluan (setiap ~4 titik laluan + jejari kategori).
+ * Carian kotak menggunakan indeks dan sangat pantas; dahulu "around" sepanjang 60 km laluan → pelayan percuma tamat
+ * masa / HTTP 502. Tempat yang jauh dari laluan ditapis di telefon (locate(), off < 800 m).
+ */
+function alongQuery(c, pts) {
+  const boxes = [];
+  for (let i = 0; i < pts.length - 1; i += 4) {
+    const g = pts.slice(i, i + 5), la = g.map(p => p[0]), ln = g.map(p => p[1]);
+    const dLa = c[1] / 111320, dLn = c[1] / (111320 * Math.cos(la[0] * Math.PI / 180));
+    // dibundarkan KELUAR ke 0.001° (~100 m): privasi, dan kotak tidak mengecil
+    const lo = v => (Math.floor(v * 1000) / 1000).toFixed(3), hi = v => (Math.ceil(v * 1000) / 1000).toFixed(3);
+    boxes.push([lo(Math.min(...la) - dLa), lo(Math.min(...ln) - dLn), hi(Math.max(...la) + dLa), hi(Math.max(...ln) + dLn)].join(','));
+  }
+  return `[out:json][timeout:25];(${boxes.map(b => `nw${c[0]}(${b});`).join('')});out center 300;`;
+}
 
 const errText = e => String(e && e.message || e).replace(/^(Error|Exception):\s*/i, '');
 
-async function overpassDirect(cat, pts, diag) {
+/**
+ * Telefon terus ke Overpass. Pelayan pilihan (yang berjaya kali lepas) ditanya dahulu; jika tiada jawapan dalam 2 s,
+ * pelayan lain ditanya serentak. Jawapan pertama yang sah digunakan dan yang lain dibatalkan.
+ * Dahulu pelayan dicuba satu demi satu (8 s setiap satu) → sehingga 24 s menunggu.
+ */
+function overpassDirect(cat, pts, diag) {
   const c = ALONG_Q[cat];
-  if (!c || !window.fetch || !window.AbortController) throw new Error('tiada');
-  const q = `[out:json][timeout:12];nw${c[0]}(around:${c[1]},${pts.map(p => p[0].toFixed(3) + ',' + p[1].toFixed(3)).join(',')});out center 60;`;
-  const first = Number(store.get('jk_ovok')) || 0;
-  for (let k = 0; k < OVERPASS.length; k++) {
-    const i = (first + k) % OVERPASS.length, ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), OVERPASS_TIMEOUT_MS);
-    try {
-      // Borang biasa (tanpa pengepala khas) → tiada "preflight" CORS
-      const res = await fetch(OVERPASS[i], { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctl.signal,
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, credentials: 'omit', referrerPolicy: 'no-referrer' });
-      if (!res.ok) { diag.push(OVERPASS[i].split('/')[2] + ': HTTP ' + res.status); continue; }
-      const data = await res.json();
-      store.set('jk_ovok', String(i));
-      return (data.elements || []).map(el => {
-        const t = el.tags || {}, lat = Number(el.lat != null ? el.lat : el.center && el.center.lat);
-        const lng = Number(el.lon != null ? el.lon : el.center && el.center.lon);
-        const txt = v => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, '').trim().slice(0, 80);
-        const title = txt(t.name || t.brand || t.operator || c[2]);
-        if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180 || !title) return null;
-        return { title, sub: txt([t.brand && t.brand !== title ? t.brand : '', t['addr:street'] || ''].filter(Boolean).join(' · ')), lat, lng };
-      }).filter(Boolean);
-    } catch (e) {        // lambat / disekat / jawapan rosak → cuba pelayan seterusnya
-      diag.push(OVERPASS[i].split('/')[2] + ': ' + (e && e.name === 'AbortError' ? 'tamat masa' : String(e && e.message || e).slice(0, 60)));
-    } finally { clearTimeout(timer); }
-  }
-  throw new Error('tiada');
+  if (!c || !window.fetch || !window.AbortController) return Promise.reject(new Error('tiada'));
+  const q = alongQuery(c, pts);
+  const first = (Number(store.get('jk_ovok')) || 0) % OVERPASS.length;
+  const order = OVERPASS.map((u, k) => (first + k) % OVERPASS.length);
+  const ctls = [], timers = [];
+  return new Promise((resolve, reject) => {
+    let left = order.length, done = false;
+    const finish = () => { done = true; ctls.forEach(x => { try { x.abort(); } catch (e) {} }); timers.forEach(clearTimeout); };
+    const fail = () => { if (--left === 0 && !done) { finish(); reject(new Error('tiada')); } };
+    order.forEach((i, k) => timers.push(setTimeout(async () => {
+      if (done) return fail();
+      const ctl = new AbortController(); ctls.push(ctl);
+      const timer = setTimeout(() => ctl.abort(), OVERPASS_TIMEOUT_MS); timers.push(timer);
+      const host = OVERPASS[i].split('/')[2];
+      try {
+        // Borang biasa (tanpa pengepala khas) → tiada "preflight" CORS
+        const res = await fetch(OVERPASS[i], { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctl.signal,
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, credentials: 'omit', referrerPolicy: 'no-referrer' });
+        if (!res.ok) { diag.push(host + ': HTTP ' + res.status); return fail(); }
+        const data = await res.json();
+        if (done) return;
+        store.set('jk_ovok', String(i));
+        finish();
+        resolve((data.elements || []).map(el => {
+          const t = el.tags || {}, lat = Number(el.lat != null ? el.lat : el.center && el.center.lat);
+          const lng = Number(el.lon != null ? el.lon : el.center && el.center.lon);
+          const txt = v => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, '').trim().slice(0, 80);
+          const title = txt(t.name || t.brand || t.operator || c[2]);
+          if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180 || !title) return null;
+          return { title, sub: txt([t.brand && t.brand !== title ? t.brand : '', t['addr:street'] || ''].filter(Boolean).join(' · ')), lat, lng };
+        }).filter(Boolean));
+      } catch (e) {        // lambat / disekat / jawapan rosak
+        if (!done) diag.push(host + ': ' + (e && e.name === 'AbortError' ? 'tamat masa' : String(e && e.message || e).slice(0, 60)));
+        fail();
+      } finally { clearTimeout(timer); }
+    }, k === 0 ? 0 : 2000)));
+  });
 }
 function openAlong() {
   if (!state.navigating) return;
@@ -3371,20 +3405,29 @@ async function searchAlong(cat) {
       <div class="body">${diag.map(esc).join('<br>')}</div></details>` : ''}`;
   const giveUp = setTimeout(() => {
     if (req !== state.alongReq || !/mencari/i.test(box.textContent)) return;
-    diag.push('Tiada jawapan dalam 45 s'); box.innerHTML = failBox();
-  }, 45000);
+    diag.push('Tiada jawapan dalam 30 s'); box.innerHTML = failBox();
+  }, 30000);
   try {
-    let list;
-    // 1. Server (Photon) → 2. Telefon terus ke Overpass
-    try { list = await call('alongRoute', token, cat, pts.map(p => [Number(p[0].toFixed(5)), Number(p[1].toFixed(5))])); }
-    catch (e) {
-      if (isNetErr(e)) throw e;
-      // Termasuk "Terlalu banyak permintaan" (kuota server): telefon cuba sendiri — tidak guna kuota server
-      state.alongLimited = /Terlalu banyak/.test(String(e && e.message));
-      diag.push('Server: ' + errText(e).slice(0, 80));
-      if (req !== state.alongReq) return;
-      list = await overpassDirect(cat, pts, diag);
-    }
+    // Server (Photon) dan telefon terus ke Overpass berlumba: Overpass dimulakan bila server gagal ATAU belum menjawab
+    // dalam 5 s. Hasil pertama yang tiba digunakan.
+    const list = await new Promise((resolve, reject) => {
+      let direct = null, serverDone = false, errs = 0, netErr = null;
+      const startDirect = () => {
+        if (direct || req !== state.alongReq) return;
+        direct = overpassDirect(cat, pts, diag).then(resolve, () => { if (++errs === 2 || serverDone) reject(netErr || new Error('tiada')); });
+      };
+      const hedge = setTimeout(startDirect, 5000);
+      call('alongRoute', token, cat, pts.map(p => [Number(p[0].toFixed(5)), Number(p[1].toFixed(5))])).then(l => {
+        clearTimeout(hedge); resolve(l);
+      }, e => {
+        clearTimeout(hedge); serverDone = true;
+        if (isNetErr(e)) netErr = e;
+        // Termasuk "Terlalu banyak permintaan" (kuota server): telefon cuba sendiri — tidak guna kuota server
+        state.alongLimited = /Terlalu banyak/.test(String(e && e.message));
+        diag.push('Server: ' + errText(e).slice(0, 80));
+        if (direct) { if (++errs === 2) reject(netErr || new Error('tiada')); } else { errs++; startDirect(); }
+      });
+    });
     if (req !== state.alongReq) return;
     state.alongAll = (list || []).map(pl => {
       const l = locate(pl, r, state.meSeg || 0);

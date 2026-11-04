@@ -60,3 +60,10 @@ test('saluran uji: telefon juga cuba Photon terus (selain Overpass)', () => {
   assert.match(s, /function photonDirect\(/);
   assert.match(s, /direct = directAlong\(cat, pts, diag\)/);
 });
+
+test('Index.html: carian sepanjang laluan guna kotak kecil & berlumba dengan server (disahkan di iPhone, 2026.11.04-l)', () => {
+  const s = clientScript();
+  assert.match(s, /function alongQuery\(c, pts\)/);
+  assert.match(s, /const hedge = setTimeout\(startDirect, 5000\)/);
+  assert.ok(!/around:\$\{c\[1\]\}/.test(s));
+});
