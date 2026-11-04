@@ -7,7 +7,7 @@
 
 // Versi aplikasi — SATU-SATUNYA tempat versi ditulis. Ia disuntik ke Index.html oleh doGet() (menu ☰ & skrin ralat).
 // Naikkan setiap kali kod berubah supaya mudah semak telefon sudah guna kod terkini.
-const APP_VERSION = '2026.11.04-e';
+const APP_VERSION = '2026.11.04-f';
 
 const CONFIG = {
   // ttlMin = berapa minit laporan kekal aktif sebelum luput
@@ -1610,6 +1610,36 @@ function nearbyPlaces(token, cat, lat, lng) {
 
 // ---------------------------------------------------------------- Panel pentadbir (pemilik skrip sahaja)
 // Setiap fungsi menyemak isOwner_() di server — butang yang tersembunyi di klien BUKAN kawalan keselamatan.
+
+/**
+ * Saluran uji (PEMILIK sahaja): simpan teks skrip yang benar-benar diterima pelayar telefon ke helaian "Diagnostik",
+ * supaya pembangun boleh membandingkannya dengan fail asal (siasatan ralat Safari iPhone).
+ * parts: senarai teks (ejen pelayar, ralat, kemudian setiap skrip). Disimpan dalam kepingan ≤ 40000 aksara.
+ */
+function saveDiag(parts) {
+  if (!isOwner_()) throw new Error('Tidak dibenarkan.');
+  rateLimit_('admin', 'owner');
+  if (!Array.isArray(parts)) throw new Error('Data tidak sah.');
+  const CH = 40000, rows = [], now = new Date().toISOString();
+  let total = 0;
+  parts.slice(0, 40).forEach((p, i) => {
+    const t = String(p == null ? '' : p);
+    total += t.length;
+    if (total > 1500000) throw new Error('Data terlalu besar.');
+    for (let k = 0; k === 0 || k < t.length; k += CH) rows.push([now, i, k / CH, protectCell_(t.slice(k, k + CH))]);
+  });
+  const lock = lock_();
+  try {
+    const ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID'));
+    const sh = ss.getSheetByName(SHEET_DIAG_) || ss.insertSheet(SHEET_DIAG_);
+    const last = sh.getLastRow();
+    if (last > 0) sh.getRange(1, 1, last, 4).clearContent();
+    sh.getRange(1, 1, 1, 4).setValues([['Masa', 'Bahagian', 'Kepingan', 'Teks']]);
+    sh.getRange(2, 1, rows.length, 4).setValues(rows);
+  } finally { lock.releaseLock(); }
+  return rows.length;
+}
+const SHEET_DIAG_ = 'Diagnostik';
 
 function requireOwner_(token) {
   const uid = verify_(token);
