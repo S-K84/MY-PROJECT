@@ -7,7 +7,7 @@
 
 // Versi aplikasi — SATU-SATUNYA tempat versi ditulis. Ia disuntik ke Index.html oleh doGet() (menu ☰ & skrin ralat).
 // Naikkan setiap kali kod berubah supaya mudah semak telefon sudah guna kod terkini.
-const APP_VERSION = '2026.11.04-v';
+const APP_VERSION = '2026.11.04-w';
 
 const CONFIG = {
   // ttlMin = berapa minit laporan kekal aktif sebelum luput
@@ -359,7 +359,7 @@ function rateLimitAll_(pairs, count) {
 /** Kunci skrip dengan mesej mesra. waitLock() melontar "Lock timeout…" yang disangka klien sebagai tiada liputan. */
 function lock_(ms) {
   const lock = LockService.getScriptLock();
-  if (!lock.tryLock(ms || 10000)) throw new Error('Sistem sibuk. Cuba lagi sebentar.');
+  if (!lock.tryLock(ms || 10000)) { bumpDaily_('b'); throw new Error('Sistem sibuk. Cuba lagi sebentar.'); }
   return lock;
 }
 
@@ -436,6 +436,7 @@ function submitReports(token, r) {
       return id;
     });
     bumpStats_(userId, cell_(r.name, 30), items.length - merged, 0, 0);
+    if (items.length - merged > 0) bumpDaily_('r', items.length - merged);
     cache.put(cdKey, '1', CONFIG.REPORT_COOLDOWN_SEC);
     rebuildReports_();
     return { ok: true, ids: ids, id: ids[0], merged: merged };
@@ -1177,6 +1178,7 @@ function getRoute(token, origin, dest, opts) {
     throw new Error(res.status === 'ZERO_RESULTS' ? 'Tiada laluan ke destinasi ini.' : 'Laluan tidak dijumpai.');
   }
 
+  if (!opts.recheck) bumpDaily_('n');   // satu carian laluan (bukan semakan "laluan lebih pantas")
   return res.routes.map(rt => {
     // Dengan titik singgah, laluan ada 2 "leg" → dicantum menjadi satu
     const legs = rt.legs, sum = f => legs.reduce((a, l) => a + f(l), 0);
@@ -1269,6 +1271,98 @@ function cleanup(e) {
   } finally {
     lock.releaseLock();
   }
+  // Isnin pagi: sandaran data & e-mel ringkasan kepada pemilik (guna pencetus setiap jam yang sedia ada)
+  try { weeklyTasks_(false); } catch (err) { console.error('weeklyTasks_: ' + err.message); }
+}
+
+// ---------------------------------------------------------------- Ringkasan mingguan & sandaran
+// Kiraan harian (PropertiesService 'DAILY'): { 'yyyy-mm-dd': { r: laporan baharu, n: carian laluan, b: "Sistem sibuk" } }.
+// Baca-ubah-tulis tanpa kunci → beberapa kiraan mungkin hilang bila serentak; cukup untuk anggaran mingguan.
+const BACKUP_KEEP_ = 4;   // simpan 4 sandaran mingguan terakhir
+function dayKey_(t) { return new Date(t + 8 * 3600e3).toISOString().slice(0, 10); }   // tarikh Malaysia (UTC+8)
+function bumpDaily_(field, n) {
+  try {
+    const props = PropertiesService.getScriptProperties(), k = dayKey_(Date.now());
+    const d = parseJson_(props.getProperty('DAILY')) || {};
+    d[k] = d[k] || {};
+    d[k][field] = (Number(d[k][field]) || 0) + (n || 1);
+    Object.keys(d).sort().slice(0, -21).forEach(x => { delete d[x]; });
+    props.setProperty('DAILY', JSON.stringify(d));
+  } catch (e) { /* kiraan tidak kritikal */ }
+}
+
+/** Ringkasan 7 hari lepas (tidak termasuk hari ini). */
+function weeklySummary_(now) {
+  const days = [];
+  for (let i = 7; i >= 1; i--) days.push(dayKey_(now - i * 864e5));
+  const d = parseJson_(PropertiesService.getScriptProperties().getProperty('DAILY')) || {};
+  const sum = f => days.reduce((a, k) => a + (Number(d[k] && d[k][f]) || 0), 0);
+  const sh = statsSheet_(), last = sh.getLastRow();
+  const rows = last < 2 ? [] : sh.getRange(2, 1, last - 1, STATS_HEADERS.length).getValues().filter(x => x[0]);
+  const since = now - 7 * 864e5, t = v => new Date(v).getTime();
+  return {
+    from: days[0], to: days[6],
+    active: rows.filter(x => t(x[6] || x[5]) > since).length,
+    joined: rows.filter(x => t(x[5]) > since).length,
+    users: rows.length,
+    reports: sum('r'), routes: sum('n'), busy: sum('b'),
+    activeReports: getReports_().length
+  };
+}
+
+/** Salin helaian data ke hamparan "JalanKita — Sandaran" (dalam Drive pemilik); simpan BACKUP_KEEP_ minggu terakhir. */
+function backupSheets_(now) {
+  const props = PropertiesService.getScriptProperties();
+  const ss = SpreadsheetApp.openById(props.getProperty('SHEET_ID'));
+  let bk = null;
+  const id = props.getProperty('BACKUP_ID');
+  if (id) { try { bk = SpreadsheetApp.openById(id); } catch (e) { bk = null; } }
+  if (!bk) { bk = SpreadsheetApp.create('JalanKita — Sandaran'); props.setProperty('BACKUP_ID', bk.getId()); }
+  const tag = dayKey_(now);
+  [SHEET_REPORTS, SHEET_STATS, SHEET_PREFS, SHEET_SHARES].forEach(name => {
+    const sh = ss.getSheetByName(name);
+    if (!sh) return;
+    const old = bk.getSheetByName(name + ' ' + tag);
+    if (old) bk.deleteSheet(old);
+    sh.copyTo(bk).setName(name + ' ' + tag);
+  });
+  const tagOf = s => { const m = s.getName().match(/ (\d{4}-\d{2}-\d{2})$/); return m ? m[1] : null; };
+  const keep = bk.getSheets().map(tagOf).filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).sort().reverse()
+    .slice(0, BACKUP_KEEP_);
+  bk.getSheets().forEach(s => { if (keep.indexOf(tagOf(s)) < 0) bk.deleteSheet(s); });   // lama + "Sheet1" asal
+  return { url: bk.getUrl(), tag: tag };
+}
+
+function weeklyTasks_(force) {
+  const props = PropertiesService.getScriptProperties(), now = Date.now(), today = dayKey_(now);
+  if (!force) {
+    const my = new Date(now + 8 * 3600e3);
+    if (my.getUTCDay() !== 1 || my.getUTCHours() < 8) return null;      // Isnin, selepas 8 pagi
+    if (props.getProperty('WEEKLY_LAST') === today) return null;       // sekali seminggu
+  }
+  props.setProperty('WEEKLY_LAST', today);
+  let backup = null, backupErr = '';
+  try { backup = backupSheets_(now); } catch (e) { backupErr = String(e && e.message || e).slice(0, 200); }
+  const s = weeklySummary_(now);
+  const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const row = (k, v) => '<tr><td style="padding:4px 12px 4px 0;color:#555">' + k + '</td><td><b>' + esc(v) + '</b></td></tr>';
+  const html = '<h2 style="margin:0 0 8px">JalanKita · ringkasan minggu lepas</h2>' +
+    '<p style="color:#555">' + esc(s.from) + ' hingga ' + esc(s.to) + '</p><table>' +
+    row('Pengguna aktif', s.active) + row('Pengguna baharu', s.joined) + row('Jumlah pengguna (setahun)', s.users) +
+    row('Laporan baharu', s.reports) + row('Carian laluan', s.routes) + row('Laporan aktif sekarang', s.activeReports) +
+    row('"Sistem sibuk" (server penuh)', s.busy) + '</table>' +
+    (s.busy > 20 ? '<p>⚠️ Server kerap sibuk minggu lepas. Beritahu pembangun.</p>' : '') +
+    (backup ? '<p>💾 Sandaran data: <a href="' + esc(backup.url) + '">JalanKita — Sandaran</a> (' + esc(backup.tag) +
+      ', ' + BACKUP_KEEP_ + ' minggu terakhir disimpan)</p>' : '<p>⚠️ Sandaran gagal: ' + esc(backupErr) + '</p>');
+  MailApp.sendEmail({ to: Session.getEffectiveUser().getEmail(), subject: 'JalanKita · Ringkasan mingguan ' + s.to,
+    htmlBody: html, name: 'JalanKita' });
+  return { summary: s, backup: backup, backupErr: backupErr };
+}
+
+/** Pemilik: jalankan sekali dari editor Apps Script (butang Run) untuk memberi kebenaran e-mel & menguji ringkasan. */
+function weeklyReportNow() {
+  if (!isOwner_()) throw new Error('Tidak dibenarkan.');
+  return weeklyTasks_(true);
 }
 
 function pruneSheet_(sh, width, keepFn) {

@@ -190,3 +190,10 @@ test('Index.html: kamera laju, suara had laju, batal lapor pantas, panduan skrin
   assert.match(s, /yes: 'Batal', no: 'OK', ms: 6000/);
   assert.match(s, /const en = voiceLang === 'en';/);
 });
+
+test('saluran uji: kesesakan merah baharu di hadapan → semak laluan lain serta-merta, dengan anggaran lewat laporan', () => {
+  const s = clientScript('IndexUji.html');
+  assert.match(s, /const urgent = fresh\.length && Date\.now\(\) - state\.fasterAt >= 120000/);
+  assert.match(s, /function jamPenalty\(r, along\)/);
+  assert.match(s, /const leftNow = remainingSec\(cur\) \+ jamPenalty\(cur, along\)/);
+});
