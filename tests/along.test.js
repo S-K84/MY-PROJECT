@@ -45,3 +45,18 @@ test('saluran uji: pertanyaan Overpass guna kotak kecil sepanjang laluan (bukan 
   const bb = boxes.map(b => b.match(/\(([^)]*)\)/)[1].split(',').map(Number));
   pts.forEach(p => assert.ok(bb.some(b => p[0] >= b[0] && p[0] <= b[2] && p[1] >= b[1] && p[1] <= b[3])));
 });
+
+test('alongRoute: pemilik nampak kod HTTP Photon dalam ralat (siasatan); pengguna lain tidak', () => {
+  const fx = { UrlFetchApp: { fetchAll: reqs => reqs.map(() => ({ getResponseCode: () => 403, getContentText: () => '' })) } };
+  const a = loadCode(fx);
+  assert.throws(() => a.ctx.alongRoute('u1', 'fuel', pts), e => !/Photon server/.test(e.message));
+  const b = loadCode(fx);
+  b.session.email = b.session.owner;
+  assert.throws(() => b.ctx.alongRoute('u1', 'fuel', pts), /\[Photon server: HTTP 403×3\]/);
+});
+
+test('saluran uji: telefon juga cuba Photon terus (selain Overpass)', () => {
+  const s = clientScript('IndexUji.html');
+  assert.match(s, /function photonDirect\(/);
+  assert.match(s, /direct = directAlong\(cat, pts, diag\)/);
+});

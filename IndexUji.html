@@ -3375,12 +3375,12 @@ function overpassDirect(cat, pts, diag) {
       if (done) return fail();
       const ctl = new AbortController(); ctls.push(ctl);
       const timer = setTimeout(() => ctl.abort(), OVERPASS_TIMEOUT_MS); timers.push(timer);
-      const host = OVERPASS[i].split('/')[2];
+      const host = OVERPASS[i].split('/')[2], t0 = Date.now();
       try {
         // Borang biasa (tanpa pengepala khas) → tiada "preflight" CORS
         const res = await fetch(OVERPASS[i], { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctl.signal,
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, credentials: 'omit', referrerPolicy: 'no-referrer' });
-        if (!res.ok) { diag.push(host + ': HTTP ' + res.status); return fail(); }
+        if (!res.ok) { diag.push(host + ': HTTP ' + res.status + ' · ' + (Date.now() - t0) + ' ms'); return fail(); }
         const data = await res.json();
         if (done) return;
         store.set('jk_ovok', String(i));
@@ -3394,10 +3394,59 @@ function overpassDirect(cat, pts, diag) {
           return { title, sub: txt([t.brand && t.brand !== title ? t.brand : '', t['addr:street'] || ''].filter(Boolean).join(' · ')), lat, lng };
         }).filter(Boolean));
       } catch (e) {        // lambat / disekat / jawapan rosak
-        if (!done) diag.push(host + ': ' + (e && e.name === 'AbortError' ? 'tamat masa' : String(e && e.message || e).slice(0, 60)));
+        if (!done) diag.push(host + ': ' + (e && e.name === 'AbortError' ? 'tamat masa' : String(e && e.message || e).slice(0, 60)) +
+          ' · ' + (Date.now() - t0) + ' ms');
         fail();
       } finally { clearTimeout(timer); }
     }, k === 0 ? 0 : 2000)));
+  });
+}
+// Photon terus dari telefon (sumber percuma kedua). Server Google mungkin disekat oleh Photon, tetapi telefon tidak.
+const PHOTON_TAGS = { fuel: ['amenity:fuel'], rest: ['highway:services', 'highway:rest_area'],
+  mosque: ['amenity:place_of_worship'], toilet: ['amenity:toilets'], atm: ['amenity:atm'], ev: ['amenity:charging_station'],
+  food: ['amenity:restaurant', 'amenity:fast_food', 'amenity:cafe', 'amenity:food_court'],
+  train: ['railway:station', 'railway:halt'], bus: ['amenity:bus_station'] };
+function photonDirect(cat, pts, diag) {
+  const tags = PHOTON_TAGS[cat];
+  if (!tags || !window.fetch || !window.AbortController) return Promise.reject(new Error('tiada'));
+  const every = Math.max(1, Math.ceil(pts.length / 10)), seen = {};
+  const pick = pts.filter((p, i) => i % every === 0).map(p => [p[0].toFixed(2), p[1].toFixed(2)])
+    .filter(p => !seen[p] && (seen[p] = true)).slice(0, 10);
+  const t0 = Date.now(), ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), OVERPASS_TIMEOUT_MS);
+  const qs = tags.map(t => '&osm_tag=' + encodeURIComponent(t)).join('');
+  let ok = 0, codes = {};
+  return Promise.all(pick.map(p => fetch('https:\/\/photon.komoot.io/reverse?lat=' + p[0] + '&lon=' + p[1] + '&radius=2&limit=15' + qs,
+    { signal: ctl.signal, credentials: 'omit', referrerPolicy: 'no-referrer' })
+    .then(r => { codes[r.status] = (codes[r.status] || 0) + 1; return r.ok ? r.json() : null; })
+    .then(d => { if (d) ok++; return (d && d.features) || []; })
+    .catch(e => { const k = e && e.name === 'AbortError' ? 'tamat masa' : String(e && e.message || e).slice(0, 40);
+      codes[k] = (codes[k] || 0) + 1; return []; })))
+    .then(all => {
+      clearTimeout(timer);
+      diag.push('photon (telefon): ' + Object.keys(codes).map(k => k + '×' + codes[k]).join(', ') + ' · ' + (Date.now() - t0) + ' ms');
+      if (!ok) throw new Error('tiada');
+      const out = [], dup = {};
+      [].concat(...all).forEach(f => {
+        const pr = f.properties || {}, g = (f.geometry && f.geometry.coordinates) || [];
+        if (pr.osm_key && tags.indexOf(pr.osm_key + ':' + pr.osm_value) < 0) return;
+        if (cat === 'mosque' && !/masjid|surau|mosque|musol+a|musal+a/i.test(String(pr.name || ''))) return;
+        const lat = Number(g[1]), lng = Number(g[0]);
+        const title = String(pr.name || ALONG_Q[cat][2]).replace(/[\u0000-\u001f]/g, '').trim().slice(0, 80);
+        const k = title + '|' + lat.toFixed(3) + ',' + lng.toFixed(3);
+        if (!isFinite(lat) || !isFinite(lng) || dup[k]) return;
+        dup[k] = true;
+        out.push({ title, sub: [pr.street, pr.city].filter(Boolean).join(', ').slice(0, 80), lat, lng });
+      });
+      return out;
+    });
+}
+/** Sumber percuma dari telefon: Overpass & Photon serentak — hasil pertama yang berjaya digunakan. */
+function directAlong(cat, pts, diag) {
+  return new Promise((resolve, reject) => {
+    let left = 2;
+    const no = () => { if (--left === 0) reject(new Error('tiada')); };
+    overpassDirect(cat, pts, diag).then(resolve, no);
+    photonDirect(cat, pts, diag).then(resolve, no);
   });
 }
 function openAlong() {
@@ -3449,7 +3498,7 @@ async function searchAlong(cat) {
       let direct = null, serverDone = false, errs = 0, netErr = null;
       const startDirect = () => {
         if (direct || req !== state.alongReq) return;
-        direct = overpassDirect(cat, pts, diag).then(resolve, () => { if (++errs === 2 || serverDone) reject(netErr || new Error('tiada')); });
+        direct = directAlong(cat, pts, diag).then(resolve, () => { if (++errs === 2 || serverDone) reject(netErr || new Error('tiada')); });
       };
       const hedge = setTimeout(startDirect, 5000);
       call('alongRoute', token, cat, pts.map(p => [Number(p[0].toFixed(5)), Number(p[1].toFixed(5))])).then(l => {
@@ -3459,7 +3508,7 @@ async function searchAlong(cat) {
         if (isNetErr(e)) netErr = e;
         // Termasuk "Terlalu banyak permintaan" (kuota server): telefon cuba sendiri — tidak guna kuota server
         state.alongLimited = /Terlalu banyak/.test(String(e && e.message));
-        diag.push('Server: ' + errText(e).slice(0, 80));
+        diag.push('Server: ' + errText(e).slice(0, 160));
         if (direct) { if (++errs === 2) reject(netErr || new Error('tiada')); } else { errs++; startDirect(); }
       });
     });
@@ -3475,7 +3524,19 @@ async function searchAlong(cat) {
   } catch (e) {
     if (req !== state.alongReq) return;
     if (isNetErr(e)) box.innerHTML = '<div class="hint">📵 Tiada liputan.</div>';
-    else box.innerHTML = failBox();
+    else {
+      box.innerHTML = failBox();
+      // Diagnostik: pertanyaan Overpass paling kecil — beza "pelayan sibuk" dengan "sambungan disekat"
+      const t0 = Date.now(), ctl = window.AbortController && new AbortController(), tm = setTimeout(() => ctl && ctl.abort(), 8000);
+      fetch(OVERPASS[0] + '?data=' + encodeURIComponent('[out:json][timeout:5];node(1);out;'),
+        { signal: ctl && ctl.signal, credentials: 'omit', referrerPolicy: 'no-referrer' })
+        .then(r => 'HTTP ' + r.status, x => (x && x.name === 'AbortError' ? 'tamat masa' : String(x && x.message || x).slice(0, 40)))
+        .then(t => {
+          clearTimeout(tm);
+          diag.push('ping overpass-api.de: ' + t + ' · ' + (Date.now() - t0) + ' ms');
+          if (req === state.alongReq && /tidak menjawab|Terlalu banyak/.test(box.textContent)) box.innerHTML = failBox();
+        });
+    }
   } finally { clearTimeout(slow); clearTimeout(giveUp); }
 }
 

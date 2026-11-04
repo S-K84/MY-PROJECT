@@ -7,7 +7,7 @@
 
 // Versi aplikasi — SATU-SATUNYA tempat versi ditulis. Ia disuntik ke Index.html oleh doGet() (menu ☰ & skrin ralat).
 // Naikkan setiap kali kod berubah supaya mudah semak telefon sudah guna kod terkini.
-const APP_VERSION = '2026.11.04-l';
+const APP_VERSION = '2026.11.04-m';
 
 const CONFIG = {
   // ttlMin = berapa minit laporan kekal aktif sebelum luput
@@ -1516,7 +1516,9 @@ function alongRoute(token, cat, pts) {
   let out;
   try { out = photonAlong_(cat, coords); } catch (e) {
     if (/Terlalu banyak/.test(e.message)) throw e;
-    throw new Error('Carian sepanjang laluan tidak tersedia sekarang. Cuba lagi sebentar.');
+    // Butiran teknikal (kod HTTP Photon) hanya untuk pemilik — untuk siasatan
+    const detail = isOwner_() ? ' [Photon server: ' + (e.detail || String(e.message).slice(0, 60)) + ']' : '';
+    throw new Error('Carian sepanjang laluan tidak tersedia sekarang. Cuba lagi sebentar.' + detail);
   }
   try { cache.put(ck, JSON.stringify(out), 600); } catch (e) { /* abaikan */ }
   return out;
@@ -1544,16 +1546,22 @@ function photonAlong_(cat, coords, radiusKm) {
     if (hit != null) JSON.parse(hit).forEach(p => out.push(p)); else need.push(x);
   });
   let answered = pick.length - need.length;
+  const codes = {};
   if (need.length) {
     rateLimit_('G_photonAlong', null, need.length);
     const tags = PHOTON_TAGS_[cat].map(t => '&osm_tag=' + encodeURIComponent(t)).join('');
-    const res = UrlFetchApp.fetchAll(need.map(x => {
+    let res;
+    try { res = UrlFetchApp.fetchAll(need.map(x => {
       const ll = x.split(',');
       return { url: 'https://photon.komoot.io/reverse?lat=' + ll[0] + '&lon=' + ll[1] + '&radius=' + rad + '&limit=' + (rad > 2 ? 30 : 15) + tags,
         muteHttpExceptions: true, followRedirects: false };
-    }));
+    })); } catch (e) {
+      const err = new Error('Photon tidak menjawab.'); err.detail = String(e && e.message || e).slice(0, 80); throw err;
+    }
     res.forEach((rr, i) => {
-      if (rr.getResponseCode() !== 200) return;
+      const code = rr.getResponseCode();
+      codes[code] = (codes[code] || 0) + 1;
+      if (code !== 200) return;
       let d;
       try { d = JSON.parse(rr.getContentText()); } catch (e) { return; }
       answered++;
@@ -1562,7 +1570,11 @@ function photonAlong_(cat, coords, radiusKm) {
       try { cache.put('pa_' + cat + '_' + rad + '_' + need[i], JSON.stringify(found), 3600); } catch (e) { /* abaikan */ }
     });
   }
-  if (!answered) throw new Error('Photon tidak menjawab.');
+  if (!answered) {
+    const err = new Error('Photon tidak menjawab.');
+    err.detail = 'HTTP ' + Object.keys(codes).map(k => k + '×' + codes[k]).join(', ');
+    throw err;
+  }
   return dedupePlaces_(out.filter(Boolean)).slice(0, 80);
 }
 
