@@ -18,3 +18,20 @@ jobs:
           node-version: 22
       - name: Jalankan ujian
         run: npm test
+
+  # Buka aplikasi dalam Chromium sebenar (Leaflet dari npm, servis Apps Script olok-olok) — tangkap ralat skrin,
+  # navigasi, laporan & carian sebelum merge. Tidak menggantikan ujian iPhone melalui saluran uji (?uji=1).
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Pasang pakej ujian
+        run: npm ci
+      - name: Pasang Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Jalankan ujian pelayar
+        run: npm run test:browser

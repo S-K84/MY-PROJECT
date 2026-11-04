@@ -72,13 +72,15 @@ JalanKita ialah aplikasi navigasi & laporan trafik komuniti (ala Waze): **Google
 ```bash
 npm test
 ```
-- Node 20+, tanpa pakej tambahan. `tests/helpers.js` memuatkan `Code.gs` dalam `vm` dengan olok-olok `CacheService`
+- `npm test`: Node 20+, tanpa pakej tambahan. `tests/helpers.js` memuatkan `Code.gs` dalam `vm` dengan olok-olok `CacheService`
   (meniru tempoh luput & had 100 KB), `SpreadsheetApp` (`FakeSheet`), `LockService`, `PropertiesService`, `Session`,
   `Utilities` (HMAC sebenar) dan `Maps` (dalam ujian laluan).
 - `loadCode()` menggantikan `verify_` (token = id). Ujian yang memerlukan token sebenar guna `ctx.verify_ = ctx.realVerify_`.
 - `clientScript()` memulangkan skrip utama `Index.html` dengan tag templat diganti, untuk semakan sintaks dan ujian i18n.
-- Ujian pelayar (Playwright + Leaflet dari npm, servis sebagai olok-olok) dijalankan secara manual bila klien berubah.
-  CDN disekat dalam persekitaran ujian, jadi hidangkan fail Leaflet secara setempat.
+- **Ujian pelayar**: `npm run test:browser` (`tests-browser/`, Playwright + Leaflet dari `devDependencies`, servis Apps Script
+  olok-olok dalam `harness.js`). CI menjalankannya pada setiap PR (`browser` dalam `test.yml`). Ujian ini membuka
+  `Index.html` dan `IndexUji.html`: permulaan BM/English, semua halaman tetapan, navigasi, lapor pantas, carian sepanjang
+  laluan, had laju & kamera. Tambah ujian di sini untuk ciri klien baharu. Lulus di Chromium ≠ lulus di Safari iPhone.
 
 ## Keputusan yang sudah dibuat
 - **Jubin peta:** kekal `tile.openstreetmap.org` buat masa ini. MapTiler/Stadia (pakej percuma: bukan komersial) ditangguh

@@ -3,9 +3,15 @@
   "private": true,
   "description": "JalanKita — navigasi & laporan trafik komuniti (Google Apps Script)",
   "scripts": {
-    "test": "node --test \"tests/*.test.js\""
+    "test": "node --test \"tests/*.test.js\"",
+    "test:browser": "node --test --test-concurrency=1 \"tests-browser/*.test.js\""
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "leaflet": "1.9.4",
+    "leaflet-rotate": "0.2.8",
+    "playwright": "1.63.0"
   }
 }
