@@ -1861,19 +1861,25 @@ const typeRows = key => Object.keys(TYPES).map(t => sRow({ multi: key + '|' + t,
 const PAGES = {
   homescreen: () => {
     const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua), crios = /CriOS/.test(ua), android = /Android/.test(ua);
+    // Ditulis penuh dalam bahasa paparan (bukan diterjemah perkataan demi perkataan — hasilnya bercampur BM/English)
+    const en = voiceLang === 'en';
     const step = (n, t) => `<div class="hs-step"><i class="n">${n}</i><span>${t}</span></div>`;
-    const iosSafari = sec('iPhone · Safari') + '<div class="hs">' +
-      step(1, 'Tekan butang <b>Kongsi</b> (petak dengan anak panah ke atas) di bawah skrin.') +
-      step(2, 'Tatal ke bawah, tekan <b>Tambah ke Skrin Utama</b> (Add to Home Screen).') +
-      step(3, 'Tekan <b>Tambah</b> (Add) di kanan atas. Ikon JalanKita muncul di skrin utama.') + '</div>';
-    const iosChrome = sec('iPhone · Chrome') + '<div class="hs">' +
-      step(1, 'Tekan butang <b>Kongsi</b> (petak dengan anak panah ke atas) di sebelah bar alamat.') +
-      step(2, 'Pilih <b>Tambah ke Skrin Utama</b> (Add to Home Screen).') +
-      step(3, 'Tekan <b>Tambah</b> (Add).') + '</div>';
-    const androidChrome = sec('Android · Chrome') + '<div class="hs">' +
-      step(1, 'Tekan <b>⋮</b> (tiga titik) di kanan atas.') +
-      step(2, 'Tekan <b>Tambah ke skrin utama</b> (Add to Home screen).') +
-      step(3, 'Tekan <b>Tambah</b> (Add).') + '</div>';
+    const box = (title, steps) => sec(title) + '<div class="hs">' + steps.map((t, i) => step(i + 1, t)).join('') + '</div>';
+    const iosSafari = box('iPhone · Safari', en
+      ? ['Tap the <b>Share</b> button (square with an up arrow) at the bottom of the screen.',
+        'Scroll down and tap <b>Add to Home Screen</b>.', 'Tap <b>Add</b> at the top right. The JalanKita icon appears on your home screen.']
+      : ['Tekan butang <b>Kongsi</b> (petak dengan anak panah ke atas) di bawah skrin.',
+        'Tatal ke bawah, tekan <b>Tambah ke Skrin Utama</b> (Add to Home Screen).',
+        'Tekan <b>Tambah</b> (Add) di kanan atas. Ikon JalanKita muncul di skrin utama.']);
+    const iosChrome = box('iPhone · Chrome', en
+      ? ['Tap the <b>Share</b> button (square with an up arrow) next to the address bar.', 'Choose <b>Add to Home Screen</b>.',
+        'Tap <b>Add</b>.']
+      : ['Tekan butang <b>Kongsi</b> (petak dengan anak panah ke atas) di sebelah bar alamat.',
+        'Pilih <b>Tambah ke Skrin Utama</b> (Add to Home Screen).', 'Tekan <b>Tambah</b> (Add).']);
+    const androidChrome = box('Android · Chrome', en
+      ? ['Tap <b>⋮</b> (three dots) at the top right.', 'Tap <b>Add to Home screen</b>.', 'Tap <b>Add</b>.']
+      : ['Tekan <b>⋮</b> (tiga titik) di kanan atas.', 'Tekan <b>Tambah ke skrin utama</b> (Add to Home screen).',
+        'Tekan <b>Tambah</b> (Add).']);
     const order = ios ? (crios ? [iosChrome, iosSafari, androidChrome] : [iosSafari, iosChrome, androidChrome])
       : android ? [androidChrome, iosSafari, iosChrome] : [iosSafari, iosChrome, androidChrome];
     return { title: 'Tambah ke skrin utama', html:

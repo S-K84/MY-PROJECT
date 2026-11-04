@@ -175,3 +175,9 @@ test('saluran uji: kamera laju OSM, suara had laju baharu, batal lapor pantas, p
     { type: 'way', id: 3, tags: { highway: 'primary', maxspeed: '90' }, geometry: [] }], 0, 1e9);
   assert.strictEqual(JSON.stringify(cams.map(c => c.id)), '["cam-1"]');
 });
+
+test('saluran uji: panduan skrin utama ditulis penuh dalam bahasa paparan (tidak bercampur BM/English)', () => {
+  const s = clientScript('IndexUji.html');
+  assert.match(s, /const en = voiceLang === 'en';/);
+  assert.match(s, /'Tap the <b>Share<\/b> button/);
+});
