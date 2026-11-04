@@ -3078,10 +3078,21 @@ function checkStillThere() {
 const FASTER_EVERY_MS = 10 * 60000;
 function maybeCheckFaster(r, along) {
   if (!S.fasterRoute || S.travel === 'walk' || offline || state.fasterBusy || !state.fasterAt) return;
-  if (Date.now() - state.fasterAt < FASTER_EVERY_MS) return;
+  // Kesesakan MERAH baharu (kemalangan / sesak teruk) dalam 20 km di hadapan → semak serta-merta, bukan tunggu 10 minit
+  // (paling kerap sekali setiap 2 minit). Setiap kawasan sesak hanya mencetuskan sekali.
+  const seen = state.redSeen || (state.redSeen = new Set());
+  const fresh = (r.traffic || []).filter(t => t.lvl > 1 && t.s > along + 500 && t.s < along + 20000 && t.ids.some(id => !seen.has(id)));
+  const urgent = fresh.length && Date.now() - state.fasterAt >= 120000;
+  if (urgent) fresh.forEach(t => t.ids.forEach(id => seen.add(id)));
+  if (!urgent && Date.now() - state.fasterAt < FASTER_EVERY_MS) return;
   if (r.total - along < 3000 || Date.now() - (state.lastReroute || 0) < 120000) return; // hampir sampai / baru kira semula
   state.fasterAt = Date.now();
   checkFaster();
+}
+
+/** Anggaran lewat (saat) akibat kesesakan yang dilaporkan di hadapan pada laluan r. */
+function jamPenalty(r, along) {
+  return trafficSegs(r).filter(t => t.e > along).reduce((sum, t) => sum + (t.lvl > 1 ? 360 : 120), 0);
 }
 
 /** Peratus titik laluan 'a' (di hadapan) yang berada di atas laluan 'b' — untuk kenal pasti laluan yang sama. */
@@ -3109,9 +3120,12 @@ async function checkFaster() {
     const same = fresh.find(x => routeOverlap(x, cur) >= 0.9);
     // Laluan semasa ditemui → kemas kini masa tiba & lewat dengan data trafik terkini
     if (same) cur.fresh = { sec: same.durationSec, delay: same.delaySec, left: Math.max(1, cur.total - along) };
-    const leftNow = remainingSec(cur);
-    const best = fresh.reduce((x, y) => (y.durationSec < x.durationSec ? y : x));
-    const save = leftNow - best.durationSec;
+    // Masa Google tidak mengambil kira laporan pengguna (kemalangan / sesak) → tambah anggaran lewat bagi
+    // kesesakan yang dilaporkan di hadapan: merah 6 min, oren 2 min. Laluan baharu dinilai dengan cara yang sama.
+    const leftNow = remainingSec(cur) + jamPenalty(cur, along);
+    const cost = x => (x === same ? leftNow : x.durationSec + jamPenalty(x, 0));
+    const best = fresh.reduce((x, y) => (cost(y) < cost(x) ? y : x));
+    const save = leftNow - cost(best);
     renderNav();
     if (best === same || save < Math.max(180, leftNow * 0.1) || askBusy()) return;   // jimat ≥ 3 min dan ≥ 10%
     const mins = Math.round(save / 60);
