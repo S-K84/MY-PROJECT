@@ -3334,7 +3334,24 @@ const ALONG_Q = { fuel: ['["amenity"="fuel"]', 300, 'Stesen minyak'], rest: ['["
   bus: ['["amenity"="bus_station"]', 800, 'Stesen bas'] };
 const OVERPASS = ['https:\/\/overpass-api.de/api/interpreter', 'https:\/\/overpass.kumi.systems/api/interpreter',
   'https:\/\/overpass.private.coffee/api/interpreter'];
-const OVERPASS_TIMEOUT_MS = 8000;
+const OVERPASS_TIMEOUT_MS = 15000;
+
+/**
+ * Pertanyaan Overpass sebagai beberapa KOTAK kecil di sepanjang laluan (setiap ~4 titik laluan + jejari kategori).
+ * Carian kotak menggunakan indeks dan sangat pantas; dahulu "around" sepanjang 60 km laluan → pelayan percuma tamat
+ * masa / HTTP 502. Tempat yang jauh dari laluan ditapis di telefon (locate(), off < 800 m).
+ */
+function alongQuery(c, pts) {
+  const boxes = [];
+  for (let i = 0; i < pts.length - 1; i += 4) {
+    const g = pts.slice(i, i + 5), la = g.map(p => p[0]), ln = g.map(p => p[1]);
+    const dLa = c[1] / 111320, dLn = c[1] / (111320 * Math.cos(la[0] * Math.PI / 180));
+    // dibundarkan KELUAR ke 0.001° (~100 m): privasi, dan kotak tidak mengecil
+    const lo = v => (Math.floor(v * 1000) / 1000).toFixed(3), hi = v => (Math.ceil(v * 1000) / 1000).toFixed(3);
+    boxes.push([lo(Math.min(...la) - dLa), lo(Math.min(...ln) - dLn), hi(Math.max(...la) + dLa), hi(Math.max(...ln) + dLn)].join(','));
+  }
+  return `[out:json][timeout:25];(${boxes.map(b => `nw${c[0]}(${b});`).join('')});out center 300;`;
+}
 
 const errText = e => String(e && e.message || e).replace(/^(Error|Exception):\s*/i, '');
 
@@ -3346,7 +3363,7 @@ const errText = e => String(e && e.message || e).replace(/^(Error|Exception):\s*
 function overpassDirect(cat, pts, diag) {
   const c = ALONG_Q[cat];
   if (!c || !window.fetch || !window.AbortController) return Promise.reject(new Error('tiada'));
-  const q = `[out:json][timeout:12];nw${c[0]}(around:${c[1]},${pts.map(p => p[0].toFixed(3) + ',' + p[1].toFixed(3)).join(',')});out center 60;`;
+  const q = alongQuery(c, pts);
   const first = (Number(store.get('jk_ovok')) || 0) % OVERPASS.length;
   const order = OVERPASS.map((u, k) => (first + k) % OVERPASS.length);
   const ctls = [], timers = [];
