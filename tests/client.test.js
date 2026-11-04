@@ -74,3 +74,14 @@ test('saluran uji: peta tidak berkelip semasa bergerak (tiada pudar jubin, jubin
   assert.match(s, /L\.map\('map', \{[^}]*fadeAnimation: false/);
   assert.match(s, /L\.tileLayer\([^)]*updateWhenIdle: false/);
 });
+
+test('saluran uji: garisan laluan & trafik dilukis pada Canvas (SVG berkelip di Safari iPhone semasa peta bergerak)', () => {
+  const f = path.join(ROOT, 'IndexUji.html');
+  if (!fs.existsSync(f)) return;
+  const s = clientScript('IndexUji.html');
+  assert.match(s, /const lineRenderer = L\.canvas\(/);
+  const lines = [...s.matchAll(/L\.polyline\(([\s\S]*?)\)\.addTo\(map\)/g)].map(m => m[1])
+    .filter(x => /routeLayers|JAM_COLOR|#33ccff/.test(x));
+  assert.ok(lines.length >= 2, 'garisan laluan/trafik tidak dijumpai');
+  lines.forEach(x => assert.match(x, /renderer: lineRenderer/));
+});
