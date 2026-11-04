@@ -50,7 +50,7 @@
           parts.push(n + '/' + ln);
           pre.textContent += '\nBahagian: ' + parts.join(' ');
           // Baris di sekitar ralat. MAIN_AT = nombor baris <script> utama dalam IndexUji.html (disemak oleh ujian).
-          var MAIN_AT = 727, bl = window.__bootLine;
+          var MAIN_AT = 728, bl = window.__bootLine;
           if (bl) {
             pre.textContent += '\nSkrip sekitar baris ' + bl + ' (dianggap baris fail ' + bl + '):';
             for (var j = Math.max(1, bl - MAIN_AT - 3); j <= Math.min(SL.length - 1, bl - MAIN_AT + 1); j++)
@@ -408,8 +408,9 @@
     /* Tulisan besar: panel, banner & menu dibesarkan (peta tidak — zoom pada peta mengganggu koordinat Leaflet) */
     body.big-text #navTop, body.big-text #panel, body.big-text #home, body.big-text #setSheet, body.big-text #drawer .pane,
     body.big-text #askCard, body.big-text #toast, body.big-text .modal .sheet { zoom:1.18; }
-    .qr-box { background:#fff; border-radius:18px; padding:14px; width:240px; margin:6px auto 14px; color:#000; text-align:center; }
-    .qr-box img { display:block; width:240px; height:240px; }
+    .qr-box { background:#fff; border-radius:18px; padding:14px; width:240px; box-sizing:content-box; margin:6px auto 14px; color:#000;
+      text-align:center; }
+    .qr-box img { display:block; width:100%; height:auto; aspect-ratio:1; }
     .sos-btn { display:block; width:calc(100% - 24px); margin-left:12px !important; box-sizing:border-box; text-align:center; text-decoration:none; border:0; border-radius:16px;
       padding:18px; margin:0 0 10px; font-size:20px; font-weight:800; color:#fff; background:#d32f2f; }
     .sos-btn.wa { background:#25d366; color:#04260f; }
