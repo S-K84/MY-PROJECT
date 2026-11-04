@@ -655,6 +655,21 @@
     </div>
   </div>
 
+  <div class="modal" id="migrateModal">
+    <div class="sheet">
+      <span class="handle"></span>
+      <h3>Pulihkan data anda?</h3>
+      <p class="pop-muted" style="font-size:14px">Google menukar ID akaun anda untuk JalanKita setiap 30 hari. Pelayar ini ada data dari akaun sebelum ini:</p>
+      <div class="linkbox" id="migrateWho"></div>
+      <p class="pop-muted" style="font-size:14px">Pulihkan mata, tetapan dan tempat (Rumah, Kerja, kegemaran) ke akaun anda sekarang?</p>
+      <p class="pop-muted" style="font-size:14px">Pilih "Bukan saya" jika ia milik orang lain yang pernah guna pelayar ini.</p>
+      <div style="display:flex; gap:10px; margin-top:14px">
+        <button class="btn btn-soft" id="migrateNo">Bukan saya</button>
+        <button class="btn btn-accent" id="migrateYes" style="flex:2">Pulihkan</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="netBadge" role="status">📵 Tiada liputan</div>
 
@@ -1097,6 +1112,15 @@ const EN = {
   'Lokasi anda dipadam dari server.': 'Your location was deleted from the server.', 'Mod halimunan: lokasi anda tidak dikongsi.':
     'Invisible mode: your location is not shared.', 'Lokasi anda dikongsi (dikaburkan ~100 m).': 'Your location is shared (blurred ~100 m).',
   'Sistem sibuk. Cuba lagi sebentar.': 'The system is busy. Try again shortly.',
+  'Token lama tidak sah.': 'The old session is not valid.', 'Tiada data untuk dipulihkan.': 'There is no data to restore.',
+  'Pulihkan data anda?': 'Restore your data?', 'Bukan saya': 'Not me', 'Pulihkan': 'Restore',
+  'Google menukar ID akaun anda untuk JalanKita setiap 30 hari. Pelayar ini ada data dari akaun sebelum ini:':
+    'Google changes your JalanKita account ID every 30 days. This browser has data from the previous account:',
+  'Pulihkan mata, tetapan dan tempat (Rumah, Kerja, kegemaran) ke akaun anda sekarang?':
+    'Restore points, settings and places (Home, Work, favourites) to your current account?',
+  'Pilih "Bukan saya" jika ia milik orang lain yang pernah guna pelayar ini.':
+    'Choose "Not me" if it belongs to someone else who used this browser.',
+  'Tanpa nama': 'No name',
   // Mesej ralat server (disemak oleh tests/i18n.test.js — setiap mesej baharu mesti ditambah di sini)
   'Sistem belum disediakan.': 'The system has not been set up yet.', 'Lokasi tidak sah.': 'Invalid location.',
   'Jenis laporan tidak sah.': 'Invalid report type.', 'Jenis laporan berulang.': 'Duplicate report type.',
@@ -1210,7 +1234,8 @@ const EN_RULES = [
   [/^(.+) laporan dihantar\. Terima kasih! 🙏$/, m => m[1] + ' reports sent. Thank you! 🙏'],
   [/^JalanKita · Peta © OpenStreetMap · Laluan oleh Google$/, () => 'JalanKita · Map © OpenStreetMap · Routes by Google'],
   [/^Pilih 1 hingga (\d+) jenis laporan\.$/, m => 'Choose 1 to ' + m[1] + ' report types.'],
-  [/^Arah ke (.+)$/, m => 'Heading ' + tr(m[1])], [/^oleh ([^·]+)$/, m => 'by ' + m[1]],
+  [/^Arah ke (.+)$/, m => 'Heading ' + tr(m[1])], [/^(\d+) mata$/, m => m[1] + ' points'],
+  [/^✅ Data anda dipulihkan · (\d+) mata$/, m => '✅ Your data was restored · ' + m[1] + ' points'], [/^oleh ([^·]+)$/, m => 'by ' + m[1]],
   [/^Lokasi anda dikesan (\d+) km dari destinasi\. Semak GPS atau matikan VPN\.$/, m =>
     'Your location was detected ' + m[1] + ' km from the destination. Check your GPS or turn off your VPN.'],
   [/^(\d+) setiap (\d+) jam$/, m => m[1] + ' per ' + m[2] + ' h'],
@@ -3517,7 +3542,7 @@ $('btnSend').onclick = async () => {
 // ------------------------------------------------------------ Kawalan
 document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('.modal').style.display = 'none');
 document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => {
-  if (e.target === m && m.id !== 'nameModal') m.style.display = 'none';
+  if (e.target === m && m.id !== 'nameModal' && m.id !== 'migrateModal') m.style.display = 'none';
 }));
 $('openSearch').onclick = () => openSearch('go');
 $('searchBack').onclick = closeSearch;
@@ -3642,11 +3667,41 @@ async function loadPrefsNow() {
   askNameIfNeeded();
 }
 window.addEventListener('online', () => setTimeout(loadPrefsNow, 500));
-call('getSession', store.get('jk_token')).then(async s => {
+// ---- Pindah data bila Google menukar ID akaun (setiap 30 hari). Server hanya menawarkan jika ID lama ada data dan
+// ID semasa belum ada mata. Pengguna mesti mengesahkan: pelayar yang sama mungkin dikongsi oleh akaun Google lain.
+const prevToken = store.get('jk_token'), pendingOld = store.get('jk_token_old');
+function offerMigration(oldToken, offer) {
+  const oldId = String(oldToken || '').split('.')[0], declined = getJSON('jk_mig_no', []);
+  if (!oldToken || oldId === String(token).split('.')[0] || declined.indexOf(oldId) >= 0) { store.del('jk_token_old'); return; }
+  store.set('jk_token_old', oldToken);                        // simpan sehingga pengguna memilih (walaupun halaman ditutup)
+  $('migrateWho').textContent = (offer.name || 'Tanpa nama') + ' · ' + (Number(offer.points) || 0) + ' mata';
+  $('migrateModal').style.display = 'flex';
+  $('migrateNo').onclick = () => {
+    store.set('jk_mig_no', JSON.stringify([oldId].concat(declined).slice(0, 10)));
+    store.del('jk_token_old');
+    $('migrateModal').style.display = 'none';
+  };
+  $('migrateYes').onclick = async () => {
+    $('migrateYes').disabled = true;
+    try {
+      const r = await call('migrateData', token, oldToken);
+      store.del('jk_token_old');
+      $('migrateModal').style.display = 'none';
+      toast('✅ Data anda dipulihkan · ' + (Number(r && r.points) || 0) + ' mata');
+      state.profile = null; loadProfile();
+    } catch (e) {
+      if (/Tiada data|tidak sah/.test(String(e && e.message))) { store.del('jk_token_old'); $('migrateModal').style.display = 'none'; }
+      toast(isNetErr(e) ? '📵 Tiada liputan.' : (e.message || String(e)));
+    }
+    $('migrateYes').disabled = false;
+  };
+}
+call('getSession', prevToken, pendingOld).then(async s => {
   token = s.token; store.set('jk_token', token);
   state.isOwner = s.owner === true;
   if (TRACK) return startTracking();
   await loadPrefsNow();
+  if (s.migrate) offerMigration(pendingOld || prevToken, s.migrate); else store.del('jk_token_old');
   maybeSendLocation(); refresh(); flushQueue(); updateStreet();
 }).catch(e => {
   if (TRACK) { $('trackTitle').textContent = 'Tidak dapat memuatkan'; $('trackSub').textContent = e.message || String(e); return; }

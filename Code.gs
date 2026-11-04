@@ -7,7 +7,7 @@
 
 // Versi aplikasi — SATU-SATUNYA tempat versi ditulis. Ia disuntik ke Index.html oleh doGet() (menu ☰ & skrin ralat).
 // Naikkan setiap kali kod berubah supaya mudah semak telefon sudah guna kod terkini.
-const APP_VERSION = '2026.11.03-b';
+const APP_VERSION = '2026.11.04-a';
 
 const CONFIG = {
   // ttlMin = berapa minit laporan kekal aktif sebelum luput
@@ -56,6 +56,7 @@ const CONFIG = {
     location:  [400, 3600],  live: [720, 3600],   // aplikasi menyegar setiap 15 s ≈ 240 sejam
     profile:   [120, 3600],
     prefsLoad: [120, 3600],   prefsSave: [240, 3600],
+    migrate:   [5, 3600],     // pindah data dari ID lama (lihat migrateData)
     resolve:   [30, 3600],   G_resolve: [400, 3600],  // kuota UrlFetch ~20,000/hari
     G_photon:  [500, 3600],  // OpenStreetMap Photon — guna secara berhemah (perkhidmatan percuma)
     G_places:  [60, 21600]   // Google Places (berbayar selepas kuota percuma) — maks ~240 sehari
@@ -175,12 +176,19 @@ function getSheet_(name) {
 // "Anyone with Google account", ID diterbitkan daripada Session.getTemporaryActiveUserKey()
 // supaya seorang pengguna = satu identiti (lebih sukar untuk spam / undi palsu).
 
-function getSession(storedToken) {
+/** oldToken (pilihan): token lama yang masih menunggu keputusan "Pulihkan data?" di pelayar ini. */
+function getSession(storedToken, oldToken) {
   const gKey = Session.getTemporaryActiveUserKey();
   if (gKey) {
     const uid = 'g_' + hash_(gKey).slice(0, 20);
     // owner hanya untuk paparan menu; setiap fungsi pentadbir menyemak isOwner_() sekali lagi di server
-    return { token: uid + '.' + sign_(uid), owner: isOwner_() };
+    const out = { token: uid + '.' + sign_(uid), owner: isOwner_() };
+    const oldId = tokenId_(oldToken || storedToken);
+    if (oldId && oldId !== uid) {
+      carryBan_(oldId, uid);
+      try { const offer = migrationOffer_(oldId, uid); if (offer) out.migrate = offer; } catch (e) { /* tawaran tidak kritikal */ }
+    }
+    return out;
   }
   if (storedToken) {
     try { verify_(storedToken); return { token: String(storedToken) }; } catch (e) { /* keluarkan baharu */ }
@@ -198,6 +206,105 @@ function verify_(token) {
   if (gKey && parts[0] !== 'g_' + hash_(gKey).slice(0, 20)) throw new Error('Sesi tidak sah. Muat semula halaman.');
   if (bannedList_().indexOf(parts[0]) >= 0) throw new Error('Akaun ini telah disekat oleh pentadbir.');
   return parts[0];
+}
+
+// ---------------------------------------------------------------- Pindah data bila ID bertukar
+// Session.getTemporaryActiveUserKey() dirotasi oleh Google setiap 30 hari, jadi ID "g_…" pengguna bertukar dan
+// mata, tetapan & sekatannya kelihatan hilang. Pelayar masih menyimpan token lama (ditandatangani HMAC oleh server),
+// jadi data boleh dipindah ke ID baharu:
+//  - Sekatan dipindah SERTA-MERTA tanpa bertanya (supaya pengguna disekat tidak "bebas" setiap 30 hari).
+//  - Data lain dipindah hanya selepas pengguna mengesahkan (migrateData). Pelayar yang sama boleh dikongsi oleh dua
+//    akaun Google; tanpa pengesahan, orang kedua akan "mewarisi" data orang pertama. Kad pengesahan hanya memaparkan
+//    nama samaran & mata (bukan Rumah/Kerja).
+//  - Data DIPINDAH (bukan disalin): ID lama tidak lagi mempunyai data, jadi token lama yang dicuri tidak berguna selepas itu.
+
+/** ID dalam token jika tandatangannya sah (tanpa semakan akaun Google semasa), jika tidak null. */
+function tokenId_(token) {
+  const parts = String(token || '').split('.');
+  if (parts.length !== 2 || !/^[ag]_[A-Za-z0-9_-]{8,40}$/.test(parts[0])) return null;
+  try { return safeEqual_(sign_(parts[0]), parts[1]) ? parts[0] : null; } catch (e) { return null; }
+}
+
+/** Sekatan ID lama → ID baharu. */
+function carryBan_(oldId, newId) {
+  const list = bannedList_();
+  if (list.indexOf(oldId) < 0 || list.indexOf(newId) >= 0) return;
+  const lock = lock_();
+  try {
+    const fresh = bannedList_().filter(x => x !== newId);
+    if (fresh.length >= CONFIG.MAX_BANNED) return;
+    fresh.push(newId);
+    PropertiesService.getScriptProperties().setProperty('BANNED', JSON.stringify(fresh));
+    CacheService.getScriptCache().put('banned', JSON.stringify(fresh), 600);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function findRow_(sh, id) {
+  const last = sh.getLastRow();
+  if (last < 2) return -1;
+  const i = sh.getRange(2, 1, last - 1, 1).getValues().findIndex(v => String(v[0]) === id);
+  return i < 0 ? -1 : i + 2;
+}
+const statsPoints_ = r => (Number(r[2]) || 0) * 10 + (Number(r[3]) || 0) * 5 + (Number(r[4]) || 0);
+
+/**
+ * Tawaran pindah: { name, points } jika ID lama ada data DAN ID baharu belum ada mata.
+ * (ID baharu yang sudah ada mata = akaun lain yang aktif di pelayar yang sama → jangan ganggu.)
+ */
+function migrationOffer_(oldId, newId) {
+  const st = statsSheet_(), oldRow = findRow_(st, oldId), newRow = findRow_(st, newId);
+  const oldStats = oldRow > 0 ? st.getRange(oldRow, 1, 1, STATS_HEADERS.length).getValues()[0] : null;
+  if (newRow > 0 && statsPoints_(st.getRange(newRow, 1, 1, STATS_HEADERS.length).getValues()[0]) > 0) return null;
+  const hasPrefs = findRow_(prefsSheet_(), oldId) > 0;
+  if (!hasPrefs && !(oldStats && statsPoints_(oldStats) > 0)) return null;
+  return { name: oldStats ? String(oldStats[1] || '') : '', points: oldStats ? statsPoints_(oldStats) : 0 };
+}
+
+/** Pindah mata & data pengguna dari ID dalam oldToken ke pengguna semasa (selepas pengguna mengesahkan). */
+function migrateData(token, oldToken) {
+  const newId = verify_(token);
+  const oldId = tokenId_(oldToken);
+  if (!oldId || oldId === newId) throw new Error('Token lama tidak sah.');
+  rateLimit_('migrate', newId);
+  const lock = lock_();
+  try {
+    if (!migrationOffer_(oldId, newId)) throw new Error('Tiada data untuk dipulihkan.');
+    // Statistik: gabung kiraan ke ID baharu (baris ID baharu, jika ada, belum ada mata), tarikh Sertai paling awal
+    const st = statsSheet_(), oldRow = findRow_(st, oldId);
+    let points = 0;
+    if (oldRow > 0) {
+      const o = st.getRange(oldRow, 1, 1, STATS_HEADERS.length).getValues()[0];
+      points = statsPoints_(o);
+      const newRow = findRow_(st, newId);
+      if (newRow > 0) {
+        const n = st.getRange(newRow, 1, 1, STATS_HEADERS.length).getValues()[0];
+        const joined = Math.min(new Date(o[5]).getTime() || Infinity, new Date(n[5]).getTime() || Infinity);
+        st.getRange(newRow, 2, 1, 6).setValues([[protectCell_(String(n[1] || o[1] || '')), Number(n[2]) + Number(o[2]),
+          Number(n[3]) + Number(o[3]), Number(n[4]) + Number(o[4]), isFinite(joined) ? new Date(joined) : new Date(), new Date()]]);
+        st.deleteRow(oldRow);
+      } else {
+        st.getRange(oldRow, 1).setValue(newId);
+        st.getRange(oldRow, 7).setValue(new Date());
+      }
+    }
+    // Data pengguna: ID baharu mungkin sudah menyimpan salinan dari pelayar ini — kekalkan yang paling baharu
+    const pf = prefsSheet_(), pOld = findRow_(pf, oldId);
+    if (pOld > 0) {
+      const pNew = findRow_(pf, newId);
+      if (pNew < 0) pf.getRange(pOld, 1).setValue(newId);
+      else {
+        const tOld = new Date(pf.getRange(pOld, 3).getValue()).getTime() || 0;
+        const tNew = new Date(pf.getRange(pNew, 3).getValue()).getTime() || 0;
+        if (tOld > tNew) pf.getRange(pNew, 2, 1, 2).setValues([[protectCell_(String(pf.getRange(pOld, 2).getValue())), new Date()]]);
+        pf.deleteRow(pOld);
+      }
+    }
+    return { ok: true, points: points };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function sign_(uid) {
