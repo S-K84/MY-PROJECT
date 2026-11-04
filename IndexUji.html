@@ -50,7 +50,7 @@
           parts.push(n + '/' + ln);
           pre.textContent += '\nBahagian: ' + parts.join(' ');
           // Baris di sekitar ralat. MAIN_AT = nombor baris <script> utama dalam IndexUji.html (disemak oleh ujian).
-          var MAIN_AT = 719, bl = window.__bootLine;
+          var MAIN_AT = 721, bl = window.__bootLine;
           if (bl) {
             pre.textContent += '\nSkrip sekitar baris ' + bl + ' (dianggap baris fail ' + bl + '):';
             for (var j = Math.max(1, bl - MAIN_AT - 3); j <= Math.min(SL.length - 1, bl - MAIN_AT + 1); j++)
@@ -138,6 +138,8 @@
       --ctl:#0d0f12; --ctl-fg:#f2f3f5; --pill:#000; --pill-fg:#fff; --page:#121418; --accent-text:#33ccff;
       --t-red:#ff8a80; --t-orange:#ffb74d; --t-green:#81c784;
     }
+    /* iPhone: elak jubin peta berkelip semasa peta digerakkan/diputar dengan transform */
+    .leaflet-tile { -webkit-backface-visibility:hidden; backface-visibility:hidden; }
     body.dark-map .leaflet-tile-pane { filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9); }
     body.dark-map #map { background:#1c2028; }
     * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -853,13 +855,16 @@ const state = {
 };
 
 // ------------------------------------------------------------ Peta
-const map = L.map('map', { zoomControl: false, rotate: true, bearing: 0,
+// fadeAnimation: false — jubin baharu tidak "pudar masuk" dari kosong. Semasa memandu peta bergerak setiap saat, jadi
+// kesan pudar itu kelihatan seperti peta berkelip (Google Maps tidak memudarkan jubin).
+const map = L.map('map', { zoomControl: false, rotate: true, bearing: 0, fadeAnimation: false,
   touchRotate: false, shiftKeyRotate: false, rotateControl: false }).setView([3.139, 101.6869], 13); // KL
 // Jika plugin putaran gagal dimuat, aplikasi tetap berfungsi dengan "utara di atas"
 const canRotate = typeof map.setBearing === 'function';
 L.tileLayer('https:\/\/{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19, attribution: '&copy; OpenStreetMap',
-  keepBuffer: 4 // simpan lebih banyak jubin di sekeliling: tepi peta tidak kosong sekejap semasa bergerak/berputar
+  keepBuffer: 8,          // simpan lebih banyak jubin di sekeliling: tepi peta tidak kosong sekejap semasa bergerak/berputar
+  updateWhenIdle: false   // muat jubin SEMASA peta bergerak (lalai telefon: hanya selepas berhenti → petak kosong muncul)
 }).addTo(map);
 map.attributionControl.setPosition('topright');
 const reportLayer = L.layerGroup().addTo(map);
