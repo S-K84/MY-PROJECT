@@ -7,7 +7,7 @@
 
 // Versi aplikasi — SATU-SATUNYA tempat versi ditulis. Ia disuntik ke Index.html oleh doGet() (menu ☰ & skrin ralat).
 // Naikkan setiap kali kod berubah supaya mudah semak telefon sudah guna kod terkini.
-const APP_VERSION = '2026.11.04-j';
+const APP_VERSION = '2026.11.04-k';
 
 const CONFIG = {
   // ttlMin = berapa minit laporan kekal aktif sebelum luput
@@ -1511,10 +1511,12 @@ function alongRoute(token, cat, pts) {
   rateLimit_('along', userId);
   // 1. Photon (sudah terbukti berfungsi dari server Google) — beberapa titik laluan dicari serentak
   // 2. Overpass — hanya jika Photon gagal (pelayan Overpass percuma kerap lambat / menyekat server Google)
+  // Overpass TIDAK dicuba dari server: UrlFetch tiada had masa sendiri (~60 s bagi setiap pelayan yang lambat), jadi
+  // pengguna menunggu lama. Bila Photon gagal, telefon terus ke Overpass (had masa pendek, pelayan dicuba serentak).
   let out;
   try { out = photonAlong_(cat, coords); } catch (e) {
     if (/Terlalu banyak/.test(e.message)) throw e;
-    out = overpassAlong_(c, coords);
+    throw new Error('Carian sepanjang laluan tidak tersedia sekarang. Cuba lagi sebentar.');
   }
   try { cache.put(ck, JSON.stringify(out), 600); } catch (e) { /* abaikan */ }
   return out;
