@@ -1033,7 +1033,9 @@ const EN = {
   'Berdekatan': 'Nearby', 'Semua cadangan': 'All suggestions', 'Anggaran': 'Approximate',
   // Lapor
   'Boleh pilih lebih daripada satu (maks 5)': 'You can pick more than one (max 5)',
-  'Atau pilih jenis & butiran (boleh lebih daripada satu, maks 5)': 'Or choose type & details (more than one allowed, max 5)', 'Seterusnya': 'Next', 'Hantar': 'Send', 'Batal': 'Cancel',
+  'Atau pilih jenis & butiran (boleh lebih daripada satu, maks 5)': 'Or choose type & details (more than one allowed, max 5)',
+  'Versi baharu tersedia': 'New version available', 'Muat semula untuk kemas kini JalanKita': 'Reload to update JalanKita',
+  'Nanti': 'Later', 'Seterusnya': 'Next', 'Hantar': 'Send', 'Batal': 'Cancel',
   'Tambah komen (pilihan)': 'Add a comment (optional)', 'Maksimum 5 jenis dalam satu laporan.': 'Maximum 5 types in one report.',
   'Pilih jenis laporan.': 'Choose a report type.', 'Laporan dihantar. Terima kasih! 🙏': 'Report sent. Thank you! 🙏',
   'Polis': 'Police', 'Kemalangan': 'Accident', 'Kesesakan': 'Traffic jam', 'Bahaya': 'Hazard', 'Banjir': 'Flood',
@@ -2355,7 +2357,8 @@ function maybeSendLocation() {
   state.lastSent = { lat: me.lat, lng: me.lng, t: now };
   // Arah terakhir yang diketahui (≤ 2 minit) — semasa berhenti dalam kesesakan GPS tidak memberi arah
   const hd = me.heading != null ? me.heading : reportHeading(false);
-  call('updateLocation', token, { name: userName, lat: me.lat, lng: me.lng, speed: me.speed, heading: hd, mood: S.mood }).catch(() => {});
+  // Tidak dihantar sendiri: ikut bersama segar data seterusnya (getLiveData) — satu pelaksanaan server, bukan dua
+  state.locPending = { name: userName, lat: me.lat, lng: me.lng, speed: me.speed, heading: hd, mood: S.mood };
 }
 
 // ------------------------------------------------------------ Data langsung
@@ -2364,14 +2367,38 @@ async function refresh() {
   try {
     const me = state.me || {};
     state.lastRefreshAt = Date.now();
-    const d = await call('getLiveData', token, me.lat, me.lng);
+    const loc = hidden ? null : state.locPending;
+    const d = await call('getLiveData', token, me.lat, me.lng, loc);
+    if (loc && state.locPending === loc) state.locPending = null;
+    state.liveBackoff = 0; state.liveBackoffUntil = 0;
+    checkVersion(d.v);
     state.reports = d.reports;
     state.users = d.users || [];
     drawReports(); drawUsers(state.users);
     checkHazards();
     if (state.routes.length) drawTraffic();
     if (state.routes.length && !state.navigating) renderRouteChoices();
-  } catch (e) { console.warn(e); }
+  } catch (e) {
+    console.warn(e);
+    // Server penuh / had kuota → beri ruang: tangguh segar seterusnya 30 s, 60 s, sehingga 2 minit
+    if (!isNetErr(e) && /sibuk|too many|terlalu banyak|invoked|lock|lambat/i.test(String(e && e.message))) {
+      state.liveBackoff = Math.min(120000, (state.liveBackoff || 15000) * 2);
+      state.liveBackoffUntil = Date.now() + state.liveBackoff;
+    }
+  }
+}
+
+// ---- Versi baharu di server (selepas deploy): tawar muat semula, sekali sahaja, bukan semasa navigasi
+function checkVersion(v) {
+  if (!v || state.verOffered || String(v) === APP_VERSION.replace(/ \(uji\)$/, '')) return;
+  if (state.navigating || askBusy()) return;              // cuba lagi pada segar seterusnya
+  state.verOffered = true;
+  showAsk({ icon: '🆕', text: 'Versi baharu tersedia', sub: 'Muat semula untuk kemas kini JalanKita', yes: 'Muat semula',
+    no: 'Nanti', ms: 15000, onYes: reloadApp });
+}
+function reloadApp() {
+  const uji = / \(uji\)$/.test(APP_VERSION);
+  if (APP_URL) window.open(APP_URL + (uji ? '?uji=1' : ''), '_top'); else location.reload();
 }
 
 // Jangan lukis semula laporan semasa popup terbuka — clearLayers() menutupnya (pengguna mungkin hendak tekan 👍/👎).
@@ -4099,7 +4126,10 @@ if (TRACK) document.body.dataset.mode = 'track';
 else {
   restoreShare(); startGeo(false);
   // Segar laporan & pengguna setiap 15 s; bila telefon diam lama (bukan navigasi) hanya setiap 60 s (jimat bateri & kuota)
-  setInterval(() => { if (!isIdle() || Date.now() - (state.lastRefreshAt || 0) >= 60000) refresh(); }, 15000);
+  setInterval(() => {
+    if (Date.now() < (state.liveBackoffUntil || 0)) return;   // server sibuk: tunggu
+    if (!isIdle() || Date.now() - (state.lastRefreshAt || 0) >= 60000) refresh();
+  }, 15000);
 }
 window.__appStarted = true; // pengesan permulaan di <head> tahu aplikasi berjaya bermula
 </script>

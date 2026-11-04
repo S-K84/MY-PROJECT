@@ -7,7 +7,7 @@
 
 // Versi aplikasi — SATU-SATUNYA tempat versi ditulis. Ia disuntik ke Index.html oleh doGet() (menu ☰ & skrin ralat).
 // Naikkan setiap kali kod berubah supaya mudah semak telefon sudah guna kod terkini.
-const APP_VERSION = '2026.11.04-p';
+const APP_VERSION = '2026.11.04-q';
 
 const CONFIG = {
   // ttlMin = berapa minit laporan kekal aktif sebelum luput
@@ -607,7 +607,10 @@ function touchIndex_(cache, key, id, nowSec, maxAgeSec, cap, ttlSec) {
 }
 
 function updateLocation(token, u) {
-  const userId = verify_(token);
+  return updateLocation_(verify_(token), u);
+}
+
+function updateLocation_(userId, u) {
   u = u || {};
   const lat = Number(u.lat), lng = Number(u.lng);
   if (!isValidCoord_(lat, lng)) return { ok: false };
@@ -674,13 +677,20 @@ function getActiveUsers_(myId, near) {
     });
 }
 
-/** Satu panggilan untuk segarkan semua data peta (jimat kuota). */
-function getLiveData(token, lat, lng) {
+/**
+ * Satu panggilan untuk segarkan semua data peta (jimat kuota). loc (pilihan) = lokasi pengguna untuk dikongsi —
+ * dahulu panggilan updateLocation berasingan; digabung supaya bilangan pelaksanaan Apps Script (had ~30 serentak)
+ * berkurang. v = versi aplikasi di server (klien menawarkan muat semula bila versinya lama).
+ */
+function getLiveData(token, lat, lng, loc) {
   const userId = verify_(token);
   rateLimit_('live', userId);
+  if (loc && typeof loc === 'object') {
+    try { updateLocation_(userId, loc); } catch (e) { /* had lokasi: data peta tetap dipulangkan */ }
+  }
   lat = Number(lat); lng = Number(lng);
   const near = isValidCoord_(lat, lng) ? { lat: lat, lng: lng } : null;
-  return { reports: nearbyReports_(near), users: getActiveUsers_(userId, near) };
+  return { reports: nearbyReports_(near), users: getActiveUsers_(userId, near), v: APP_VERSION };
 }
 
 function nearbyReports_(near) {
