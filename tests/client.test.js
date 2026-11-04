@@ -181,3 +181,12 @@ test('saluran uji: panduan skrin utama ditulis penuh dalam bahasa paparan (tidak
   assert.match(s, /const en = voiceLang === 'en';/);
   assert.match(s, /'Tap the <b>Share<\/b> button/);
 });
+
+test('Index.html: kamera laju, suara had laju, batal lapor pantas, panduan skrin utama (disahkan di jalan)', () => {
+  const s = clientScript();
+  assert.match(s, /node\["highway"="speed_camera"\]/);
+  assert.match(s, /function checkCameras\(along\)/);
+  assert.match(s, /speak\(VOICE\[voiceLang\]\.limit\(/);
+  assert.match(s, /yes: 'Batal', no: 'OK', ms: 6000/);
+  assert.match(s, /const en = voiceLang === 'en';/);
+});
