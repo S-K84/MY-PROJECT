@@ -15,6 +15,7 @@
         window.__bootErrors.push('Gagal memuat: ' + (e.target.src || e.target.href || e.target.tagName));
         return;
       }
+      if (e.lineno && !window.__bootLine) window.__bootLine = e.lineno;
       window.__bootErrors.push(String(e.message || e) + (e.lineno ? ' (baris ' + e.lineno + ')' : ''));
     }, true);
     setTimeout(function () {
@@ -26,7 +27,7 @@
       var box = document.createElement('div'); box.style.maxWidth = '440px';
       var h = document.createElement('h3'); h.textContent = '⚠️ Aplikasi gagal bermula';
       var pre = document.createElement('pre');
-      pre.style.cssText = 'white-space:pre-wrap;text-align:left;font-size:12px;background:#dde1e6;padding:10px;border-radius:10px';
+      pre.style.cssText = 'white-space:pre-wrap;text-align:left;font-size:10px;background:#dde1e6;max-height:70vh;overflow:auto;padding:10px;border-radius:10px';
       pre.textContent = 'Versi: ' + <?!= versionJson ?> + '\nPustaka peta (Leaflet): ' + (window.L ? 'dimuat' : 'TIDAK DIMUAT') +
         '\nPutaran peta: ' + (window.L && L.Map && L.Map.prototype.setBearing ? 'dimuat' : 'tiada') +
         '\nRalat:\n' + (window.__bootErrors.length ? window.__bootErrors.join('\n') : '(tiada ralat dilaporkan)');
@@ -35,8 +36,27 @@
         var sc = document.getElementsByTagName('script'), big = null;
         for (var i = 0; i < sc.length; i++) if (!big || sc[i].text.length > big.text.length) big = sc[i];
         if (big) pre.textContent += '\n\nSkrip utama: ' + big.text.length + ' aksara, ' + big.text.split('\n').length +
-          ' baris\nHujung skrip: ' + JSON.stringify(big.text.slice(-70)) +
+          ' baris\nAwal skrip: ' + JSON.stringify(big.text.slice(0, 70)) +
+          '\nHujung skrip: ' + JSON.stringify(big.text.slice(-70)) +
           '\nHalaman: ' + document.documentElement.outerHTML.length + ' aksara, ' + sc.length + ' skrip';
+        if (big) {
+          // Saiz setiap bahagian ("// ----" dalam skrip utama): aksara/baris. Dibanding dengan fail asal untuk cari
+          // bahagian mana yang diterima berbeza.
+          var L = big.text.split('\n'), parts = [], n = 0, ln = 0;
+          for (i = 0; i < L.length; i++) {
+            if (L[i].indexOf('// ----') === 0) { parts.push(n + '/' + ln); n = 0; ln = 0; }
+            n += L[i].length + 1; ln++;
+          }
+          parts.push(n + '/' + ln);
+          pre.textContent += '\nBahagian: ' + parts.join(' ');
+          // Baris di sekitar ralat. MAIN_AT = nombor baris <script> utama dalam IndexUji.html (disemak oleh ujian).
+          var MAIN_AT = 704, bl = window.__bootLine;
+          if (bl) {
+            pre.textContent += '\nSkrip sekitar baris ' + bl + ' (dianggap baris fail ' + bl + '):';
+            for (var j = Math.max(1, bl - MAIN_AT - 3); j <= Math.min(L.length - 1, bl - MAIN_AT + 1); j++)
+              pre.textContent += '\n' + (j + MAIN_AT) + '| ' + L[j].slice(0, 110);
+          }
+        }
       } catch (x) { pre.textContent += '\n(diagnostik gagal: ' + x.message + ')'; }
       var p = document.createElement('p'); p.textContent = 'Tangkap skrin mesej ini dan hantar kepada pembangun.';
       var btn = document.createElement('button'); btn.textContent = 'Muat semula';

@@ -36,3 +36,12 @@ test('appsscript.json sah dan web app dikonfigurasi', () => {
   assert.strictEqual(m.runtimeVersion, 'V8');
   assert.ok(m.webapp && m.webapp.executeAs && m.webapp.access);
 });
+
+test('saluran uji: MAIN_AT dalam diagnostik sama dengan baris <script> utama IndexUji.html', () => {
+  const f = path.join(ROOT, 'IndexUji.html');
+  if (!fs.existsSync(f)) return;
+  const lines = fs.readFileSync(f, 'utf8').split('\n');
+  const m = lines.join('\n').match(/var MAIN_AT = (\d+),/);
+  if (!m) return;
+  assert.strictEqual(lines.lastIndexOf('<script>') + 1, Number(m[1]));
+});
