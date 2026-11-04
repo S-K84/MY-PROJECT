@@ -115,7 +115,7 @@ test('saluran uji: had laju automatik — tafsir maxspeed & pilih selang pada la
 test('saluran uji: lapor satu tekan (Polis, Kemalangan, Sesak, Bahaya)', () => {
   const s = clientScript('IndexUji.html');
   assert.match(s, /const QUICK_TYPES = \['POLIS', 'KEMALANGAN', 'SESAK', 'BAHAYA'\]/);
-  assert.match(s, /sendReport\(\[\{ type: b\.dataset\.quick/);
+  assert.match(s, /sendReport\(\[\{ type: k, desc: ''/);
 });
 
 test('saluran uji: jimat bateri — GPS ketepatan rendah & segar 60 s bila diam lama', () => {
@@ -156,4 +156,22 @@ test('popup laporan: butang "Padam laporan saya" untuk laporan sendiri (Index & 
     assert.match(s, /data-del-mine=/, f);
     assert.match(s, /call\('deleteMyReport', token, id\)/, f);
   });
+});
+
+test('saluran uji: kamera laju OSM, suara had laju baharu, batal lapor pantas, panduan skrin utama', () => {
+  const s = clientScript('IndexUji.html');
+  assert.match(s, /node\["highway"="speed_camera"\]/);
+  assert.match(s, /function checkCameras\(along\)/);
+  assert.match(s, /speak\(VOICE\[voiceLang\]\.limit\(/);
+  assert.match(s, /yes: 'Batal', no: 'OK', ms: 6000/);
+  assert.match(s, /homescreen: \(\) =>/);
+  const vm = require('vm');
+  const fn = name => s.match(new RegExp('function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}'))[0];
+  const ctx = { locate: p => ({ off: Math.abs(p.lng - 101.7) * 111000, along: (p.lat - 3.1) * 111000 }) };
+  vm.runInNewContext(fn('routeCameras') + ';this.f = routeCameras;', ctx);
+  const cams = ctx.f({}, [
+    { type: 'node', id: 1, lat: 3.11, lon: 101.7001, tags: { highway: 'speed_camera' } },     // di atas laluan
+    { type: 'node', id: 2, lat: 3.12, lon: 101.705, tags: { highway: 'speed_camera' } },      // ~550 m dari laluan
+    { type: 'way', id: 3, tags: { highway: 'primary', maxspeed: '90' }, geometry: [] }], 0, 1e9);
+  assert.strictEqual(JSON.stringify(cams.map(c => c.id)), '["cam-1"]');
 });

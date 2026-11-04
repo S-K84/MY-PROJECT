@@ -50,7 +50,7 @@
           parts.push(n + '/' + ln);
           pre.textContent += '\nBahagian: ' + parts.join(' ');
           // Baris di sekitar ralat. MAIN_AT = nombor baris <script> utama dalam IndexUji.html (disemak oleh ujian).
-          var MAIN_AT = 729, bl = window.__bootLine;
+          var MAIN_AT = 733, bl = window.__bootLine;
           if (bl) {
             pre.textContent += '\nSkrip sekitar baris ' + bl + ' (dianggap baris fail ' + bl + '):';
             for (var j = Math.max(1, bl - MAIN_AT - 3); j <= Math.min(SL.length - 1, bl - MAIN_AT + 1); j++)
@@ -420,6 +420,10 @@
     .sub { padding:10px 16px; border-radius:999px; border:1.5px solid var(--line); font-weight:600; }
     .sub.on { border-color:var(--accent); background:var(--accent); color:var(--accent-ink); }
     .rbtn { position:relative; }
+    .hs { background:var(--sheet); border-radius:14px; padding:6px 12px; margin:0 0 6px; }
+    .hs-step { display:flex; gap:12px; align-items:flex-start; padding:8px 0; font-size:15px; line-height:1.4; }
+    .hs-step .n { flex:none; width:26px; height:26px; border-radius:50%; background:var(--accent); color:#000; font-style:normal;
+      font-weight:700; display:flex; align-items:center; justify-content:center; font-size:14px; }
     .quick-rep { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin:4px 0 6px; }
     .quick-rep button { border:0; border-radius:16px; padding:12px 4px; min-height:84px; color:#fff; font-weight:700; font-size:13px;
       display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
@@ -801,7 +805,7 @@ let voiceLang = store.get('jk_voice') === 'en' ? 'en' : 'ms';
 const VOICE = {
   ms: { code: 'ms-MY', prefer: ['ms', 'id'], inDist: d => `Dalam ${d}, `, arrive: 'Anda telah tiba di destinasi.',
     near: d => `Destinasi anda ${d} di hadapan.`, reroute: 'Mengira semula laluan.',
-    speeding: 'Awas, anda melebihi had laju.', child: 'Jangan lupa periksa tempat duduk belakang.', mi: 'batu', ft: 'kaki',
+    speeding: 'Awas, anda melebihi had laju.', camera: d => `Kamera laju ${d} di hadapan.`, limit: n => `Had laju ${n}.`, child: 'Jangan lupa periksa tempat duduk belakang.', mi: 'batu', ft: 'kaki',
     hazard: (l, d) => `Awas, ${l} dilaporkan ${d} di hadapan.`, test: 'Arahan suara dalam Bahasa Melayu.',
     jam: d => d ? `Kesesakan ${d} di hadapan.` : 'Anda memasuki kawasan sesak.',
     still: l => `${l} di sini. Masih ada?`, faster: m => `Laluan lebih pantas dijumpai. Jimat ${m} minit.`,
@@ -809,7 +813,7 @@ const VOICE = {
     m: 'meter', km: 'kilometer' },
   en: { code: 'en-GB', prefer: ['en-gb', 'en'], inDist: d => `In ${d}, `, arrive: 'You have arrived at your destination.',
     near: d => `Your destination is ${d} ahead.`, reroute: 'Recalculating route.',
-    speeding: 'Caution, you are over the speed limit.', child: 'Remember to check the back seat.', mi: 'miles', ft: 'feet',
+    speeding: 'Caution, you are over the speed limit.', camera: d => `Speed camera ${d} ahead.`, limit: n => `Speed limit ${n}.`, child: 'Remember to check the back seat.', mi: 'miles', ft: 'feet',
     hazard: (l, d) => `Caution, ${l} reported ${d} ahead.`, test: 'Voice guidance in English.',
     jam: d => d ? `Traffic jam ${d} ahead.` : 'You are entering a traffic jam.',
     still: l => `${l} here. Is it still there?`, faster: m => `Faster route found. Save ${m} minutes.`,
@@ -1035,7 +1039,12 @@ const EN = {
   'Boleh pilih lebih daripada satu (maks 5)': 'You can pick more than one (max 5)',
   'Atau pilih jenis & butiran (boleh lebih daripada satu, maks 5)': 'Or choose type & details (more than one allowed, max 5)',
   'Versi baharu tersedia': 'New version available', 'Muat semula untuk kemas kini JalanKita': 'Reload to update JalanKita',
-  'Nanti': 'Later', '🗑️ Padam laporan saya': '🗑️ Delete my report',
+  'Nanti': 'Later', 'Laporan dihantar': 'Report sent', 'Laporan dibatalkan.': 'Report cancelled.', 'OK': 'OK',
+  'Tambah ke skrin utama': 'Add to home screen', 'Buka JalanKita seperti app': 'Open JalanKita like an app',
+  'Selepas ini JalanKita boleh dibuka terus dari ikon di skrin utama, seperti app — tidak perlu cari pautan dalam WhatsApp.':
+    'After this, JalanKita opens straight from an icon on your home screen, like an app — no need to find the link in WhatsApp.',
+  'Kongsi pautan JalanKita kepada rakan, kemudian ajar mereka langkah yang sama.':
+    'Share the JalanKita link with friends, then show them the same steps.', '🗑️ Padam laporan saya': '🗑️ Delete my report',
   'Hanya pelapor boleh memadam laporan ini.': 'Only the person who reported this can delete it.', 'Seterusnya': 'Next', 'Hantar': 'Send', 'Batal': 'Cancel',
   'Tambah komen (pilihan)': 'Add a comment (optional)', 'Maksimum 5 jenis dalam satu laporan.': 'Maximum 5 types in one report.',
   'Pilih jenis laporan.': 'Choose a report type.', 'Laporan dihantar. Terima kasih! 🙏': 'Report sent. Thank you! 🙏',
@@ -1850,6 +1859,27 @@ const typeRows = key => Object.keys(TYPES).map(t => sRow({ multi: key + '|' + t,
 
 // ---- Halaman
 const PAGES = {
+  homescreen: () => {
+    const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua), crios = /CriOS/.test(ua), android = /Android/.test(ua);
+    const step = (n, t) => `<div class="hs-step"><i class="n">${n}</i><span>${t}</span></div>`;
+    const iosSafari = sec('iPhone · Safari') + '<div class="hs">' +
+      step(1, 'Tekan butang <b>Kongsi</b> (petak dengan anak panah ke atas) di bawah skrin.') +
+      step(2, 'Tatal ke bawah, tekan <b>Tambah ke Skrin Utama</b> (Add to Home Screen).') +
+      step(3, 'Tekan <b>Tambah</b> (Add) di kanan atas. Ikon JalanKita muncul di skrin utama.') + '</div>';
+    const iosChrome = sec('iPhone · Chrome') + '<div class="hs">' +
+      step(1, 'Tekan butang <b>Kongsi</b> (petak dengan anak panah ke atas) di sebelah bar alamat.') +
+      step(2, 'Pilih <b>Tambah ke Skrin Utama</b> (Add to Home Screen).') +
+      step(3, 'Tekan <b>Tambah</b> (Add).') + '</div>';
+    const androidChrome = sec('Android · Chrome') + '<div class="hs">' +
+      step(1, 'Tekan <b>⋮</b> (tiga titik) di kanan atas.') +
+      step(2, 'Tekan <b>Tambah ke skrin utama</b> (Add to Home screen).') +
+      step(3, 'Tekan <b>Tambah</b> (Add).') + '</div>';
+    const order = ios ? (crios ? [iosChrome, iosSafari, androidChrome] : [iosSafari, iosChrome, androidChrome])
+      : android ? [androidChrome, iosSafari, iosChrome] : [iosSafari, iosChrome, androidChrome];
+    return { title: 'Tambah ke skrin utama', html:
+      note('Selepas ini JalanKita boleh dibuka terus dari ikon di skrin utama, seperti app — tidak perlu cari pautan dalam WhatsApp.') +
+      order.join('') + note('Kongsi pautan JalanKita kepada rakan, kemudian ajar mereka langkah yang sama.') };
+  },
   root: () => ({ title: 'Tetapan', html:
     list([sRow({ go: 'general', icon: '⚙️', color: '#26c6da', label: 'Umum' }),
       sRow({ go: 'mapd', icon: '🗺️', color: '#43a047', label: 'Paparan peta' }),
@@ -2061,7 +2091,8 @@ function renderDrawer() {
       sRow({ doAct: 'liveShare', icon: '📡', color: '#2e7d32', label: 'Kongsi perjalanan langsung',
         sub: state.share ? 'Sedang berkongsi' : 'Rakan nampak kereta anda bergerak' })])}
     ${state.isOwner ? list([sRow({ doAct: 'admin', icon: '🛡️', color: '#e53935', label: 'Panel pentadbir' })]) : ''}
-    ${list([sRow({ go: 'root', icon: '⚙️', color: '#78909c', label: 'Tetapan' })])}
+    ${list([sRow({ go: 'homescreen', icon: '📲', color: '#5c6bc0', label: 'Tambah ke skrin utama', sub: 'Buka JalanKita seperti app' }),
+      sRow({ go: 'root', icon: '⚙️', color: '#78909c', label: 'Tetapan' })])}
     <p class="pop-muted" style="margin:16px 4px">JalanKita · Peta © OpenStreetMap · Laluan oleh Google<br>Versi ${APP_VERSION}</p>`;
 }
 
@@ -3494,7 +3525,7 @@ function speedAt(intervals, along) {
 }
 function updateRoadLimit() {
   const r = state.routes[state.selRoute];
-  if (!r || !state.navigating || S.speedLimit !== -1) return;
+  if (!r || !state.navigating) return;
   const along = state.meAlong || 0;
   // Muat (semula) bila laluan bertukar atau kedudukan menghampiri hujung kawasan yang sudah dimuat
   if (!state.slBusy && (state.slRoute !== r || state.slTo < Math.min(r.total, along + 10000))) {
@@ -3502,20 +3533,55 @@ function updateRoadLimit() {
     const navId = state.navId, from = Math.max(0, along - 200), to = Math.min(r.total, along + SL_AHEAD), pts = [];
     for (let d = from; d < to; d += 1000) pts.push(slicePts(r, d, d)[0]);
     pts.push(slicePts(r, to, to)[0]);
-    const q = `[out:json][timeout:25];(${routeBoxes(pts, 40).map(b => `way["highway"]["maxspeed"](${b});`).join('')});out tags geom;`;
+    // Satu pertanyaan: jalan ber-maxspeed + kamera laju (highway=speed_camera) di sepanjang laluan
+    const q = `[out:json][timeout:25];(${routeBoxes(pts, 40).map(b =>
+      `way["highway"]["maxspeed"](${b});node["highway"="speed_camera"](${b});`).join('')});out tags geom;`;
     overpassRaw(q, []).then(data => {
       if (navId !== state.navId || state.routes[state.selRoute] !== r) return;
       const keep = state.slRoute === r ? (state.slInt || []).filter(x => x.e < from) : [];
       state.slInt = keep.concat(speedIntervals(r, data.elements, Math.max(0, (state.meSeg || 0) - 5), to + 100));
+      const keepCams = state.slRoute === r ? (state.cams || []).filter(x => x.a < from) : [];
+      state.cams = keepCams.concat(routeCameras(r, data.elements, Math.max(0, (state.meSeg || 0) - 5), to + 100));
       state.slRoute = r; state.slTo = to;
       updateRoadLimit();
     }, () => { state.slRetryAt = Date.now() + 60000; })
       .finally(() => { setTimeout(() => { state.slBusy = false; }, Math.max(0, (state.slRetryAt || 0) - Date.now())); });
   }
+  if (state.slRoute === r) checkCameras(along);
+  if (S.speedLimit !== -1) return;
   const v = state.slRoute === r ? speedAt(state.slInt, along) : 0;
   if (v) { state.roadLimit = v; state.roadLimitAt = along; }
   else if (state.roadLimit && along - (state.roadLimitAt || 0) > 300) state.roadLimit = 0;   // tiada data lagi
-  if (state.shownLimit !== curLimit()) { state.shownLimit = curLimit(); renderSpeedSign(); }
+  if (state.shownLimit !== curLimit()) {
+    state.shownLimit = curLimit(); renderSpeedSign();
+    // Sebut had baharu (cth. 90 → 60) — tidak lebih kerap daripada 20 s, dan bukan nilai yang sama berulang
+    const lim = state.shownLimit;
+    if (lim && lim !== state.saidLimit && Date.now() - (state.saidLimitAt || 0) > 20000) {
+      state.saidLimit = lim; state.saidLimitAt = Date.now();
+      speak(VOICE[voiceLang].limit(fmtSpeed(lim)), 'speed');
+    }
+  }
+}
+/** Kamera laju OSM di atas laluan (≤ 40 m). Pulangkan [{ a: jarak pada laluan, id }]. */
+function routeCameras(r, elements, fromSeg, maxAlong) {
+  const out = [];
+  (elements || []).forEach(el => {
+    if (el.type !== 'node' || !el.tags || el.tags.highway !== 'speed_camera') return;
+    const l = locate({ lat: el.lat, lng: el.lon }, r, fromSeg, maxAlong);
+    if (l.off <= 40) out.push({ a: l.along, id: 'cam-' + el.id });
+  });
+  return out;
+}
+/** Amaran suara sekali bagi setiap kamera di hadapan (jarak amaran sama seperti laporan; +400 m bila laju). */
+function checkCameras(along) {
+  if (S.alertTypes.indexOf('KAMERA') < 0 || S.travel === 'walk' || !state.me) return;
+  const warnM = (Number(S.alertDist) || 600) + ((state.me.speed || 0) > 70 ? 400 : 0);
+  const cam = (state.cams || []).find(c => c.a > along && c.a - along <= warnM && !state.alerted.has(c.id));
+  if (!cam) return;
+  state.alerted.add(cam.id);
+  const d = cam.a - along;
+  toast(`📷 Kamera laju · ${fmtDist(d)}`, true);
+  speak(VOICE[voiceLang].camera(sayDist(d)), 'hazard');
 }
 /** Had laju yang digunakan: tetapan sendiri, atau had jalan (Automatik, semasa navigasi sahaja). */
 function curLimit() {
@@ -3880,7 +3946,16 @@ const QUICK_TYPES = ['POLIS', 'KEMALANGAN', 'SESAK', 'BAHAYA'];
 $('quickRep').addEventListener('click', e => {
   const b = e.target.closest('[data-quick]'); if (!b || !TYPES[b.dataset.quick] || !state.me) return;
   $('quickRep').querySelectorAll('button').forEach(x => { x.disabled = true; });
-  sendReport([{ type: b.dataset.quick, desc: '', heading: reportHeading(false) }])
+  const k = b.dataset.quick;
+  sendReport([{ type: k, desc: '', heading: reportHeading(false) }])
+    .then(res => {
+      // Tersalah tekan? "Batal" selama 6 s memadam laporan baharu itu (bukan bila digabung dengan laporan sedia ada)
+      const id = res && !Number(res.merged) && res.ids && res.ids[0];
+      if (!id || askBusy()) return;
+      showAsk({ icon: TYPES[k].icon, text: 'Laporan dihantar', sub: TYPES[k].label, yes: 'Batal', no: 'OK', ms: 6000,
+        onYes: () => call('deleteMyReport', token, id).then(() => { toast('Laporan dibatalkan.'); refresh(); },
+          e => toast(isNetErr(e) ? '📵 Tiada liputan.' : (e.message || e))) });
+    })
     .finally(() => $('quickRep').querySelectorAll('button').forEach(x => { x.disabled = false; }));
 });
 function renderReportNext() {
@@ -3941,11 +4016,13 @@ async function sendReport(items) {
     const res = await call('submitReports', token, payload);
     rememberMine(res && res.ids);
     $('reportModal').style.display = 'none';
+    state.lastReportRes = res;
     // Server menggabungkan laporan yang sama (jenis, ≤200 m) dengan yang sudah ada — dikira sebagai 👍, bukan pin baharu
     const mergedN = Number(res && res.merged) || 0;
     toast(mergedN && mergedN === items.length ? 'Laporan ini sudah ada. 👍 anda ditambah. Terima kasih!'
       : items.length > 1 ? `${items.length} laporan dihantar. Terima kasih! 🙏` : 'Laporan dihantar. Terima kasih! 🙏');
     refresh();
+    return res;
   } catch (e) {
     if (isNetErr(e)) {
       const q = loadQueue();
