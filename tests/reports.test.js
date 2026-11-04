@@ -146,3 +146,15 @@ test('bumpStats_ mengemas kini lajur Aktif', () => {
   env.report('g_A', [{ type: 'SESAK' }], { lat: 4, lng: 102 });
   assert.strictEqual(new Date(env.stats.data()[0][6]).getTime(), env.clock.now);
 });
+
+test('deleteMyReport: pelapor boleh memadam laporannya; orang lain tidak', () => {
+  const env = setup();
+  const res = env.report('g_A1234567', [{ type: 'POLIS', desc: '' }]);
+  const id = res.ids[0];
+  assert.throws(() => env.ctx.deleteMyReport('g_B1234567', id), /Hanya pelapor/);
+  assert.strictEqual(env.reports.data().length, 1);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(env.ctx.deleteMyReport('g_A1234567', id))), { ok: true });
+  assert.strictEqual(env.reports.data().length, 0);
+  assert.strictEqual(env.ctx.getReports_().length, 0);           // cache laporan dibina semula
+  assert.throws(() => env.ctx.deleteMyReport('g_A1234567', id), /tidak dijumpai/);
+});
