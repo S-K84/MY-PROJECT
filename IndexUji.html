@@ -50,7 +50,7 @@
           parts.push(n + '/' + ln);
           pre.textContent += '\nBahagian: ' + parts.join(' ');
           // Baris di sekitar ralat. MAIN_AT = nombor baris <script> utama dalam IndexUji.html (disemak oleh ujian).
-          var MAIN_AT = 740, bl = window.__bootLine;
+          var MAIN_AT = 727, bl = window.__bootLine;
           if (bl) {
             pre.textContent += '\nSkrip sekitar baris ' + bl + ' (dianggap baris fail ' + bl + '):';
             for (var j = Math.max(1, bl - MAIN_AT - 3); j <= Math.min(SL.length - 1, bl - MAIN_AT + 1); j++)
@@ -65,21 +65,6 @@
       box.appendChild(h); box.appendChild(pre); box.appendChild(p); box.appendChild(btn); d.appendChild(box);
       document.body.appendChild(d);
     }, 6000);
-  </script>
-  <!-- Saluran uji sahaja: hantar teks skrip yang diterima pelayar ke helaian "Diagnostik" (pemilik sahaja).
-       Skrip berasingan tanpa komen, supaya ia tetap berjalan walaupun skrip lain gagal dihurai. -->
-  <script>
-    setTimeout(function () {
-      var say = function (m) { var p = document.querySelector('#fatal pre'); if (p) p.textContent += '\n' + m; };
-      try {
-        if (!window.google || !google.script || !google.script.run) { say('Diagnostik: google.script tiada'); return; }
-        var sc = document.getElementsByTagName('script'), out = [navigator.userAgent,
-          'appStarted=' + !!window.__appStarted + ' errors=' + (window.__bootErrors || []).join(' | ')];
-        for (var i = 0; i < sc.length; i++) out.push('#' + i + ' src=' + (sc[i].src || '') + ' len=' + sc[i].text.length + '\n' + sc[i].text);
-        google.script.run.withSuccessHandler(function (n) { say('Diagnostik dihantar ke Sheet (' + n + ' baris).'); })
-          .withFailureHandler(function (e) { say('Diagnostik gagal dihantar: ' + (e && e.message || e)); }).saveDiag(out);
-      } catch (x) { say('Diagnostik ralat: ' + x.message); }
-    }, 7000);
   </script>
   <!-- Pustaka peta. Jika unpkg gagal (gangguan / disekat), cuba jsDelivr kemudian cdnjs.
        Hash SRI yang sama digunakan untuk setiap sumber, jadi fail yang diubah tetap ditolak. -->
@@ -423,6 +408,8 @@
     /* Tulisan besar: panel, banner & menu dibesarkan (peta tidak — zoom pada peta mengganggu koordinat Leaflet) */
     body.big-text #navTop, body.big-text #panel, body.big-text #home, body.big-text #setSheet, body.big-text #drawer .pane,
     body.big-text #askCard, body.big-text #toast, body.big-text .modal .sheet { zoom:1.18; }
+    .qr-box { background:#fff; border-radius:18px; padding:14px; width:240px; margin:6px auto 14px; color:#000; text-align:center; }
+    .qr-box img { display:block; width:240px; height:240px; }
     .sos-btn { display:block; width:calc(100% - 24px); margin-left:12px !important; box-sizing:border-box; text-align:center; text-decoration:none; border:0; border-radius:16px;
       padding:18px; margin:0 0 10px; font-size:20px; font-weight:800; color:#fff; background:#d32f2f; }
     .sos-btn.wa { background:#25d366; color:#04260f; }
@@ -841,7 +828,7 @@ const SETTINGS_DEFAULT = { units: 'km', wake: true, dark: 'auto', autoZoom: true
   repTypes: Object.keys(TYPES), alertTypes: Object.keys(TYPES), alertDist: 600, showSpeedo: true, showUsers: true,
   voiceName: '', voiceMode: 'normal', volume: 1, avoidFerries: false, avoidHighways: false, speedLimit: -1,
   childReminder: false, mood: '🙂', trips: 0, syncPlaces: true, askStill: true, fasterRoute: true, travel: 'car',
-  restRemind: true, rainAlert: true, prayerRemind: true, textSize: 'normal' };
+  restRemind: true, rainAlert: true, prayerRemind: true, textSize: 'normal', fuelL100: 7, fuelPrice: 1.99 };
 const S = Object.assign({}, SETTINGS_DEFAULT, getJSON('jk_settings', {}));
 /** Pastikan setiap tetapan bernilai sah (data dari telefon atau server tidak dipercayai bulat-bulat). */
 function validateSettings() {
@@ -853,7 +840,7 @@ function validateSettings() {
   oneOf('units', ['km', 'mi']); oneOf('dark', ['auto', 'night', 'always', 'never']); oneOf('textSize', ['normal', 'large']);
   oneOf('carIcon', ['arrow', 'car', 'moto']); oneOf('vehicle', ['private', 'taxi', 'moto']);
   oneOf('voiceMode', ['normal', 'less', 'alerts', 'off']); oneOf('mood', MOODS); oneOf('travel', ['car', 'moto', 'walk']);
-  ['alertDist', 'speedLimit', 'volume', 'trips'].forEach(k => { if (typeof S[k] !== 'number' || !isFinite(S[k])) S[k] = SETTINGS_DEFAULT[k]; });
+  ['alertDist', 'speedLimit', 'volume', 'trips', 'fuelL100', 'fuelPrice'].forEach(k => { if (typeof S[k] !== 'number' || !isFinite(S[k])) S[k] = SETTINGS_DEFAULT[k]; });
   Object.keys(SETTINGS_DEFAULT).forEach(k => {
     if (typeof SETTINGS_DEFAULT[k] === 'boolean' && typeof S[k] !== 'boolean') S[k] = SETTINGS_DEFAULT[k];
   });
@@ -1051,7 +1038,18 @@ const EN = {
   'Boleh pilih lebih daripada satu (maks 5)': 'You can pick more than one (max 5)',
   'Atau pilih jenis & butiran (boleh lebih daripada satu, maks 5)': 'Or choose type & details (more than one allowed, max 5)',
   'Versi baharu tersedia': 'New version available', 'Muat semula untuk kemas kini JalanKita': 'Reload to update JalanKita',
-  'Nanti': 'Later', 'Saiz tulisan': 'Text size', 'Biasa': 'Normal', 'Besar': 'Large', 'Peringatan rehat': 'Rest reminder',
+  'Nanti': 'Later', 'Anggaran kos minyak': 'Fuel cost estimate', 'Penggunaan minyak': 'Fuel consumption',
+  'Harga minyak': 'Fuel price', 'Kongsi JalanKita': 'Share JalanKita', 'Kod QR & WhatsApp untuk rakan': 'QR code & WhatsApp for friends',
+  '💬 Hantar ke WhatsApp': '💬 Send to WhatsApp', '📋 Salin pautan': '📋 Copy link',
+  'Minta rakan imbas kod QR ini dengan kamera telefon, atau hantar pautan melalui WhatsApp.':
+    'Ask friends to scan this QR code with their phone camera, or send the link via WhatsApp.',
+  'Lebih ramai pengguna = lebih banyak laporan & kesesakan automatik yang tepat di jalan anda.':
+    'More users = more reports & more accurate automatic traffic on your roads.',
+  'Kos dipaparkan pada pilihan laluan, cth. "⛽ ~RM 18". Tol tidak termasuk.': 'Cost is shown on route options, e.g. "⛽ ~RM 18". Tolls not included.',
+  'Kereta kecil biasanya 5–6, sedan 7–8, SUV / MPV 10–12. Motosikal dikira 3 L / 100 km.':
+    'Small cars are usually 5–6, sedans 7–8, SUV / MPV 10–12. Motorcycles use 3 L / 100 km.',
+  'Harga berubah setiap minggu. Pilih yang paling hampir — anggaran kos hanya panduan.':
+    'Prices change weekly. Pick the closest — the cost estimate is only a guide.', 'Saiz tulisan': 'Text size', 'Biasa': 'Normal', 'Besar': 'Large', 'Peringatan rehat': 'Rest reminder',
   'Selepas 2 jam memandu tanpa henti': 'After 2 hours of non-stop driving', 'Amaran hujan lebat': 'Heavy rain alert',
   'Ramalan cuaca di sepanjang laluan (Open-Meteo)': 'Weather forecast along the route (Open-Meteo)',
   'Peringatan waktu solat': 'Prayer time reminder', 'Semasa navigasi · masjid / surau di hadapan': 'While navigating · mosque / surau ahead',
@@ -1825,6 +1823,12 @@ const CHOICES = {
     opts: [['auto', 'Ikut telefon'], ['night', 'Malam sahaja (7 mlm – 7 pg)'], ['always', 'Sentiasa'], ['never', 'Tidak pernah']],
     note: '"Ikut telefon" hanya menukar warna panel. Peta digelapkan untuk "Malam sahaja" dan "Sentiasa".' },
   carIcon: { title: 'Ikon kenderaan', opts: [['arrow', 'Anak panah'], ['car', 'Kereta'], ['moto', 'Motosikal']] },
+  fuelL100: { title: 'Penggunaan minyak', opts: [[0, 'Mati'], [5, '5 L / 100 km'], [6, '6 L / 100 km'], [7, '7 L / 100 km'],
+    [8, '8 L / 100 km'], [10, '10 L / 100 km'], [12, '12 L / 100 km'], [15, '15 L / 100 km']],
+    note: 'Kereta kecil biasanya 5–6, sedan 7–8, SUV / MPV 10–12. Motosikal dikira 3 L / 100 km.' },
+  fuelPrice: { title: 'Harga minyak', opts: [[1.99, 'RM 1.99 (RON95 BUDI95)'], [2.6, 'RM 2.60 (RON95 tanpa subsidi)'],
+    [3.18, 'RM 3.18 (RON97)'], [2.15, 'RM 2.15 (Diesel)']],
+    note: 'Harga berubah setiap minggu. Pilih yang paling hampir — anggaran kos hanya panduan.' },
   voiceMode: { title: 'Arahan suara',
     opts: [['normal', '🔊 Biasa'], ['less', '🔉 Kurang bercakap'], ['alerts', '❗ Amaran sahaja'], ['off', '🔇 Mati']],
     note: 'Kurang bercakap: belokan semasa, amaran & ketibaan sahaja. Amaran sahaja: laporan di hadapan, had laju & ketibaan.' },
@@ -1889,6 +1893,18 @@ const typeRows = key => Object.keys(TYPES).map(t => sRow({ multi: key + '|' + t,
 
 // ---- Halaman
 const PAGES = {
+  invite: () => {
+    // Pautan aplikasi biasa (bukan saluran uji). QR dijana oleh api.qrserver.com — hanya pautan awam aplikasi dihantar.
+    const url = APP_URL || '';
+    const qr = url ? 'https:\/\/api.qrserver.com/v1/create-qr-code/?size=480x480&margin=12&data=' + encodeURIComponent(url) : '';
+    return { title: 'Kongsi JalanKita', html:
+      note('Minta rakan imbas kod QR ini dengan kamera telefon, atau hantar pautan melalui WhatsApp.') +
+      (qr ? `<div class="qr-box"><img src="${esc(qr)}" alt="Kod QR JalanKita" width="240" height="240"
+        onerror="this.parentNode.textContent='Kod QR tidak dapat dimuat. Guna butang di bawah.'"></div>` : '') +
+      `<button class="sos-btn wa" data-do="inviteWa">💬 Hantar ke WhatsApp</button>` +
+      `<button class="sos-btn alt" data-do="inviteCopy">📋 Salin pautan</button>` +
+      note('Lebih ramai pengguna = lebih banyak laporan & kesesakan automatik yang tepat di jalan anda.') };
+  },
   sos: () => ({ title: 'Kecemasan', html:
     `<a class="sos-btn" href="tel:999" target="_top">📞 Telefon 999</a>` +
     `<button class="sos-btn wa" data-do="sosShare">📍 Hantar lokasi saya ke WhatsApp</button>` +
@@ -1993,7 +2009,9 @@ const PAGES = {
 
   vehicle: () => ({ title: 'Butiran kenderaan',
     html: list([choiceRow('vehicle', 'Jenis kenderaan', '🚘', '#29b6f6'), choiceRow('carIcon', 'Ikon kenderaan')]) +
-    note(CHOICES.vehicle.note) }),
+    note(CHOICES.vehicle.note) + sec('Anggaran kos minyak') +
+    list([choiceRow('fuelL100', 'Penggunaan minyak', '⛽', '#ef6c00'), choiceRow('fuelPrice', 'Harga minyak', '💵', '#2e7d32')]) +
+    note('Kos dipaparkan pada pilihan laluan, cth. "⛽ ~RM 18". Tol tidak termasuk.') }),
 
   alerts: () => ({ title: 'Amaran & laporan', html:
     list([sRow({ go: 'alertTypes', label: 'Laporan yang diberi amaran', value: S.alertTypes.length + ' / ' + Object.keys(TYPES).length }),
@@ -2143,6 +2161,7 @@ function renderDrawer() {
       sRow({ doAct: 'liveShare', icon: '📡', color: '#2e7d32', label: 'Kongsi perjalanan langsung',
         sub: state.share ? 'Sedang berkongsi' : 'Rakan nampak kereta anda bergerak' })])}
     ${state.isOwner ? list([sRow({ doAct: 'admin', icon: '🛡️', color: '#e53935', label: 'Panel pentadbir' })]) : ''}
+    ${list([sRow({ go: 'invite', icon: '🤝', color: '#00897b', label: 'Kongsi JalanKita', sub: 'Kod QR & WhatsApp untuk rakan' })])}
     ${list([sRow({ go: 'sos', icon: '🆘', color: '#d32f2f', label: 'Kecemasan', sub: 'Telefon 999 · hantar lokasi ke keluarga' })])}
     ${list([sRow({ go: 'homescreen', icon: '📲', color: '#5c6bc0', label: 'Tambah ke skrin utama', sub: 'Buka JalanKita seperti app' }),
       sRow({ go: 'root', icon: '⚙️', color: '#78909c', label: 'Tetapan' })])}
@@ -2237,6 +2256,11 @@ function onSettingsClick(e) {
     else if (a === 'liveShare') { closeDrawer(); openShare(); }
     else if (a === 'admin') { closeDrawer(); openAdmin(); }
     else if (a === 'sosShare') sosShare();
+    else if (a === 'inviteWa') openWhatsApp('🚗 Jom guna JalanKita — navigasi & laporan trafik komuniti Malaysia (percuma, tanpa muat turun app):\n' + APP_URL);
+    else if (a === 'inviteCopy') {
+      (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(APP_URL) : Promise.reject())
+        .then(() => toast('📋 Pautan disalin.'), () => toast('Tekan lama pautan di atas untuk salin.'));
+    }
     else if (a === 'testVoice') speak(VOICE[voiceLang].test, 'test');
     else if (a === 'clearHist') { const p = places(); p.recent = []; savePlaces(p); toast('Sejarah carian dipadam.'); }
     else if (a === 'delPrefs') {
@@ -2818,6 +2842,7 @@ function renderRouteChoices() {
         r.durationSec === fastest && state.routes.length > 1 ? '<span class="tag">Terpantas</span>' : ''}</span>
         <span class="meta">${esc(r.distanceText)}</span></div>
       <div class="meta">Tiba ${clock(Date.now() + r.durationSec * 1000)} · melalui ${esc(r.summary || '—')}</div>
+      ${fuelCost(r.distanceM) ? `<div class="meta">⛽ ~RM ${fuelCost(r.distanceM)}</div>` : ''}
       ${r.delaySec != null ? `<div class="meta">${delayHtml(r.delaySec)}</div>` : ''}
       <div class="meta">${hz.length ? hz.length + ' laporan: ' + icons : 'Tiada laporan di laluan ini'}</div>
     </button>`;
@@ -3147,6 +3172,14 @@ function maybeCheckFaster(r, along) {
   if (r.total - along < 3000 || Date.now() - (state.lastReroute || 0) < 120000) return; // hampir sampai / baru kira semula
   state.fasterAt = Date.now();
   checkFaster();
+}
+
+/** Anggaran kos minyak (RM, dibundarkan) bagi jarak m meter; '' bila mati / berjalan kaki. */
+function fuelCost(m) {
+  const lper100 = S.travel === 'moto' ? 3 : Number(S.fuelL100) || 0, price = Number(S.fuelPrice) || 0;
+  if (!lper100 || !price || S.travel === 'walk' || !(m > 0)) return '';
+  const rm = m / 100000 * lper100 * price;
+  return rm < 10 ? rm.toFixed(2) : String(Math.round(rm));
 }
 
 /** Anggaran lewat (saat) akibat kesesakan yang dilaporkan di hadapan pada laluan r. */
