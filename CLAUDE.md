@@ -31,6 +31,9 @@ JalanKita (nama paparan: **Jalan Malaysia**, ikon Jalur Gemilang; nama hamparan 
   Fungsi dalaman mesti berakhir dengan `_`. Setiap fungsi awam untuk pengguna bermula dengan `verify_(token)`, dan fungsi
   pentadbir dengan `requireOwner_(token)`. `setup()` dan `cleanup()` menyemak `isOwner_()` / `isRealTrigger_()`.
 - Input pengguna yang ditulis ke Sheet mesti melalui `cell_()` / `protectCell_()`, untuk menghalang suntikan formula `= + - @`.
+- **Tetamu (ID `a_…`, tanpa log masuk Google) hanya MELIHAT.** ID `a_` boleh dicipta tanpa had, jadi fungsi yang menulis
+  atau menggunakan had global (laluan, laporan, undi, carian, kongsi) mesti guna `requireGoogle_(verify_(token))`. Fungsi
+  latar (lokasi, `whereAmI`, `savePrefs`) senyap untuk tetamu (`isGuest_`). Diuji oleh `tests/guest.test.js`.
 - Data ke dalam `<script>` dalam templat mesti melalui `jsonForScript_()`. Dalam klien, teks pengguna ke HTML mesti melalui
   `esc()`, atau guna `textContent`.
 - URL luaran (UrlFetch) mestilah senarai TETAP, tidak boleh datang dari pengguna (SSRF). Pautan lokasi disemak oleh `allowedLink_()`.
