@@ -210,6 +210,7 @@ test('IndexUji.html: pulang ke Rumah → tawar "Beritahu keluarga" (WhatsApp den
     const r = await page.evaluate(async () => {
       const w = ms => new Promise(r => setTimeout(r, ms));
       let opened = ''; window.open = u => { opened = u; };
+      S.prayerRemind = false;      // jangan biar kad waktu solat (bergantung pada jam CI) muncul dahulu
       const p = places(); p.home = { title: 'Rumah', lat: 3.2, lng: 101.7 }; savePlaces(p);
       state.manualLoc = false; setMe({ lat: 3.1, lng: 101.7, heading: 0, speed: 0, t: Date.now() }); await w(50);
       planRoute({ title: 'Rumah', lat: 3.2, lng: 101.7 }); await w(300); startNav(); await w(100);
