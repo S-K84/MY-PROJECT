@@ -83,6 +83,9 @@ npm test
   laluan, had laju & kamera. Tambah ujian di sini untuk ciri klien baharu. Lulus di Chromium ≠ lulus di Safari iPhone.
 
 ## Keputusan yang sudah dibuat
+- **Ikon skrin utama iPhone:** Apps Script tidak boleh menetapkan `apple-touch-icon`, jadi halaman pembuka `docs/index.html`
+  (GitHub Pages, `https://s-k84.github.io/MY-PROJECT/`) memberi ikon dan terus lompat ke `/exec`. `#pasang` memaparkan
+  langkah pasang. Tambah ke skrin utama dari **Chrome** iPhone (Safari tidak dapat membuka web app Apps Script ini).
 - **Jubin peta:** kekal `tile.openstreetmap.org` buat masa ini. MapTiler/Stadia (pakej percuma: bukan komersial) ditangguh
   sehingga pengguna bertambah.
 - **ID 30 hari:** pindah data perlu pengesahan pengguna ("Pulihkan data anda?"), kerana pelayar boleh dikongsi oleh akaun Google
