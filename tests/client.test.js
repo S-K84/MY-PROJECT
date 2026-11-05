@@ -257,3 +257,11 @@ for (const file of ['Index.html', 'IndexUji.html']) test(`${file}: peta malam di
   const b = Number((rule[1].match(/brightness\(([\d.]+)\)/) || [])[1]);
   assert.ok(b > 0.4 && b < 0.9, 'peta malam mesti dimalapkan (brightness 0.4–0.9), dapat ' + b);
 });
+
+test('saluran uji: polish UI — butang menu bulat, butang lapor arang + kuning, maklum balas tekan & reduced-motion', () => {
+  const s = fs.readFileSync(path.join(ROOT, 'IndexUji.html'), 'utf8');
+  assert.match(s, /#btnMenu \{ border-radius:50%; \}/);
+  assert.match(s, /--report-bg:#23262c; --report-fg:#ffd000;/);
+  assert.match(s, /\.ctl:active \{ transform:translateZ\(0\) scale\(\.93\)/);   // kekal lapisan GPU (elak berkelip)
+  assert.match(s, /@media \(prefers-reduced-motion: reduce\) \{\s*\.ctl, \.btn/);
+});

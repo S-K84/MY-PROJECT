@@ -50,7 +50,7 @@
           parts.push(n + '/' + ln);
           pre.textContent += '\nBahagian: ' + parts.join(' ');
           // Baris di sekitar ralat. MAIN_AT = nombor baris <script> utama dalam IndexUji.html (disemak oleh ujian).
-          var MAIN_AT = 740, bl = window.__bootLine;
+          var MAIN_AT = 773, bl = window.__bootLine;
           if (bl) {
             pre.textContent += '\nSkrip sekitar baris ' + bl + ' (dianggap baris fail ' + bl + '):';
             for (var j = Math.max(1, bl - MAIN_AT - 3); j <= Math.min(SL.length - 1, bl - MAIN_AT + 1); j++)
@@ -523,6 +523,39 @@
     .leaflet-popup-content-wrapper, .leaflet-popup-tip { background:var(--sheet); color:var(--fg); }
     .leaflet-popup-content button { padding:7px 12px; margin:6px 6px 0 0; border-radius:999px; background:var(--sheet-2); }
     .pop-muted { color:var(--muted); font-size:12px; }
+    /* ---------- Polish UI (UI/UX Pro Max): elevasi 2 lapis, butang lapor jelas, maklum balas tekan, kad laluan ---------- */
+    :root {
+      --shadow:0 1px 2px rgba(0,0,0,.16), 0 6px 18px rgba(0,0,0,.16);
+      --shadow-lg:0 2px 4px rgba(0,0,0,.18), 0 12px 28px rgba(0,0,0,.22);
+      --report-bg:#23262c; --report-fg:#ffd000;          /* arang + segi tiga kuning (seperti papan tanda): lebih tajam daripada coklat zaitun */
+      --accent-soft:rgba(51,204,255,.12);
+      --press:cubic-bezier(.2,.8,.2,1);
+    }
+    :root[data-theme="dark"] { --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 22px rgba(0,0,0,.45); }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 22px rgba(0,0,0,.45); }
+    }
+    /* Semua kawalan terapung bulat & seragam (dahulu butang menu sahaja segi empat) */
+    #btnMenu { border-radius:50%; }
+    #btnReport { box-shadow:var(--shadow-lg), inset 0 0 0 2px rgba(0,0,0,.08); }
+    /* Panel bawah: bayang lebih lembut, garis pemegang lebih jelas */
+    .sheet-b { box-shadow:0 -1px 0 var(--line), 0 -10px 30px rgba(0,0,0,.18); }
+    .handle { width:40px; background:var(--muted); opacity:.45; }
+    /* Cip Rumah / Kerja: berisi (lebih moden, sasaran tekan ≥ 48px) */
+    .chip { min-height:48px; background:var(--sheet-2); border-color:transparent; }
+    .sec-title { margin:16px 0 4px; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+    /* Kad laluan dipilih: latar tona aksen, bukan sempadan sahaja */
+    .route-card.sel { background:var(--accent-soft); }
+    /* Maklum balas tekan < 100 ms (kekalkan translateZ(0) — lapisan GPU elak berkelip di iPhone) */
+    .ctl, .btn, .chip, .round, .opt, .route-card, #btnReport, .search-pill {
+      transition:transform .12s var(--press), filter .12s var(--press), background-color .15s, border-color .15s; }
+    .btn:active, .chip:active, .round:active, .opt:active, .route-card:active, #btnReport:active, .search-pill:active {
+      transform:scale(.96); filter:brightness(.94); }
+    .ctl:active { transform:translateZ(0) scale(.93); filter:brightness(.92); }
+    .btn-accent { box-shadow:0 4px 14px rgba(51,204,255,.35); }
+    @media (prefers-reduced-motion: reduce) {
+      .ctl, .btn, .chip, .round, .opt, .route-card, #btnReport, .search-pill { transition:none; }
+    }
   </style>
 </head>
 <body data-mode="idle">
