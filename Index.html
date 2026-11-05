@@ -48,6 +48,9 @@
   </script>
   <!-- Pustaka peta. Jika unpkg gagal (gangguan / disekat), cuba jsDelivr kemudian cdnjs.
        Hash SRI yang sama digunakan untuk setiap sumber, jadi fail yang diubah tetap ditolak. -->
+  <!-- Overpass: keturunan Highway Gothic, jenis huruf papan tanda jalan raya. Jika gagal dimuat, fon sistem digunakan. -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;700;800&display=swap">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous"
     onerror="this.onerror=null; this.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'">
@@ -503,6 +506,55 @@
     .leaflet-popup-content-wrapper, .leaflet-popup-tip { background:var(--sheet); color:var(--fg); }
     .leaflet-popup-content button { padding:7px 12px; margin:6px 6px 0 0; border-radius:999px; background:var(--sheet-2); }
     .pop-muted { color:var(--muted); font-size:12px; }
+    /* ---------- Polish UI (UI/UX Pro Max): elevasi 2 lapis, butang lapor jelas, maklum balas tekan, kad laluan ---------- */
+    :root {
+      --shadow:0 1px 2px rgba(0,0,0,.16), 0 6px 18px rgba(0,0,0,.16);
+      --shadow-lg:0 2px 4px rgba(0,0,0,.18), 0 12px 28px rgba(0,0,0,.22);
+      --report-bg:#23262c; --report-fg:#ffd000;          /* arang + segi tiga kuning (seperti papan tanda): lebih tajam daripada coklat zaitun */
+      --accent-soft:rgba(51,204,255,.12);
+      --press:cubic-bezier(.2,.8,.2,1);
+    }
+    :root[data-theme="dark"] { --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 22px rgba(0,0,0,.45); }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 22px rgba(0,0,0,.45); }
+    }
+    /* Semua kawalan terapung bulat & seragam (dahulu butang menu sahaja segi empat) */
+    #btnMenu { border-radius:50%; }
+    #btnReport { box-shadow:var(--shadow-lg), inset 0 0 0 2px rgba(0,0,0,.08); }
+    /* Panel bawah: bayang lebih lembut, garis pemegang lebih jelas */
+    .sheet-b { box-shadow:0 -1px 0 var(--line), 0 -10px 30px rgba(0,0,0,.18); }
+    .handle { width:40px; background:var(--muted); opacity:.45; }
+    /* Cip Rumah / Kerja: berisi (lebih moden, sasaran tekan ≥ 48px) */
+    .chip { min-height:48px; background:var(--sheet-2); border-color:transparent; }
+    .sec-title { margin:16px 0 4px; font-size:14px; font-weight:700; }
+    /* Kad laluan dipilih: latar tona aksen, bukan sempadan sahaja */
+    .route-card.sel { background:var(--accent-soft); }
+    /* Maklum balas tekan < 100 ms (kekalkan translateZ(0) — lapisan GPU elak berkelip di iPhone) */
+    .ctl, .btn, .chip, .round, .opt, .route-card, #btnReport, .search-pill {
+      transition:transform .12s var(--press), filter .12s var(--press), background-color .15s, border-color .15s; }
+    .btn:active, .chip:active, .round:active, .opt:active, .route-card:active, #btnReport:active, .search-pill:active {
+      transform:scale(.96); filter:brightness(.94); }
+    .ctl:active { transform:translateZ(0) scale(.93); filter:brightness(.92); }
+    .btn-accent { box-shadow:0 4px 14px rgba(51,204,255,.35); }
+    @media (prefers-reduced-motion: reduce) {
+      .ctl, .btn, .chip, .round, .opt, .route-card, #btnReport, .search-pill { transition:none; }
+    }
+    /* ---------- Identiti: papan tanda jalan raya Malaysia (frontend-design) ----------
+       Satu unsur menonjol: banner arahan = papan tanda lebuh raya hijau dengan bingkai putih di dalam. Yang lain tenang. */
+    :root { --sign-green:#00704a; --sign-green-deep:#005c3c; --sign-white:#ffffff;
+      --nav-bg:var(--sign-green); --nav-row:var(--sign-green-deep); --nav-road:var(--sign-white); --nav-muted:rgba(255,255,255,.78); }
+    :root[data-theme="dark"] { --sign-green:#00603f; --sign-green-deep:#004d33; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --sign-green:#00603f; --sign-green-deep:#004d33; } }
+    /* Titik tengah "·" Overpass memakan ruang selepasnya ("PM ·via") — lukis "·" sahaja dengan fon sistem. */
+    @font-face { font-family:"JKDot"; src:local("Helvetica Neue"), local("Helvetica"), local("Arial"), local("Roboto");
+      unicode-range:U+00B7; }
+    html, body { font-family:"JKDot", "Overpass", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    #navTop { border-radius:0 0 18px 18px;
+      box-shadow:0 6px 20px rgba(0,0,0,.35), inset 0 0 0 6px var(--sign-green), inset 0 0 0 8.5px var(--sign-white); }
+    #navTop { padding-left:20px; padding-right:20px; padding-bottom:14px; }
+    .nav-dist { font-weight:800; letter-spacing:-.01em; }
+    .nav-road { font-weight:700; }
+    .tabs button.on { color:var(--sign-green); }
   </style>
 </head>
 <body data-mode="idle">
