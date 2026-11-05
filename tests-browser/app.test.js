@@ -204,8 +204,8 @@ for (const file of FILES) test(`${file}: tekan lama pada peta → Pergi ke sini 
   } finally { await close(); }
 });
 
-test('IndexUji.html: pulang ke Rumah → tawar "Beritahu keluarga" (WhatsApp dengan masa tiba)', async () => {
-  const { page, errors, close } = await open('IndexUji.html');
+for (const file of FILES) test(`${file}: pulang ke Rumah → tawar "Beritahu keluarga" (WhatsApp dengan masa tiba)`, async () => {
+  const { page, errors, close } = await open(file);
   try {
     const r = await page.evaluate(async () => {
       const w = ms => new Promise(r => setTimeout(r, ms));
@@ -223,8 +223,8 @@ test('IndexUji.html: pulang ke Rumah → tawar "Beritahu keluarga" (WhatsApp den
   } finally { await close(); }
 });
 
-test('IndexUji.html: laluan dengan kemalangan dilaporkan — laluan lain disyorkan ("Elak sesak") & amaran ditunjuk', async () => {
-  const { page, errors, close } = await open('IndexUji.html');
+for (const file of FILES) test(`${file}: laluan dengan kemalangan dilaporkan — laluan lain disyorkan ("Elak sesak") & amaran ditunjuk`, async () => {
+  const { page, errors, close } = await open(file);
   try {
     const r = await page.evaluate(async () => {
       const w = ms => new Promise(r => setTimeout(r, ms));
@@ -247,8 +247,8 @@ test('IndexUji.html: laluan dengan kemalangan dilaporkan — laluan lain disyork
   } finally { await close(); }
 });
 
-test('IndexUji.html: 👍 baharu pada laporan anda → ucapan terima kasih sekali', async () => {
-  const { page, errors, close } = await open('IndexUji.html');
+for (const file of FILES) test(`${file}: 👍 baharu pada laporan anda → ucapan terima kasih sekali`, async () => {
+  const { page, errors, close } = await open(file);
   try {
     const r = await page.evaluate(async () => {
       const w = ms => new Promise(r => setTimeout(r, ms));
@@ -283,8 +283,8 @@ for (const file of FILES) test(`${file}: halaman "Tambah ke skrin utama" ada but
   } finally { await close(); }
 });
 
-test('IndexUji.html: pulang ke Rumah dalam waktu solat → kad "Beritahu keluarga" dahulu, kemudian kad solat', async () => {
-  const { page, errors, close } = await open('IndexUji.html');
+for (const file of FILES) test(`${file}: pulang ke Rumah dalam waktu solat → kad "Beritahu keluarga" dahulu, kemudian kad solat`, async () => {
+  const { page, errors, close } = await open(file);
   try {
     const r = await page.evaluate(async () => {
       const w = ms => new Promise(r => setTimeout(r, ms));
@@ -308,8 +308,8 @@ test('IndexUji.html: pulang ke Rumah dalam waktu solat → kad "Beritahu keluarg
   } finally { await close(); }
 });
 
-test('IndexUji.html: kad lain sedang dipapar semasa mula ke Rumah → "Beritahu keluarga" menunggu giliran', async () => {
-  const { page, errors, close } = await open('IndexUji.html');
+for (const file of FILES) test(`${file}: kad lain sedang dipapar semasa mula ke Rumah → "Beritahu keluarga" menunggu giliran`, async () => {
+  const { page, errors, close } = await open(file);
   try {
     const r = await page.evaluate(async () => {
       const w = ms => new Promise(r => setTimeout(r, ms));
