@@ -266,3 +266,19 @@ test('IndexUji.html: 👍 baharu pada laporan anda → ucapan terima kasih sekal
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+
+for (const file of FILES) test(`${file}: halaman "Tambah ke skrin utama" ada butang ke halaman ikon 🇲🇾 (GitHub Pages)`, async () => {
+  const { page, errors, close } = await open(file);
+  try {
+    const r = await page.evaluate(() => {
+      openSet('homescreen');
+      const a = document.getElementById('hsInstall');
+      return { href: a ? a.href : '', target: a ? a.target : '', text: document.body.innerText };
+    });
+    assert.strictEqual(r.href, 'https://s-k84.github.io/MY-PROJECT/#pasang');
+    assert.strictEqual(r.target, '_top');
+    assert.match(r.text, /guna Chrome/);
+    assert.doesNotMatch(r.text, /iPhone · Safari/);
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});
