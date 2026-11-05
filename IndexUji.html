@@ -50,7 +50,7 @@
           parts.push(n + '/' + ln);
           pre.textContent += '\nBahagian: ' + parts.join(' ');
           // Baris di sekitar ralat. MAIN_AT = nombor baris <script> utama dalam IndexUji.html (disemak oleh ujian).
-          var MAIN_AT = 738, bl = window.__bootLine;
+          var MAIN_AT = 740, bl = window.__bootLine;
           if (bl) {
             pre.textContent += '\nSkrip sekitar baris ' + bl + ' (dianggap baris fail ' + bl + '):';
             for (var j = Math.max(1, bl - MAIN_AT - 3); j <= Math.min(SL.length - 1, bl - MAIN_AT + 1); j++)
@@ -125,7 +125,9 @@
     }
     /* iPhone: elak jubin peta berkelip semasa peta digerakkan/diputar dengan transform */
     .leaflet-tile { -webkit-backface-visibility:hidden; backface-visibility:hidden; }
-    body.dark-map .leaflet-tile-pane { filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9); }
+    /* Peta malam: DIMALAPKAN, bukan diterbalikkan. invert() menjadikan jalan putih hitam di atas latar yang juga gelap —
+       pemilik hanya nampak tulisan pada waktu malam. Malap: jalan kekal lebih cerah daripada latar, warna lebuh raya kekal. */
+    body.dark-map .leaflet-tile-pane { filter:brightness(.62) contrast(1.35) saturate(.75); }
     body.dark-map #map { background:#1c2028; }
     * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
     html,body { margin:0; height:100%; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
