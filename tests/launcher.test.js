@@ -66,3 +66,9 @@ test('ikon Jalur Gemilang: kanton biru (kiri atas), jalur merah di bawah — sam
     assert.ok(r2 > 180 && g2 < 30 && b2 < 30, `${d}: jalur merah ${[r2, g2, b2]}`);
   }
 });
+
+test('pembuka: ikon dibenam (data:) supaya tidak jadi tanda "?" bila halaman terus melompat', () => {
+  const m = html.match(/<img src="data:image\/png;base64,([^"]+)"/);
+  assert.ok(m, 'ikon mesti dibenam sebagai data: (bukan fail berasingan)');
+  assert.ok(Buffer.from(m[1], 'base64').equals(fs.readFileSync(path.join(dir, 'icon-180.png'))), 'ikon dibenam mesti sama dengan icon-180.png');
+});
