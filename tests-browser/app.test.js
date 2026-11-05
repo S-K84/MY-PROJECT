@@ -328,3 +328,59 @@ for (const file of FILES) test(`${file}: kad lain sedang dipapar semasa mula ke 
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+
+test('IndexUji.html: cadangan perjalanan — petang hari kerja "Pulang ke rumah?" → terus navigasi; sekali sehari; tiada pada hujung minggu', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
+  try {
+    const r = await page.evaluate(async () => {
+      const w = ms => new Promise(r => setTimeout(r, ms));
+      const realNow = Date.now;
+      const at = iso => { const t = Date.parse(iso); Date.now = () => t; };
+      try {
+        const p = places(); p.home = { title: 'Rumah', lat: 3.2, lng: 101.7 }; p.work = { title: 'Kerja', lat: 3.0, lng: 101.6 }; savePlaces(p);
+        S.prayerRemind = false; S.tripSuggest = true; state.manualLoc = false;
+        const kinds = ['2026-11-05T09:30:00Z', '2026-11-05T00:30:00Z', '2026-11-05T05:00:00Z', '2026-11-07T09:30:00Z']
+          .map(t => tripSuggestion(Date.parse(t)));                         // Khamis 17:30, Khamis 08:30, Khamis 13:00, Sabtu 17:30
+        at('2026-11-07T09:30:00Z'); setMe({ lat: 3.1, lng: 101.7, heading: 0, speed: 0, t: Date.now() }); await w(50);
+        const weekend = $('askCard').style.display;
+        at('2026-11-05T09:30:00Z'); setMe({ lat: 3.1, lng: 101.7, heading: 0, speed: 0, t: Date.now() }); await w(50);
+        const text = $('askText').textContent;
+        Date.now = realNow;
+        $('askYes').click(); await w(400);
+        const nav = { navigating: state.navigating, dest: state.dest && state.dest.title };
+        cancelRoute(); hideAsk(); await w(50);
+        at('2026-11-05T10:00:00Z'); setMe({ lat: 3.1, lng: 101.7, heading: 0, speed: 0, t: Date.now() }); await w(50);
+        const again = $('askCard').style.display, mode = document.body.dataset.mode;
+        store.del('jk_trip'); setMe({ lat: 3.1, lng: 101.7, heading: 0, speed: 0, t: Date.now() }); await w(50);
+        const nextDay = $('askText').textContent;                            // tanpa rekod "sudah ditanya" → ditanya lagi
+        return { kinds, weekend, text, nav, again, mode, nextDay };
+      } finally { Date.now = realNow; }
+    });
+    assert.deepStrictEqual(r.kinds, ['home', 'work', null, null]);
+    assert.notStrictEqual(r.weekend, 'block');
+    assert.strictEqual(r.text, 'Pulang ke rumah?');
+    assert.deepStrictEqual(r.nav, { navigating: true, dest: 'Rumah' });
+    assert.strictEqual(r.mode, 'idle');
+    assert.notStrictEqual(r.again, 'block');                                // sekali sehari sahaja
+    assert.strictEqual(r.nextDay, 'Pulang ke rumah?');
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});
+
+test('IndexUji.html: jubin peta disimpan dalam telefon — selepas muat semula, kawasan sama tidak dimuat turun lagi', async () => {
+  const { page, errors, tiles, close } = await open('IndexUji.html', null, { tiles: true });
+  try {
+    await page.waitForFunction(async () => (await (await caches.open('jk-tiles-v1')).keys()).length >= 4, null, { timeout: 15000 });
+    await page.waitForTimeout(500);
+    const first = new Set(tiles.requests);
+    await page.reload();
+    await page.waitForFunction(() => window.__appStarted === true, null, { timeout: 15000 });
+    await page.waitForFunction(() => tileStat.hit >= 4, null, { timeout: 15000 });
+    await page.waitForTimeout(500);
+    const again = tiles.requests.slice(first.size).filter(u => first.has(u));
+    const blobs = await page.evaluate(() => [...document.querySelectorAll('.leaflet-tile')].filter(i => i.src.startsWith('blob:')).length);
+    assert.deepStrictEqual(again, [], 'jubin yang sudah disimpan dimuat turun semula');
+    assert.ok(blobs >= 4, 'jubin tidak dipapar dari simpanan telefon');
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});

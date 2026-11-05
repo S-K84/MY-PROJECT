@@ -841,7 +841,7 @@ const SETTINGS_DEFAULT = { units: 'km', wake: true, dark: 'auto', autoZoom: true
   repTypes: Object.keys(TYPES), alertTypes: Object.keys(TYPES), alertDist: 600, showSpeedo: true, showUsers: true,
   voiceName: '', voiceMode: 'normal', volume: 1, avoidFerries: false, avoidHighways: false, speedLimit: -1,
   childReminder: false, mood: '🙂', trips: 0, syncPlaces: true, askStill: true, fasterRoute: true, travel: 'car',
-  restRemind: true, rainAlert: true, prayerRemind: true, textSize: 'normal', fuelL100: 7, fuelPrice: 1.99 };
+  restRemind: true, rainAlert: true, prayerRemind: true, tripSuggest: true, textSize: 'normal', fuelL100: 7, fuelPrice: 1.99 };
 const S = Object.assign({}, SETTINGS_DEFAULT, getJSON('jk_settings', {}));
 /** Pastikan setiap tetapan bernilai sah (data dari telefon atau server tidak dipercayai bulat-bulat). */
 function validateSettings() {
@@ -885,7 +885,54 @@ const map = L.map('map', { zoomControl: false, rotate: true, bearing: 0, fadeAni
   touchRotate: false, shiftKeyRotate: false, rotateControl: false }).setView([3.139, 101.6869], 13); // KL
 // Jika plugin putaran gagal dimuat, aplikasi tetap berfungsi dengan "utara di atas"
 const canRotate = typeof map.setBearing === 'function';
-L.tileLayer('https:\/\/{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+// Jubin peta disimpan dalam telefon (Cache API): kawasan biasa dipapar serta-merta & jimat data. Jubin lebih 7 hari
+// dimuat semula di latar. Jika Cache API tiada / disekat / gagal 3 kali tanpa sebarang kejayaan, jubin dimuat seperti biasa.
+const TILE_CACHE = 'jk-tiles-v1', TILE_MAX = 3000, TILE_TTL = 7 * 864e5;
+const tileStat = { ok: 0, fail: 0, count: -1, hit: 0 };
+const tileCache = (() => {
+  try { return window.caches && window.isSecureContext ? caches.open(TILE_CACHE).catch(() => null) : Promise.resolve(null); }
+  catch (e) { return Promise.resolve(null); }
+})();
+async function tilePrune(c) {
+  const keys = await c.keys(); tileStat.count = keys.length;
+  if (keys.length <= TILE_MAX) return;
+  const drop = keys.slice(0, keys.length - Math.round(TILE_MAX * 0.8));           // yang tertua dahulu (urutan simpan)
+  await Promise.all(drop.map(k => c.delete(k))); tileStat.count = keys.length - drop.length;
+}
+async function tileFetch(c, url) {
+  const r = await fetch(url, { mode: 'cors', credentials: 'omit' });
+  if (!r.ok) throw new Error('jubin ' + r.status);
+  const blob = await r.blob();
+  tileStat.ok++;
+  c.put(url, new Response(blob, { headers: { 'Content-Type': blob.type || 'image/png', 'X-JK-Time': String(Date.now()) } }))
+    .then(() => { if (tileStat.count < 0 || ++tileStat.count > TILE_MAX) return tilePrune(c); }).catch(() => {});
+  return blob;
+}
+const CachedTiles = L.TileLayer.extend({
+  createTile(coords, done) {
+    const img = document.createElement('img'), url = this.getTileUrl(coords);
+    img.alt = ''; img.setAttribute('role', 'presentation');
+    L.DomEvent.on(img, 'load', L.Util.bind(this._tileOnLoad, this, done, img));
+    L.DomEvent.on(img, 'error', L.Util.bind(this._tileOnError, this, done, img));
+    const plain = () => { img.src = url; };
+    tileCache.then(async c => {
+      if (!c || (tileStat.fail >= 3 && !tileStat.ok)) return plain();
+      try {
+        const hit = await c.match(url);
+        let blob;
+        if (hit) {
+          blob = await hit.blob(); tileStat.hit++;
+          if (Date.now() - Number(hit.headers.get('X-JK-Time') || 0) > TILE_TTL) tileFetch(c, url).catch(() => {});
+        } else blob = await tileFetch(c, url);
+        const u = URL.createObjectURL(blob), free = () => URL.revokeObjectURL(u);
+        img.addEventListener('load', free, { once: true }); img.addEventListener('error', free, { once: true });
+        img.src = u;
+      } catch (e) { tileStat.fail++; plain(); }
+    }, plain);
+    return img;
+  }
+});
+new CachedTiles('https:\/\/{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19, attribution: '&copy; OpenStreetMap',
   keepBuffer: 8,          // simpan lebih banyak jubin di sekeliling: tepi peta tidak kosong sekejap semasa bergerak/berputar
   updateWhenIdle: false   // muat jubin SEMASA peta bergerak (lalai telefon: hanya selepas berhenti → petak kosong muncul)
@@ -1016,7 +1063,7 @@ const EN = {
   'Kompas: pusat ke lokasi / tukar arah peta': 'Compass: recentre / change map direction', 'Kembali': 'Back', 'Tutup': 'Close',
   'Kembangkan / kecilkan': 'Expand / collapse', 'Terkini': 'Recent', 'Rumah': 'Home', 'Kerja': 'Work', 'Kegemaran': 'Favourites',
   'Tetapkan lokasi': 'Set location', 'Tetapkan': 'Set', 'Destinasi': 'Destination', 'Destinasi yang anda tuju akan muncul di sini.':
-    'Destinations you go to will appear here.', 'Mula': 'Go', 'Kongsi': 'Share', 'Kongsi ke WhatsApp': 'Share to WhatsApp',
+    'Destinations you go to will appear here.', 'Mula': 'Go', 'Pulang ke rumah?': 'Heading home?', 'Ke tempat kerja?': 'Going to work?', 'Navigasi terus dengan laluan disyorkan': 'Start navigation on the recommended route', 'Cadangan perjalanan': 'Trip suggestions', 'Pagi: ke tempat kerja': 'Morning: to work', 'petang: pulang ke rumah': 'evening: heading home', 'Isnin–Jumaat. Bila anda buka aplikasi pukul 6–10 pagi atau 4–9 petang, Jalan Malaysia bertanya sekali sehari. Simpan Rumah & Kerja dahulu.': 'Monday–Friday. When you open the app between 6–10 am or 4–9 pm, Jalan Malaysia asks once a day. Save Home & Work first.', 'Kongsi': 'Share', 'Kongsi ke WhatsApp': 'Share to WhatsApp',
   'Elak tol': 'Avoid tolls', '✓ Elak tol': '✓ Avoid tolls', 'Terpantas': 'Fastest', 'Tiada laporan di laluan ini': 'No reports on this route',
   'Kemudian': 'Then', 'Tamat navigasi': 'End navigation', 'Senarai belokan': 'Turn list', 'Lihat senarai belokan': 'View turn list',
   'Belokan seterusnya': 'Next turns', 'Laporan di hadapan': 'Reports ahead', 'Destinasi ': 'Destination ',
@@ -1927,7 +1974,7 @@ const CHOICES = {
 const SEGS = { units: [['km', 'km'], ['mi', 'Batu']], voiceLang: [['ms', 'Bahasa Melayu'], ['en', 'English']],
   textSize: [['normal', 'Biasa'], ['large', 'Besar']] };
 const TOGGLE_KEYS = ['wake', 'autoZoom', 'showSpeedo', 'showUsers', 'avoidFerries', 'avoidHighways', 'childReminder',
-  'syncPlaces', 'askStill', 'fasterRoute', 'restRemind', 'rainAlert', 'prayerRemind'];
+  'syncPlaces', 'askStill', 'fasterRoute', 'restRemind', 'rainAlert', 'prayerRemind', 'tripSuggest'];
 const MULTI_KEYS = ['repTypes', 'alertTypes'];
 
 function getVal(k) { return k === 'voiceLang' ? voiceLang : S[k]; }
@@ -2142,6 +2189,10 @@ const PAGES = {
     note('Waktu solat dikira di telefon (kaedah JAKIM: Subuh 20°, Isyak 18°) — anggaran, boleh berbeza beberapa minit daripada jadual rasmi.') }),
 
   planned: () => ({ title: 'Pemanduan dirancang', html:
+    list([sRow({ toggle: 'tripSuggest', icon: '🧭', color: '#26a69a', label: 'Cadangan perjalanan',
+      sub: 'Pagi: ke tempat kerja · petang: pulang ke rumah' })]) +
+    note('Isnin–Jumaat. Bila anda buka aplikasi pukul 6–10 pagi atau 4–9 petang, Jalan Malaysia bertanya sekali sehari. ' +
+      'Simpan Rumah & Kerja dahulu.') +
     note('Belum tersedia. Peringatan "masa untuk bertolak" memerlukan notifikasi push dan akses kalendar, ' +
       'yang tidak boleh dibuat oleh aplikasi web Apps Script ketika ia ditutup.') +
     list([sRow({ go: 'places', icon: '🏠', color: '#8d6e63', label: 'Rumah, kerja & kegemaran',
@@ -2453,6 +2504,7 @@ function setMe(pos) {
   checkHazards();
   checkStillThere();
   checkRest(pos);
+  checkTripSuggest(pos);
   maybeSendShare();
   maybeSendLocation();
 }
@@ -3393,6 +3445,29 @@ function checkRest(pos) {
     showAsk({ icon: '☕', text: 'Masa untuk berehat', sub: `Anda sudah memandu ${h} jam`, yes: 'Cari R&R', no: 'Nanti', ms: 15000,
       onYes: () => openAlongCat('rest') });
   } else toast(`☕ Anda sudah memandu ${h} jam. Berehatlah sebentar.`, true);
+}
+
+// ---- Cadangan perjalanan (seperti Waze): hari kerja, pagi → "Ke tempat kerja?", petang → "Pulang ke rumah?".
+// Sekali sehari bagi setiap jenis, hanya bila tiada laluan dirancang. Ya → terus navigasi dengan laluan disyorkan.
+function tripSuggestion(now) {
+  const t = new Date(now + 8 * 3600e3), day = t.getUTCDay(), h = t.getUTCHours();    // waktu Malaysia
+  if (day === 0 || day === 6) return null;
+  if (h >= 6 && h < 10) return 'work';
+  if (h >= 16 && h < 21) return 'home';
+  return null;
+}
+function checkTripSuggest(pos) {
+  if (!S.tripSuggest || state.manualLoc || state.navigating || document.body.dataset.mode !== 'idle') return;
+  if (askBusy() || $('resumeCard').style.display === 'block') return;
+  const now = Date.now(), kind = tripSuggestion(now); if (!kind) return;
+  const target = places()[kind]; if (!target || dist(pos, target) < 1000) return;
+  const key = new Date(now + 8 * 3600e3).toISOString().slice(0, 10) + kind;
+  if (store.get('jk_trip') === key) return;
+  store.set('jk_trip', key);
+  const home = kind === 'home';
+  showAsk({ icon: home ? '🏠' : '💼', text: home ? 'Pulang ke rumah?' : 'Ke tempat kerja?',
+    sub: 'Navigasi terus dengan laluan disyorkan', yes: 'Mula', no: 'Tidak', ms: 15000,
+    onYes: () => { state.autoStart = true; planRoute(Object.assign({ title: home ? 'Rumah' : 'Kerja' }, target)); } });
 }
 
 // ---- Amaran hujan lebat: ramalan Open-Meteo (percuma, dari telefon) di titik laluan setiap 10 km sehingga 100 km di hadapan,

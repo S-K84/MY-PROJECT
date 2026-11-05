@@ -79,16 +79,33 @@ function serve() {
 }
 
 /** Buka halaman; pulangkan { page, errors, close }. Permintaan ke luar 127.0.0.1 disekat (kecuali yang diolok dalam ujian). */
-async function open(file, opts) {
+// Jubin PNG 1×1 (untuk ujian simpanan jubin peta).
+const TILE_PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+
+/** extra.tiles: layan jubin OSM palsu (dengan CORS) & kira permintaan dalam tiles.requests. */
+async function open(file, opts, extra) {
   const server = await serve();
   const browser = await chromium.launch();
   const page = await browser.newPage(Object.assign({ viewport: { width: 390, height: 844 } }, opts || {}));
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.route('**/*', r => (/^http:\/\/127\.0\.0\.1/.test(r.request().url()) ? r.continue() : r.abort()));
+  // Cadangan perjalanan bergantung pada jam (petang hari kerja → kad "Pulang ke rumah?"), jadi dimatikan secara lalai
+  // supaya ujian lain tidak bergantung pada masa CI. Ujian cadangan perjalanan menghidupkannya sendiri.
+  await page.addInitScript(() => {
+    try { if (!localStorage.getItem('jk_settings')) localStorage.setItem('jk_settings', JSON.stringify({ tripSuggest: false })); }
+    catch (e) { /* tiada storan */ }
+  });
+  const tiles = { requests: [] };
+  if (extra && extra.tiles) {
+    await page.route(/^https:\/\/[abc]\.tile\.openstreetmap\.org\//, r => {
+      tiles.requests.push(r.request().url());
+      r.fulfill({ status: 200, contentType: 'image/png', headers: { 'Access-Control-Allow-Origin': '*' }, body: TILE_PNG });
+    });
+  }
   await page.goto(`http://127.0.0.1:${server.address().port}/page/${file}`);
   await page.waitForFunction(() => window.__appStarted === true, null, { timeout: 15000 });
-  return { page, errors, close: async () => { await browser.close(); server.close(); } };
+  return { page, errors, tiles, server, close: async () => { await browser.close(); server.close(); } };
 }
 
 module.exports = { open, ROUTE };
