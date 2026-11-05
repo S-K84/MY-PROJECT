@@ -384,3 +384,37 @@ for (const file of FILES) test(`${file}: jubin peta disimpan dalam telefon — s
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+
+test('IndexUji.html: peta malam guna jubin gelap CARTO (tanpa penapis); siang kembali ke OSM', async () => {
+  const { page, errors, tiles, close } = await open('IndexUji.html', null, { tiles: true });
+  try {
+    await page.evaluate(() => { S.dark = 'always'; applyTheme(); });
+    await page.waitForFunction(() => darkStat.ok >= 4, null, { timeout: 15000 });
+    const night = await page.evaluate(() => ({
+      cls: document.body.classList.contains('dark-tiles'), dark: map.hasLayer(darkTiles), osm: map.hasLayer(osmTiles),
+      filter: getComputedStyle(document.querySelector('.leaflet-tile-pane')).filter,
+      attr: document.querySelector('.leaflet-control-attribution').textContent }));
+    const day = await page.evaluate(() => { S.dark = 'never'; applyTheme();
+      return { cls: document.body.classList.contains('dark-tiles'), dark: map.hasLayer(darkTiles), osm: map.hasLayer(osmTiles) }; });
+    assert.deepStrictEqual({ cls: night.cls, dark: night.dark, osm: night.osm }, { cls: true, dark: true, osm: false });
+    assert.strictEqual(night.filter, 'none');
+    assert.match(night.attr, /CARTO/);
+    assert.ok(tiles.requests.some(u => /basemaps\.cartocdn\.com\/dark_all\//.test(u)));
+    assert.deepStrictEqual(day, { cls: false, dark: false, osm: true });
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});
+
+test('IndexUji.html: jubin CARTO gagal → peta malam kembali ke OSM dimalapkan', async () => {
+  const { page, errors, close } = await open('IndexUji.html');                // semua jubin luar disekat
+  try {
+    await page.evaluate(() => { S.dark = 'always'; applyTheme(); });
+    await page.waitForFunction(() => darkStat.failed, null, { timeout: 15000 });
+    const r = await page.evaluate(() => ({
+      cls: document.body.classList.contains('dark-tiles'), dark: map.hasLayer(darkTiles), osm: map.hasLayer(osmTiles),
+      filter: getComputedStyle(document.querySelector('.leaflet-tile-pane')).filter }));
+    assert.deepStrictEqual({ cls: r.cls, dark: r.dark, osm: r.osm }, { cls: false, dark: false, osm: true });
+    assert.match(r.filter, /brightness/);
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});

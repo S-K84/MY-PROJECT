@@ -82,7 +82,7 @@ function serve() {
 // Jubin PNG 1×1 (untuk ujian simpanan jubin peta).
 const TILE_PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 
-/** extra.tiles: layan jubin OSM palsu (dengan CORS) & kira permintaan dalam tiles.requests. */
+/** extra.tiles: layan jubin OSM & CARTO palsu (dengan CORS) & kira permintaan dalam tiles.requests. */
 async function open(file, opts, extra) {
   const server = await serve();
   const browser = await chromium.launch();
@@ -98,7 +98,7 @@ async function open(file, opts, extra) {
   });
   const tiles = { requests: [] };
   if (extra && extra.tiles) {
-    await page.route(/^https:\/\/[abc]\.tile\.openstreetmap\.org\//, r => {
+    await page.route(/^https:\/\/([abc]\.tile\.openstreetmap\.org|[abcd]\.basemaps\.cartocdn\.com)\//, r => {
       tiles.requests.push(r.request().url());
       r.fulfill({ status: 200, contentType: 'image/png', headers: { 'Access-Control-Allow-Origin': '*' }, body: TILE_PNG });
     });
