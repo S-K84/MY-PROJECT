@@ -3100,15 +3100,19 @@ function startNav() {
   followMe(true);
   requestWakeLock();
   const s = state.routes[state.selRoute].steps[0];
+  offerTellFamily();                 // dahulu: jika tidak, kad lain (cth. waktu solat dari onNavTick) mendahuluinya
   onNavTick();                       // boleh terus "sampai" jika sudah di destinasi
   if (state.navigating && s) speak(s.text, 'info');
-  if (state.navigating) offerTellFamily();
 }
 
 /** Pulang ke 🏠 Rumah → tawar mesej WhatsApp "dalam perjalanan pulang, tiba …" (satu tekan; pengguna pilih kenalan). */
 function offerTellFamily() {
   const home = places().home, r = state.routes[state.selRoute];
-  if (!home || !r || !samePlace(home, state.dest) || askBusy()) return;
+  if (!home || !r || !samePlace(home, state.dest) || !state.navigating) return;
+  if (state.me && dist(state.me, state.dest) < 300) return;                     // sudah di rumah
+  // Kad lain sedang dipaparkan → tunggu giliran (dicuba semula dalam onNavTick), jangan terus dilupakan.
+  if (askBusy()) { state.familyWait = state.navId; return; }
+  state.familyWait = null;
   const navId = state.navId;
   showAsk({ icon: '🏠', text: 'Beritahu keluarga?', sub: 'Hantar anggaran tiba melalui WhatsApp', yes: 'WhatsApp', no: 'Tidak',
     ms: 12000, onYes: () => {
@@ -3120,6 +3124,7 @@ function offerTellFamily() {
 
 function onNavTick() {
   const r = state.routes[state.selRoute]; if (!r || !state.me) return;
+  if (state.familyWait === state.navId && !askBusy()) offerTellFamily();
   const me = state.me;
   // Cari kedudukan hanya di sekitar kedudukan terakhir (maks ~400 m ke hadapan, atau lebih jika laju).
   // Tanpa had ini, laluan yang berpusing melalui lorong & kembali dekat kenderaan boleh disangka "hujung laluan".
