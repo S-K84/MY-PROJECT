@@ -766,6 +766,8 @@ if (!window.L) {
 const TYPES = <?!= typesJson ?>;
 const INITIAL = <?!= initialJson ?>;   // destinasi daripada pautan kongsi (?to=lat,lng&name=…)
 const APP_URL = <?!= appUrlJson ?>;
+// Pautan jemputan: halaman pembuka GitHub Pages (ikon skrin utama + langkah pasang), terus lompat ke APP_URL.
+const INVITE_URL = 'https:\/\/s-k84.github.io/MY-PROJECT/#pasang';
 const TRACK = <?!= trackJson ?>;      // ID pautan jejak perjalanan (?track=…), jika dibuka sebagai penonton
 // Warna bulatan & pilihan kecil bagi setiap jenis laporan (paparan sahaja)
 const COLORS = { SESAK:'#e53935', POLIS:'#1e88e5', KEMALANGAN:'#8d99a6', BAHAYA:'#fb8c00', BANJIR:'#00acc1',
@@ -1976,7 +1978,7 @@ const typeRows = key => Object.keys(TYPES).map(t => sRow({ multi: key + '|' + t,
 const PAGES = {
   invite: () => {
     // Pautan aplikasi biasa (bukan saluran uji). QR dijana oleh api.qrserver.com — hanya pautan awam aplikasi dihantar.
-    const url = APP_URL || '';
+    const url = INVITE_URL;
     const qr = url ? 'https:\/\/api.qrserver.com/v1/create-qr-code/?size=480x480&margin=12&data=' + encodeURIComponent(url) : '';
     return { title: 'Kongsi JalanKita', html:
       note('Minta rakan imbas kod QR ini dengan kamera telefon, atau hantar pautan melalui WhatsApp.') +
@@ -2342,9 +2344,9 @@ function onSettingsClick(e) {
     else if (a === 'admin') { closeDrawer(); openAdmin(); }
     else if (a === 'ujiOn' || a === 'ujiOff') { if (APP_URL) window.open(APP_URL + (a === 'ujiOn' ? '?uji=1' : ''), '_top'); }
     else if (a === 'sosShare') sosShare();
-    else if (a === 'inviteWa') openWhatsApp('🚗 Jom guna JalanKita — navigasi & laporan trafik komuniti Malaysia (percuma, tanpa muat turun app):\n' + APP_URL);
+    else if (a === 'inviteWa') openWhatsApp('🚗 Jom guna JalanKita — navigasi & laporan trafik komuniti Malaysia (percuma, tanpa muat turun app):\n' + INVITE_URL);
     else if (a === 'inviteCopy') {
-      (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(APP_URL) : Promise.reject())
+      (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(INVITE_URL) : Promise.reject())
         .then(() => toast('📋 Pautan disalin.'), () => toast('Tekan lama pautan di atas untuk salin.'));
     }
     else if (a === 'testVoice') speak(VOICE[voiceLang].test, 'test');
