@@ -895,7 +895,7 @@ const tileCache = (() => {
   try { return window.caches && window.isSecureContext ? caches.open(TILE_CACHE).catch(() => null) : Promise.resolve(null); }
   catch (e) { return Promise.resolve(null); }
 })();
-// CARTO kini memerlukan kunci API: jubinnya memaparkan "API KEY REQUIRED" (versi uji 2026.11.05-p). Buang jubin CARTO
+// CARTO kini memerlukan kunci API: jubinnya memaparkan "API KEY REQUIRED" (Nov 2026). Buang jubin CARTO
 // yang sudah tersimpan dalam telefon.
 tileCache.then(c => c && c.keys().then(ks => Promise.all(ks.filter(k => /cartocdn\.com/.test(k.url)).map(k => c.delete(k)))))
   .catch(() => {});

@@ -386,8 +386,8 @@ for (const file of FILES) test(`${file}: jubin peta disimpan dalam telefon — s
 });
 
 
-test('IndexUji.html: peta malam tidak lagi guna CARTO (perlu kunci API) & jubin CARTO lama dibuang dari telefon', async () => {
-  const { page, errors, tiles, close } = await open('IndexUji.html', null, { tiles: true });
+for (const file of FILES) test(`${file}: peta malam tidak lagi guna CARTO (perlu kunci API) & jubin CARTO lama dibuang dari telefon`, async () => {
+  const { page, errors, tiles, close } = await open(file, null, { tiles: true });
   try {
     await page.evaluate(async () => {
       const c = await caches.open('jk-tiles-v1');
