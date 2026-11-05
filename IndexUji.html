@@ -50,7 +50,7 @@
           parts.push(n + '/' + ln);
           pre.textContent += '\nBahagian: ' + parts.join(' ');
           // Baris di sekitar ralat. MAIN_AT = nombor baris <script> utama dalam IndexUji.html (disemak oleh ujian).
-          var MAIN_AT = 741, bl = window.__bootLine;
+          var MAIN_AT = 740, bl = window.__bootLine;
           if (bl) {
             pre.textContent += '\nSkrip sekitar baris ' + bl + ' (dianggap baris fail ' + bl + '):';
             for (var j = Math.max(1, bl - MAIN_AT - 3); j <= Math.min(SL.length - 1, bl - MAIN_AT + 1); j++)
@@ -127,8 +127,7 @@
     .leaflet-tile { -webkit-backface-visibility:hidden; backface-visibility:hidden; }
     /* Peta malam: DIMALAPKAN, bukan diterbalikkan. invert() menjadikan jalan putih hitam di atas latar yang juga gelap —
        pemilik hanya nampak tulisan pada waktu malam. Malap: jalan kekal lebih cerah daripada latar, warna lebuh raya kekal. */
-    /* Malam: jubin gelap CARTO (tulisan terang) — tanpa penapis. Jika CARTO gagal, OSM dimalapkan sebagai sandaran. */
-    body.dark-map:not(.dark-tiles) .leaflet-tile-pane { filter:brightness(.48) contrast(1.5) saturate(.7); }
+    body.dark-map .leaflet-tile-pane { filter:brightness(.48) contrast(1.5) saturate(.7); }
     body.dark-map #map { background:#1c2028; }
     * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
     html,body { margin:0; height:100%; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -896,6 +895,10 @@ const tileCache = (() => {
   try { return window.caches && window.isSecureContext ? caches.open(TILE_CACHE).catch(() => null) : Promise.resolve(null); }
   catch (e) { return Promise.resolve(null); }
 })();
+// CARTO kini memerlukan kunci API: jubinnya memaparkan "API KEY REQUIRED" (versi uji 2026.11.05-p). Buang jubin CARTO
+// yang sudah tersimpan dalam telefon.
+tileCache.then(c => c && c.keys().then(ks => Promise.all(ks.filter(k => /cartocdn\.com/.test(k.url)).map(k => c.delete(k)))))
+  .catch(() => {});
 async function tilePrune(c) {
   const keys = await c.keys(); tileStat.count = keys.length;
   if (keys.length <= TILE_MAX) return;
@@ -935,30 +938,11 @@ const CachedTiles = L.TileLayer.extend({
     return img;
   }
 });
-const osmTiles = new CachedTiles('https:\/\/{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+new CachedTiles('https:\/\/{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19, attribution: '&copy; OpenStreetMap',
   keepBuffer: 8,          // simpan lebih banyak jubin di sekeliling: tepi peta tidak kosong sekejap semasa bergerak/berputar
   updateWhenIdle: false   // muat jubin SEMASA peta bergerak (lalai telefon: hanya selepas berhenti → petak kosong muncul)
 }).addTo(map);
-// Peta malam: CARTO Dark Matter (latar hitam, jalan kelabu, tulisan putih). {r} = '@2x' pada skrin retina → tulisan tajam.
-// Percuma untuk kegunaan bukan komersial dengan atribusi. Jika jubin CARTO gagal (≥ 6 ralat tanpa satu pun berjaya),
-// kembali ke OSM yang dimalapkan untuk sesi ini.
-const darkTiles = new CachedTiles('https:\/\/{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  maxZoom: 19, subdomains: 'abcd', attribution: '&copy; OpenStreetMap &copy; CARTO',
-  keepBuffer: 8, updateWhenIdle: false
-});
-const darkStat = { ok: 0, err: 0, failed: false };
-darkTiles.on('tileload', () => { darkStat.ok++; });
-darkTiles.on('tileerror', () => {
-  if (++darkStat.err >= 6 && !darkStat.ok && !darkStat.failed) { darkStat.failed = true; setBaseMap(true); }
-});
-function setBaseMap(dark) {
-  const useDark = dark && !darkStat.failed;
-  document.body.classList.toggle('dark-tiles', useDark);
-  const on = useDark ? darkTiles : osmTiles, off = useDark ? osmTiles : darkTiles;
-  if (!map.hasLayer(on)) on.addTo(map);
-  if (map.hasLayer(off)) map.removeLayer(off);
-}
 map.attributionControl.setPosition('topright');
 // Garisan laluan & trafik dilukis pada Canvas, bukan SVG. Semasa memandu peta bergerak setiap saat; selepas setiap
 // gerakan Leaflet melaras semula saiz/kedudukan lapisan SVG (lebih kerap bila peta berputar), dan Safari iPhone
@@ -1423,7 +1407,7 @@ const EN_RULES = [
   [/^📵 Tiada liputan · (\d+) laporan menunggu$/, m => '📵 No signal · ' + m[1] + ' reports waiting'],
   [/^(\d+(?:\.\d+)?) (km|m)$/, m => m[0]], [/^(\d+) km\/j$/, m => m[1] + ' km/h'], [/^km\/j$/, () => 'km/h'], [/^bt\/j$/, () => 'mph'],
   [/^(.+) laporan dihantar\. Terima kasih! 🙏$/, m => m[1] + ' reports sent. Thank you! 🙏'],
-  [/^Jalan Malaysia · Peta © OpenStreetMap · Laluan oleh Google( · Peta malam © CARTO)?$/, m => 'Jalan Malaysia · Map © OpenStreetMap · Routes by Google' + (m[1] ? ' · Night map © CARTO' : '')],
+  [/^Jalan Malaysia · Peta © OpenStreetMap · Laluan oleh Google$/, () => 'Jalan Malaysia · Map © OpenStreetMap · Routes by Google'],
   [/^Pilih 1 hingga (\d+) jenis laporan\.$/, m => 'Choose 1 to ' + m[1] + ' report types.'],
   [/^Arah ke (.+)$/, m => 'Heading ' + tr(m[1])], [/^(\d+) mata$/, m => m[1] + ' points'],
   [/^✅ Data anda dipulihkan · (\d+) mata$/, m => '✅ Your data was restored · ' + m[1] + ' points'], [/^oleh ([^·]+)$/, m => 'by ' + m[1]],
@@ -2326,7 +2310,7 @@ function renderDrawer() {
     ${list([sRow({ go: 'sos', icon: '🆘', color: '#d32f2f', label: 'Kecemasan', sub: 'Telefon 999 · hantar lokasi ke keluarga' })])}
     ${list([sRow({ go: 'homescreen', icon: '📲', color: '#5c6bc0', label: 'Tambah ke skrin utama', sub: 'Buka Jalan Malaysia seperti app' }),
       sRow({ go: 'root', icon: '⚙️', color: '#78909c', label: 'Tetapan' })])}
-    <p class="pop-muted" style="margin:16px 4px">Jalan Malaysia · Peta © OpenStreetMap · Laluan oleh Google${document.body.classList.contains('dark-tiles') ? ' · Peta malam © CARTO' : ''}<br>Versi ${APP_VERSION}</p>`;
+    <p class="pop-muted" style="margin:16px 4px">Jalan Malaysia · Peta © OpenStreetMap · Laluan oleh Google<br>Versi ${APP_VERSION}</p>`;
 }
 
 // ---- Kesan setiap tetapan
@@ -2335,9 +2319,7 @@ function applyTheme() {
   const m = S.dark, night = (() => { const h = new Date().getHours(); return h >= 19 || h < 7; })();
   const theme = m === 'always' ? 'dark' : m === 'never' ? 'light' : m === 'night' ? (night ? 'dark' : 'light') : null;
   if (theme) document.documentElement.dataset.theme = theme; else delete document.documentElement.dataset.theme;
-  const darkMap = m === 'always' || (m === 'night' && night);
-  document.body.classList.toggle('dark-map', darkMap);
-  setBaseMap(darkMap);
+  document.body.classList.toggle('dark-map', m === 'always' || (m === 'night' && night));
   clearTimeout(themeTimer); themeTimer = setTimeout(applyTheme, 300000); // semak semula setiap 5 minit (malam/siang)
 }
 function renderSpeedSign() {

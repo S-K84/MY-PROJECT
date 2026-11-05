@@ -86,9 +86,9 @@ npm test
 - **Ikon skrin utama iPhone:** Apps Script tidak boleh menetapkan `apple-touch-icon`, jadi halaman pembuka `docs/index.html`
   (GitHub Pages, `https://s-k84.github.io/MY-PROJECT/`) memberi ikon dan terus lompat ke `/exec`. `#pasang` memaparkan
   langkah pasang. Tambah ke skrin utama dari **Chrome** iPhone (Safari tidak dapat membuka web app Apps Script ini).
-- **Jubin peta:** siang `tile.openstreetmap.org`; malam **CARTO Dark Matter** (`basemaps.cartocdn.com/dark_all`, percuma bukan
-  komersial, atribusi © CARTO) — pilihan pemilik kerana OSM dimalapkan memberi tulisan gelap atas latar gelap. Jika CARTO
-  gagal, OSM dimalapkan (`darkStat`, `setBaseMap`). MapTiler/Stadia ditangguh sehingga pengguna bertambah.
+- **Jubin peta:** `tile.openstreetmap.org` (siang & malam). Malam: jubin OSM **dimalapkan** (`body.dark-map .leaflet-tile-pane`),
+  bukan `invert` (jalan jadi hitam). CARTO kini memerlukan kunci API (jubin "API KEY REQUIRED", Nov 2026) — jangan guna
+  tanpa akaun. MapTiler/Stadia (perlu akaun & kunci) ditangguh sehingga pemilik memutuskan.
 - **ID 30 hari:** pindah data perlu pengesahan pengguna ("Pulihkan data anda?"), kerana pelayar boleh dikongsi oleh akaun Google
   lain. Sekatan dipindah automatik. Data dipindah, bukan disalin.
 - **Deploy:** `@google/clasp@2.4.2` dipin. `clasp login` pemilik juga guna versi ini (format `.clasprc.json` berbeza antara versi).
