@@ -329,8 +329,8 @@ for (const file of FILES) test(`${file}: kad lain sedang dipapar semasa mula ke 
   } finally { await close(); }
 });
 
-test('IndexUji.html: cadangan perjalanan — petang hari kerja "Pulang ke rumah?" → terus navigasi; sekali sehari; tiada pada hujung minggu', async () => {
-  const { page, errors, close } = await open('IndexUji.html');
+for (const file of FILES) test(`${file}: cadangan perjalanan — petang hari kerja "Pulang ke rumah?" → terus navigasi; sekali sehari; tiada pada hujung minggu`, async () => {
+  const { page, errors, close } = await open(file);
   try {
     const r = await page.evaluate(async () => {
       const w = ms => new Promise(r => setTimeout(r, ms));
@@ -367,8 +367,8 @@ test('IndexUji.html: cadangan perjalanan — petang hari kerja "Pulang ke rumah?
   } finally { await close(); }
 });
 
-test('IndexUji.html: jubin peta disimpan dalam telefon — selepas muat semula, kawasan sama tidak dimuat turun lagi', async () => {
-  const { page, errors, tiles, close } = await open('IndexUji.html', null, { tiles: true });
+for (const file of FILES) test(`${file}: jubin peta disimpan dalam telefon — selepas muat semula, kawasan sama tidak dimuat turun lagi`, async () => {
+  const { page, errors, tiles, close } = await open(file, null, { tiles: true });
   try {
     await page.waitForFunction(async () => (await (await caches.open('jk-tiles-v1')).keys()).length >= 4, null, { timeout: 15000 });
     await page.waitForTimeout(500);
