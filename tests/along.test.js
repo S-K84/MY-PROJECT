@@ -68,3 +68,15 @@ test('Index.html: carian sepanjang laluan guna kotak kecil & berlumba dengan ser
   assert.match(s, /const hedge = setTimeout\(startDirect, 5000\)/);
   assert.ok(!/around:\$\{c\[1\]\}/.test(s));
 });
+
+test('5 pelayan Overpass (server & kedua-dua halaman): 5 Nov 2026 tiga pelayan asal gagal serentak', () => {
+  const fs = require('fs'), path = require('path'), ROOT = path.join(__dirname, '..');
+  const hosts = ['overpass-api.de', 'overpass.kumi.systems', 'overpass.private.coffee', 'maps.mail.ru', 'overpass.osm.jp'];
+  const code = fs.readFileSync(path.join(ROOT, 'Code.gs'), 'utf8');
+  const list = code.match(/const OVERPASS_URLS_ = \[([^\]]+)\]/)[1];
+  for (const h of hosts) assert.ok(list.includes('https://' + h + '/'), 'server: ' + h);
+  for (const f of ['Index.html', 'IndexUji.html']) {
+    const cl = fs.readFileSync(path.join(ROOT, f), 'utf8').match(/const OVERPASS = \[([^\]]+)\]/)[1];
+    for (const h of hosts) assert.ok(cl.includes('https:\\/\\/' + h + '/'), f + ': ' + h);
+  }
+});
