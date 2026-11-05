@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JalanKita</title>
+  <meta name="apple-mobile-web-app-title" content="JalanKita">
+  <meta name="theme-color" content="#0b1220">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    :root { color-scheme: light dark; }
+    body { margin:0; font-family:system-ui, -apple-system, sans-serif; background:#0b1220; color:#f2f3f5;
+      display:flex; min-height:100vh; align-items:center; justify-content:center; text-align:center; }
+    main { max-width:420px; padding:24px; }
+    img { width:120px; height:120px; border-radius:26px; box-shadow:0 8px 30px rgba(51,204,255,.25); }
+    h1 { font-size:28px; margin:18px 0 6px; }
+    p { color:#b8c0cc; line-height:1.5; }
+    ol { text-align:left; line-height:1.6; padding-left:22px; color:#dfe4ea; }
+    a.btn { display:block; margin:22px 0 0; padding:16px; border-radius:999px; background:#33ccff; color:#00121a;
+      font-weight:800; font-size:18px; text-decoration:none; }
+    #pasang { display:none; }
+  </style>
+</head>
+<body>
+  <main>
+    <img src="icon-512.png" alt="">
+    <h1>JalanKita</h1>
+    <p id="buka">Membuka JalanKita…</p>
+    <div id="pasang">
+      <p>Navigasi & laporan trafik komuniti Malaysia. Percuma, tanpa muat turun app.</p>
+      <ol>
+        <li>Tekan butang <b>Kongsi</b> ⬆️ (iPhone: di bar alamat Chrome / bawah skrin Safari).</li>
+        <li>Pilih <b>Tambah ke Skrin Utama</b> (Add to Home Screen).</li>
+        <li>Tekan <b>Tambah</b>. Ikon JalanKita muncul di skrin utama.</li>
+      </ol>
+      <p>Android: tekan <b>⋮</b> → <b>Tambah ke skrin utama</b>.</p>
+    </div>
+    <a class="btn" id="go" href="#">Buka JalanKita</a>
+  </main>
+  <script>
+    // Halaman pembuka JalanKita (GitHub Pages): ikon skrin utama (apple-touch-icon) yang tidak boleh ditetapkan oleh
+    // Google Apps Script. Dibuka dari ikon → terus ke aplikasi. "#pasang" → paparkan langkah pasang (tiada lompatan),
+    // dan alamat ditukar ke versi TANPA "#pasang" supaya ikon yang ditambah terus membuka aplikasi.
+    var APP = 'https:\/\/script.google.com/macros/s/AKfycbxXZBdNAbD0ayIUEXf4eLgLLzLaPMSv4AfrzbFUmtB5sVwbxI7vOhIOk06UgEMADq7zyg/exec';
+    document.getElementById('go').href = APP + location.search;
+    if (location.hash === '#pasang') {
+      document.getElementById('buka').style.display = 'none';
+      document.getElementById('pasang').style.display = 'block';
+      history.replaceState(null, '', location.pathname + location.search);
+    } else {
+      location.replace(APP + location.search);
+    }
+  </script>
+</body>
+</html>
