@@ -7,7 +7,7 @@
 
 // Versi aplikasi — SATU-SATUNYA tempat versi ditulis. Ia disuntik ke Index.html oleh doGet() (menu ☰ & skrin ralat).
 // Naikkan setiap kali kod berubah supaya mudah semak telefon sudah guna kod terkini.
-const APP_VERSION = '2026.11.05-e';
+const APP_VERSION = '2026.11.05-f';
 
 const CONFIG = {
   // ttlMin = berapa minit laporan kekal aktif sebelum luput
@@ -78,6 +78,9 @@ const MOODS = ['🙂', '😎', '🤠', '😇', '🥳', '😴', '🤓', '😤', '
 
 // ---------------------------------------------------------------- Web app
 
+// Ikon aplikasi (tab pelayar & "Tambah ke Skrin Utama"). Fail dalam repo (assets/), dihidang terus oleh GitHub — URL TETAP.
+const ICON_URL_ = 'https://raw.githubusercontent.com/S-K84/MY-PROJECT/main/assets/icon-180.png';
+
 function doGet(e) {
   // Saluran uji: PEMILIK boleh buka .../exec?uji=1 untuk mencuba IndexUji.html di telefon sebelum perubahan berisiko
   // dihantar kepada semua pengguna (Index.html). Pengguna lain sentiasa mendapat Index.html.
@@ -94,6 +97,7 @@ function doGet(e) {
   // Tiada setXFrameOptionsMode(ALLOWALL): halaman tidak boleh dibenam oleh laman lain (clickjacking).
   return t.evaluate()
     .setTitle('JalanKita')
+    .setFaviconUrl(ICON_URL_)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no');
 }
 

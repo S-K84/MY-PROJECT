@@ -3,12 +3,13 @@ const assert = require('node:assert');
 const { loadCode } = require('./helpers');
 
 /** doGet dengan HtmlService olok-olok: pulangkan nama fail templat yang dihidangkan & versi yang disuntik. */
+let favicon = null;
 function serve(params, isOwner) {
   let served = null;
   const env = loadCode({
     HtmlService: { createTemplateFromFile: name => {
       const t = { evaluate() { served = { file: name, version: JSON.parse(t.versionJson) }; return out; } };
-      const out = { setTitle: () => out, addMetaTag: () => out };
+      const out = { setTitle: () => out, addMetaTag: () => out, setFaviconUrl: u => { favicon = u; return out; } };
       return t;
     } },
     ScriptApp: { getService: () => ({ getUrl: () => 'https://script.google.com/macros/s/ujian/exec' }) }
@@ -28,4 +29,14 @@ test('pemilik dengan ?uji=1 mendapat IndexUji.html, versi ditanda (uji)', () => 
   assert.strictEqual(s.file, 'IndexUji');
   assert.match(s.version, / \(uji\)$/);
   assert.strictEqual(serve({}, true).file, 'Index');
+});
+
+test('ikon aplikasi: URL tetap ke assets/icon-180.png dalam repo, dan fail ikon wujud (PNG 180×180)', () => {
+  serve({}, false);
+  assert.strictEqual(favicon, 'https://raw.githubusercontent.com/S-K84/MY-PROJECT/main/assets/icon-180.png');
+  const fs = require('fs'), path = require('path');
+  const b = fs.readFileSync(path.join(__dirname, '..', 'assets', 'icon-180.png'));
+  assert.strictEqual(b.slice(1, 4).toString(), 'PNG');
+  assert.strictEqual(b.readUInt32BE(16), 180);
+  assert.strictEqual(b.readUInt32BE(20), 180);
 });
