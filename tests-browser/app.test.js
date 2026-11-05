@@ -406,3 +406,28 @@ for (const file of FILES) test(`${file}: peta malam tidak lagi guna CARTO (perlu
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+
+test('IndexUji.html: WhatsApp di telefon dibuka terus (whatsapp://, tiada tab kosong); wa.me hanya jika app tidak terbuka', async () => {
+  const ua = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0 Mobile/15E148 Safari/604.1';
+  const { page, errors, close } = await open('IndexUji.html', { userAgent: ua });
+  try {
+    const r = await page.evaluate(async () => {
+      const w = ms => new Promise(r => setTimeout(r, ms));
+      const calls = []; window.open = (u, t) => { calls.push([u.split('?')[0], t]); };
+      // 1) app WhatsApp dibuka → halaman tersembunyi → tiada wa.me
+      openWhatsApp('hai');
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+      document.dispatchEvent(new Event('visibilitychange'));
+      await w(WA_FALLBACK_MS + 200);
+      const opened = calls.splice(0);
+      // 2) app tidak terbuka (halaman kekal kelihatan) → wa.me sebagai sandaran
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
+      openWhatsApp('hai');
+      await w(WA_FALLBACK_MS + 200);
+      return { opened, fallback: calls };
+    });
+    assert.deepStrictEqual(r.opened, [['whatsapp://send', '_top']]);
+    assert.deepStrictEqual(r.fallback, [['whatsapp://send', '_top'], ['https://wa.me/', '_blank']]);
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});
