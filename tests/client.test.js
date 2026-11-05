@@ -72,7 +72,7 @@ test('saluran uji: peta tidak berkelip semasa bergerak (tiada pudar jubin, jubin
   if (!fs.existsSync(f)) return;
   const s = clientScript('IndexUji.html');
   assert.match(s, /L\.map\('map', \{[^}]*fadeAnimation: false/);
-  assert.match(s, /L\.tileLayer\([^)]*updateWhenIdle: false/);
+  assert.match(s, /(?:L\.tileLayer|new CachedTiles)\([^)]*updateWhenIdle: false/);
 });
 
 test('saluran uji: garisan laluan & trafik dilukis pada Canvas (SVG berkelip di Safari iPhone semasa peta bergerak)', () => {
@@ -89,7 +89,7 @@ test('saluran uji: garisan laluan & trafik dilukis pada Canvas (SVG berkelip di 
 test('Index.html: pembaikan kelipan (disahkan di iPhone melalui saluran uji) — jubin & garisan laluan', () => {
   const s = clientScript();
   assert.match(s, /L\.map\('map', \{[^}]*fadeAnimation: false/);
-  assert.match(s, /L\.tileLayer\([^)]*updateWhenIdle: false/);
+  assert.match(s, /(?:L\.tileLayer|new CachedTiles)\([^)]*updateWhenIdle: false/);
   assert.match(s, /const lineRenderer = L\.canvas\(/);
   assert.match(s, /function moveMeMarker\(/);
   assert.ok(!/reportLayer\.clearLayers\(\)/.test(s), 'pin laporan masih dicipta semula setiap kali');
