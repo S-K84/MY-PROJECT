@@ -203,3 +203,65 @@ for (const file of FILES) test(`${file}: tekan lama pada peta → Pergi ke sini 
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+
+test('IndexUji.html: pulang ke Rumah → tawar "Beritahu keluarga" (WhatsApp dengan masa tiba)', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
+  try {
+    const r = await page.evaluate(async () => {
+      const w = ms => new Promise(r => setTimeout(r, ms));
+      let opened = ''; window.open = u => { opened = u; };
+      const p = places(); p.home = { title: 'Rumah', lat: 3.2, lng: 101.7 }; savePlaces(p);
+      state.manualLoc = false; setMe({ lat: 3.1, lng: 101.7, heading: 0, speed: 0, t: Date.now() }); await w(50);
+      planRoute({ title: 'Rumah', lat: 3.2, lng: 101.7 }); await w(300); startNav(); await w(100);
+      const card = $('askText').textContent; $('askYes').click();
+      return { card, opened: decodeURIComponent(opened) };
+    });
+    assert.strictEqual(r.card, 'Beritahu keluarga?');
+    assert.match(r.opened, /wa\.me.*perjalanan pulang, anggaran tiba/);
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});
+
+test('IndexUji.html: laluan dengan kemalangan dilaporkan — laluan lain disyorkan ("Elak sesak") & amaran ditunjuk', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
+  try {
+    const r = await page.evaluate(async () => {
+      const w = ms => new Promise(r => setTimeout(r, ms));
+      const enc = v => { v = Math.round(v * 1e5); v = v < 0 ? ~(v << 1) : v << 1; let o = ''; while (v >= 0x20) { o += String.fromCharCode((0x20 | (v & 0x1f)) + 63); v >>= 5; } return o + String.fromCharCode(v + 63); };
+      const poly = pts => { let s = '', a = 0, b = 0; pts.forEach(([la, lg]) => { s += enc(la - a) + enc(lg - b); a = la; b = lg; }); return s; };
+      const main = JSON.parse(JSON.stringify(__route));
+      const alt = Object.assign({}, main, { summary: 'Jalan Lencong', durationSec: 700,
+        polyline: poly([[3.1, 101.7], [3.1, 101.72], [3.2, 101.72], [3.2, 101.7]]) });
+      window.__override = { getRoute: () => [JSON.parse(JSON.stringify(main)), alt] };
+      window.__reports = [{ id: 'acc-1', type: 'KEMALANGAN', lat: 3.15, lng: 101.7001, desc: '', name: 'X', up: 1, down: 0, heading: null }];
+      state.manualLoc = false; setMe({ lat: 3.1, lng: 101.7, heading: 0, speed: 0, t: Date.now() }); await w(50);
+      await refresh();
+      planRoute({ title: 'Ujian', lat: 3.2, lng: 101.7 }); await w(300);
+      return { sel: state.selRoute, cards: [...document.querySelectorAll('.route-card')].map(c => c.innerText.replace(/\s+/g, ' ')) };
+    });
+    assert.strictEqual(r.sel, 1, JSON.stringify(r));
+    assert.match(r.cards[0], /⚠️ 1 kemalangan/);
+    assert.match(r.cards[1], /Elak sesak/);
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});
+
+test('IndexUji.html: 👍 baharu pada laporan anda → ucapan terima kasih sekali', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
+  try {
+    const r = await page.evaluate(async () => {
+      const w = ms => new Promise(r => setTimeout(r, ms));
+      store.set('jk_upseen', '2');
+      window.__override = { getProfile: () => ({ points: 30, reports: 2, upReceived: 5, joined: Date.now() }) };
+      await loadProfile(); await w(50);
+      const first = $('toast').textContent;
+      $('toast').textContent = '';
+      await loadProfile(); await w(50);
+      return { first, second: $('toast').textContent, seen: store.get('jk_upseen') };
+    });
+    assert.match(r.first, /3 pemandu berterima kasih atas laporan anda \(\+15 mata\)/);
+    assert.ok(!/berterima kasih/.test(r.second));
+    assert.strictEqual(r.seen, '5');
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});
