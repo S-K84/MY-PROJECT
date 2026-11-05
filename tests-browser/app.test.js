@@ -137,7 +137,7 @@ for (const file of FILES) {
   });
 }
 
-for (const file of FILES) test(`${file}: anggaran kos minyak pada pilihan laluan & halaman Kongsi JalanKita`, async () => {
+for (const file of FILES) test(`${file}: anggaran kos minyak pada pilihan laluan & halaman Kongsi Jalan Malaysia`, async () => {
   const { page, errors, close } = await open(file);
   try {
     const r = await page.evaluate(async () => {
