@@ -1,6 +1,6 @@
 # CLAUDE.md — panduan untuk Claude (dan pembangun) dalam repo JalanKita
 
-JalanKita ialah aplikasi navigasi & laporan trafik komuniti (ala Waze): **Google Apps Script** (server), **Google Sheets**
+JalanKita (nama paparan: **Jalan Malaysia**, ikon Jalur Gemilang; nama hamparan Drive kekal "JalanKita …") ialah aplikasi navigasi & laporan trafik komuniti (ala Waze): **Google Apps Script** (server), **Google Sheets**
 (pangkalan data), **Leaflet + OpenStreetMap** (peta). Baca `README.md` untuk gambaran ciri dan tempat data disimpan.
 
 ## Pemilik & bahasa

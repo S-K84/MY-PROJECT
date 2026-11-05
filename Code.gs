@@ -1,5 +1,5 @@
 /**
- * JalanKita — sistem navigasi & laporan trafik komuniti (ala Waze)
+ * Jalan Malaysia (dahulu JalanKita) — sistem navigasi & laporan trafik komuniti (ala Waze)
  * Dibina dengan Google Apps Script + Google Sheets + Leaflet/OpenStreetMap.
  *
  * Langkah pertama: jalankan fungsi setup() sekali dari editor Apps Script.
@@ -7,7 +7,7 @@
 
 // Versi aplikasi — SATU-SATUNYA tempat versi ditulis. Ia disuntik ke Index.html oleh doGet() (menu ☰ & skrin ralat).
 // Naikkan setiap kali kod berubah supaya mudah semak telefon sudah guna kod terkini.
-const APP_VERSION = '2026.11.05-g';
+const APP_VERSION = '2026.11.05-h';
 
 const CONFIG = {
   // ttlMin = berapa minit laporan kekal aktif sebelum luput
@@ -96,7 +96,7 @@ function doGet(e) {
   t.versionJson = jsonForScript_(APP_VERSION + (uji ? ' (uji)' : ''));
   // Tiada setXFrameOptionsMode(ALLOWALL): halaman tidak boleh dibenam oleh laman lain (clickjacking).
   return t.evaluate()
-    .setTitle('JalanKita')
+    .setTitle('Jalan Malaysia')
     .setFaviconUrl(ICON_URL_)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no');
 }
@@ -1350,7 +1350,7 @@ function weeklyTasks_(force) {
   const s = weeklySummary_(now);
   const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const row = (k, v) => '<tr><td style="padding:4px 12px 4px 0;color:#555">' + k + '</td><td><b>' + esc(v) + '</b></td></tr>';
-  const html = '<h2 style="margin:0 0 8px">JalanKita · ringkasan minggu lepas</h2>' +
+  const html = '<h2 style="margin:0 0 8px">Jalan Malaysia · ringkasan minggu lepas</h2>' +
     '<p style="color:#555">' + esc(s.from) + ' hingga ' + esc(s.to) + '</p><table>' +
     row('Pengguna aktif', s.active) + row('Pengguna baharu', s.joined) + row('Jumlah pengguna (setahun)', s.users) +
     row('Laporan baharu', s.reports) + row('Carian laluan', s.routes) + row('Laporan aktif sekarang', s.activeReports) +
@@ -1358,8 +1358,8 @@ function weeklyTasks_(force) {
     (s.busy > 20 ? '<p>⚠️ Server kerap sibuk minggu lepas. Beritahu pembangun.</p>' : '') +
     (backup ? '<p>💾 Sandaran data: <a href="' + esc(backup.url) + '">JalanKita — Sandaran</a> (' + esc(backup.tag) +
       ', ' + BACKUP_KEEP_ + ' minggu terakhir disimpan)</p>' : '<p>⚠️ Sandaran gagal: ' + esc(backupErr) + '</p>');
-  MailApp.sendEmail({ to: Session.getEffectiveUser().getEmail(), subject: 'JalanKita · Ringkasan mingguan ' + s.to,
-    htmlBody: html, name: 'JalanKita' });
+  MailApp.sendEmail({ to: Session.getEffectiveUser().getEmail(), subject: 'Jalan Malaysia · Ringkasan mingguan ' + s.to,
+    htmlBody: html, name: 'Jalan Malaysia' });
   return { summary: s, backup: backup, backupErr: backupErr };
 }
 
