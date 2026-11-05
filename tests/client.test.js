@@ -248,3 +248,12 @@ test('Index.html: ciri yang disahkan pemilik (tukar laluan bila kemalangan, reha
   assert.match(html, /\.leaflet-top, \.leaflet-bottom \{[^}]*transform:translateZ\(0\)/);
   assert.match(html, /\.qr-box \{[^}]*box-sizing:content-box/);
 });
+
+test('saluran uji: peta malam dimalapkan, bukan diterbalikkan (invert menjadikan jalan hitam atas latar gelap)', () => {
+  const s = fs.readFileSync(path.join(ROOT, 'IndexUji.html'), 'utf8');
+  const rule = s.match(/body\.dark-map \.leaflet-tile-pane \{ filter:([^;]+);/);
+  assert.ok(rule, 'peraturan penapis peta malam tiada');
+  assert.doesNotMatch(rule[1], /invert/);
+  const b = Number((rule[1].match(/brightness\(([\d.]+)\)/) || [])[1]);
+  assert.ok(b > 0.4 && b < 0.9, 'peta malam mesti dimalapkan (brightness 0.4–0.9), dapat ' + b);
+});
