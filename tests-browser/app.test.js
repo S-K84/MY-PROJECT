@@ -407,9 +407,9 @@ for (const file of FILES) test(`${file}: peta malam tidak lagi guna CARTO (perlu
   } finally { await close(); }
 });
 
-test('IndexUji.html: WhatsApp di telefon dibuka terus (whatsapp://, tiada tab kosong); wa.me hanya jika app tidak terbuka', async () => {
+for (const file of FILES) test(`${file}: WhatsApp di telefon dibuka terus (whatsapp://, tiada tab kosong); wa.me hanya jika app tidak terbuka`, async () => {
   const ua = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0 Mobile/15E148 Safari/604.1';
-  const { page, errors, close } = await open('IndexUji.html', { userAgent: ua });
+  const { page, errors, close } = await open(file, { userAgent: ua });
   try {
     const r = await page.evaluate(async () => {
       const w = ms => new Promise(r => setTimeout(r, ms));
