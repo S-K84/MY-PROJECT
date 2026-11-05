@@ -3054,9 +3054,22 @@ function shareLink(pl) {
   return { app: APP_URL ? APP_URL + '?to=' + ll + '&name=' + encodeURIComponent(pl.title || '') : '',
     gmaps: 'https:\/\/maps.google.com/?q=' + ll };
 }
+// Telefon: buka app WhatsApp terus (skema whatsapp). Dahulu wa.me dibuka dalam TAB BARU — tab itu melompat ke WhatsApp dan
+// tinggal kosong; bila pengguna kembali, Chrome iPhone memaparkan tab kosong itu (perlu tekan ✕). Jika app WhatsApp tidak
+// terbuka dalam masa WA_FALLBACK_MS (halaman masih kelihatan), guna wa.me seperti dahulu. Komputer: wa.me (WhatsApp Web).
+const WA_FALLBACK_MS = 2500;
 function openWhatsApp(text) {
-  // wa.me berfungsi di telefon (buka app WhatsApp) dan desktop (WhatsApp Web)
-  window.open('https:\/\/wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener');
+  const t = encodeURIComponent(text), web = () => window.open('https:\/\/wa.me/?text=' + t, '_blank', 'noopener');
+  if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) return web();
+  let left = false;
+  const gone = () => { if (document.visibilityState === 'hidden') left = true; };
+  document.addEventListener('visibilitychange', gone);
+  window.addEventListener('pagehide', gone);
+  setTimeout(() => {
+    document.removeEventListener('visibilitychange', gone); window.removeEventListener('pagehide', gone);
+    if (!left && document.visibilityState === 'visible') web();
+  }, WA_FALLBACK_MS);
+  window.open('whatsapp:\/\/send?text=' + t, '_top');
 }
 function shareDest() {
   const d = state.dest; if (!d) return;
