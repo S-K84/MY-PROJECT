@@ -265,3 +265,13 @@ test('saluran uji: polish UI — butang menu bulat, butang lapor arang + kuning,
   assert.match(s, /\.ctl:active \{ transform:translateZ\(0\) scale\(\.93\)/);   // kekal lapisan GPU (elak berkelip)
   assert.match(s, /@media \(prefers-reduced-motion: reduce\) \{\s*\.ctl, \.btn/);
 });
+
+test('saluran uji: identiti papan tanda jalan raya — banner hijau dengan bingkai putih, fon Overpass, tiada label huruf besar', () => {
+  const s = fs.readFileSync(path.join(ROOT, 'IndexUji.html'), 'utf8');
+  assert.match(s, /--sign-green:#00704a;/);
+  assert.match(s, /--nav-bg:var\(--sign-green\)/);
+  assert.match(s, /inset 0 0 0 8\.5px var\(--sign-white\)/);
+  assert.match(s, /fonts\.googleapis\.com\/css2\?family=Overpass/);
+  assert.match(s, /font-family:"Overpass", system-ui/);                  // fon sistem sebagai sandaran
+  assert.doesNotMatch(s, /\.sec-title \{[^}]*text-transform:uppercase/);
+});
