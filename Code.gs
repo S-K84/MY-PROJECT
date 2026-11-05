@@ -7,7 +7,7 @@
 
 // Versi aplikasi — SATU-SATUNYA tempat versi ditulis. Ia disuntik ke Index.html oleh doGet() (menu ☰ & skrin ralat).
 // Naikkan setiap kali kod berubah supaya mudah semak telefon sudah guna kod terkini.
-const APP_VERSION = '2026.11.05-x';
+const APP_VERSION = '2026.11.05-y';
 
 const CONFIG = {
   // ttlMin = berapa minit laporan kekal aktif sebelum luput
@@ -226,6 +226,15 @@ function verify_(token) {
 //  - Data DIPINDAH (bukan disalin): ID lama tidak lagi mempunyai data, jadi token lama yang dicuri tidak berguna selepas itu.
 
 /** ID dalam token jika tandatangannya sah (tanpa semakan akaun Google semasa), jika tidak null. */
+/**
+ * Pengguna tanpa log masuk Google (ID a_…) hanya boleh MELIHAT peta & laporan. ID a_ boleh dicipta tanpa had, jadi
+ * tanpa sekatan ini seorang penyalahguna boleh menghabiskan had global bersama (laluan Google, laporan, carian) untuk
+ * semua pengguna. Pilihan pemilik (semakan keselamatan Nov 2026).
+ */
+const GUEST_MSG_ = 'Log masuk akaun Google untuk menggunakan ciri ini.';
+function isGuest_(userId) { return /^a_/.test(String(userId)); }
+function requireGoogle_(userId) { if (isGuest_(userId)) throw new Error(GUEST_MSG_); return userId; }
+
 function tokenId_(token) {
   const parts = String(token || '').split('.');
   if (parts.length !== 2 || !/^[ag]_[A-Za-z0-9_-]{8,40}$/.test(parts[0])) return null;
@@ -381,7 +390,7 @@ function submitReport(token, r) {
  * Setiap jenis dikira dalam had kadar seperti laporan biasa (tidak boleh dijadikan jalan pintas untuk spam).
  */
 function submitReports(token, r) {
-  const userId = verify_(token);
+  const userId = requireGoogle_(verify_(token));
   r = r || {};
   const lat = Number(r.lat), lng = Number(r.lng);
   if (!isValidCoord_(lat, lng)) throw new Error('Lokasi tidak sah.');
@@ -563,7 +572,7 @@ function deleteMyReport(token, id) {
 }
 
 function voteReport(token, id, up) {
-  const userId = verify_(token);
+  const userId = requireGoogle_(verify_(token));
   id = String(id || '');
   if (!/^[0-9a-f-]{8,36}$/i.test(id)) throw new Error('Laporan tidak dijumpai.');
   up = up === true;
@@ -636,7 +645,9 @@ function touchIndex_(cache, key, id, nowSec, maxAgeSec, cap, ttlSec) {
 }
 
 function updateLocation(token, u) {
-  return updateLocation_(verify_(token), u);
+  const userId = verify_(token);
+  if (isGuest_(userId)) return { ok: false, guest: true };   // tetamu tidak dipaparkan di peta orang lain
+  return updateLocation_(userId, u);
 }
 
 function updateLocation_(userId, u) {
@@ -715,7 +726,7 @@ function getLiveData(token, lat, lng, loc) {
   const userId = verify_(token);
   rateLimit_('live', userId);
   if (loc && typeof loc === 'object') {
-    try { updateLocation_(userId, loc); } catch (e) { /* had lokasi: data peta tetap dipulangkan */ }
+    if (!isGuest_(userId)) try { updateLocation_(userId, loc); } catch (e) { /* had lokasi: data peta tetap dipulangkan */ }
   }
   lat = Number(lat); lng = Number(lng);
   const near = isValidCoord_(lat, lng) ? { lat: lat, lng: lng } : null;
@@ -742,7 +753,7 @@ function nearbyReports_(near) {
 // URL perkhidmatan adalah TETAP (bukan dari pengguna) — tiada risiko SSRF. Kunci API tidak pernah dihantar ke klien.
 
 function searchPlaces(token, query, lat, lng) {
-  const userId = verify_(token);
+  const userId = requireGoogle_(verify_(token));
   query = String(query == null ? '' : query).replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
   if (!query) return [];
   rateLimit_('geocode', userId);
@@ -891,7 +902,7 @@ function allowedLink_(u) {
  * Pautan pendek (maps.app.goo.gl) diikut secara manual, maksimum 5 lompatan, setiap satu disemak.
  */
 function resolveLocation(token, text) {
-  const userId = verify_(token);
+  const userId = requireGoogle_(verify_(token));
   text = String(text == null ? '' : text).slice(0, 2000);
   const direct = coordsFromText_(text);
   if (direct) return { title: 'Lokasi dikongsi', sub: direct.lat.toFixed(5) + ', ' + direct.lng.toFixed(5), lat: direct.lat, lng: direct.lng };
@@ -992,7 +1003,7 @@ function getProfile(token) {
 function whereAmI(token, lat, lng) {
   const userId = verify_(token);
   lat = Number(lat); lng = Number(lng);
-  if (!isValidCoord_(lat, lng)) return { road: '' };
+  if (isGuest_(userId) || !isValidCoord_(lat, lng)) return { road: '' };   // tetamu: tiada panggilan geocode
   rateLimitAll_([['geocode', userId], ['G_maps']]);
   const res = Maps.newGeocoder().setLanguage('ms').reverseGeocode(lat, lng);
   const results = res.results || [];
@@ -1072,6 +1083,7 @@ function loadPrefs(token) {
 
 function savePrefs(token, json) {
   const userId = verify_(token);
+  if (isGuest_(userId)) return { ok: false, guest: true };   // tetamu: tetapan kekal di telefon sahaja
   rateLimit_('prefsSave', userId);
   json = String(json == null ? '' : json);
   if (json.length > CONFIG.MAX_PREFS_CHARS) throw new Error('Data terlalu besar.');
@@ -1124,7 +1136,7 @@ function isMapsQuotaErr_(e) { return /too many times|quota|OVER_(QUERY|DAILY)_LI
  * Menggunakan servis Maps terbina dalam Apps Script (tiada API key diperlukan).
  */
 function getRoute(token, origin, dest, opts) {
-  const userId = verify_(token);
+  const userId = requireGoogle_(verify_(token));
   origin = origin || {}; dest = dest || {}; opts = opts || {};
   const oLat = Number(origin.lat), oLng = Number(origin.lng);
   const dLat = Number(dest.lat), dLng = Number(dest.lng);
@@ -1490,7 +1502,7 @@ function writeShare_(id, st, live, poly) {
 }
 
 function startShare(token, o) {
-  const userId = verify_(token);
+  const userId = requireGoogle_(verify_(token));
   o = o || {};
   rateLimit_('share', userId);
   const minutes = [15, 60, 240, 0].indexOf(Number(o.minutes)) >= 0 ? Number(o.minutes) : 60;
@@ -1537,7 +1549,7 @@ function endShareCache_(id, st) {
 }
 
 function updateShare(token, id, o) {
-  const userId = verify_(token);
+  const userId = requireGoogle_(verify_(token));
   id = String(id || ''); o = o || {};
   if (!SHARE_ID_RE_.test(id)) throw new Error('Perkongsian tidak dijumpai.');
   rateLimit_('shareUpd', userId);
@@ -1636,7 +1648,7 @@ function overpass_(q) {
 }
 
 function alongRoute(token, cat, pts) {
-  const userId = verify_(token);
+  const userId = requireGoogle_(verify_(token));
   const c = ALONG_CATS_.hasOwnProperty(String(cat)) ? ALONG_CATS_[cat] : null;
   if (!c) throw new Error('Kategori tidak sah.');
   if (!Array.isArray(pts)) throw new Error('Laluan tidak sah.');
@@ -1748,7 +1760,7 @@ function overpassAlong_(c, coords, radiusM) {
  * Lokasi dibundarkan ~1 km sebelum dihantar ke Photon (privasi); hasil grid disimpan 1 jam.
  */
 function nearbyPlaces(token, cat, lat, lng) {
-  const userId = verify_(token);
+  const userId = requireGoogle_(verify_(token));
   const c = ALONG_CATS_.hasOwnProperty(String(cat)) ? ALONG_CATS_[cat] : null;
   if (!c) throw new Error('Kategori tidak sah.');
   lat = Number(lat); lng = Number(lng);
