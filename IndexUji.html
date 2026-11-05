@@ -50,7 +50,7 @@
           parts.push(n + '/' + ln);
           pre.textContent += '\nBahagian: ' + parts.join(' ');
           // Baris di sekitar ralat. MAIN_AT = nombor baris <script> utama dalam IndexUji.html (disemak oleh ujian).
-          var MAIN_AT = 789, bl = window.__bootLine;
+          var MAIN_AT = 792, bl = window.__bootLine;
           if (bl) {
             pre.textContent += '\nSkrip sekitar baris ' + bl + ' (dianggap baris fail ' + bl + '):';
             for (var j = Math.max(1, bl - MAIN_AT - 3); j <= Math.min(SL.length - 1, bl - MAIN_AT + 1); j++)
@@ -565,7 +565,10 @@
       --nav-bg:var(--sign-green); --nav-row:var(--sign-green-deep); --nav-road:var(--sign-white); --nav-muted:rgba(255,255,255,.78); }
     :root[data-theme="dark"] { --sign-green:#00603f; --sign-green-deep:#004d33; }
     @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --sign-green:#00603f; --sign-green-deep:#004d33; } }
-    html, body { font-family:"Overpass", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    /* Titik tengah "·" Overpass memakan ruang selepasnya ("PM ·via") — lukis "·" sahaja dengan fon sistem. */
+    @font-face { font-family:"JKDot"; src:local("Helvetica Neue"), local("Helvetica"), local("Arial"), local("Roboto");
+      unicode-range:U+00B7; }
+    html, body { font-family:"JKDot", "Overpass", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
     #navTop { border-radius:0 0 18px 18px;
       box-shadow:0 6px 20px rgba(0,0,0,.35), inset 0 0 0 6px var(--sign-green), inset 0 0 0 8.5px var(--sign-white); }
     #navTop { padding-left:20px; padding-right:20px; padding-bottom:14px; }
