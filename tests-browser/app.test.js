@@ -282,3 +282,49 @@ for (const file of FILES) test(`${file}: halaman "Tambah ke skrin utama" ada but
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+
+test('IndexUji.html: pulang ke Rumah dalam waktu solat → kad "Beritahu keluarga" dahulu, kemudian kad solat', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
+  try {
+    const r = await page.evaluate(async () => {
+      const w = ms => new Promise(r => setTimeout(r, ms));
+      window.open = () => {};
+      S.prayerRemind = true;
+      const p = places(); p.home = { title: 'Rumah', lat: 3.2, lng: 101.7 }; savePlaces(p);
+      state.manualLoc = false; setMe({ lat: 3.1, lng: 101.7, heading: 0, speed: 0, t: Date.now() }); await w(50);
+      // Waktu Asar SEKARANG (seperti pemilik: 16:03), bukan bergantung pada jam CI.
+      const day = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+      const now = new Date(), t = {}; PRAYERS.forEach(([k]) => { t[k] = new Date(now.getTime() + 864e5); }); t.asar = now;
+      state.prayerCache = { day, lat: 3.1, lng: 101.7, t }; state.prayerSaid = new Set();
+      planRoute({ title: 'Rumah', lat: 3.2, lng: 101.7 }); await w(300); startNav(); await w(100);
+      const first = $('askText').textContent; $('askNo').click();
+      onNavTick(); await w(50);
+      return { first, second: $('askText').textContent, shown: $('askCard').style.display };
+    });
+    assert.strictEqual(r.first, 'Beritahu keluarga?');
+    assert.strictEqual(r.second, 'Waktu Asar');
+    assert.strictEqual(r.shown, 'block');
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});
+
+test('IndexUji.html: kad lain sedang dipapar semasa mula ke Rumah → "Beritahu keluarga" menunggu giliran', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
+  try {
+    const r = await page.evaluate(async () => {
+      const w = ms => new Promise(r => setTimeout(r, ms));
+      S.prayerRemind = false;
+      const p = places(); p.home = { title: 'Rumah', lat: 3.2, lng: 101.7 }; savePlaces(p);
+      state.manualLoc = false; setMe({ lat: 3.1, lng: 101.7, heading: 0, speed: 0, t: Date.now() }); await w(50);
+      planRoute({ title: 'Rumah', lat: 3.2, lng: 101.7 }); await w(300);
+      showAsk({ icon: 'ℹ️', text: 'Kad lain', yes: 'Ya', no: 'Tidak', ms: 60000 });
+      startNav(); await w(100);
+      const during = $('askText').textContent; $('askNo').click();
+      onNavTick(); await w(50);
+      return { during, after: $('askText').textContent };
+    });
+    assert.strictEqual(r.during, 'Kad lain');
+    assert.strictEqual(r.after, 'Beritahu keluarga?');
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});
