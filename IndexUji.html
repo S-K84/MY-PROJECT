@@ -50,7 +50,7 @@
           parts.push(n + '/' + ln);
           pre.textContent += '\nBahagian: ' + parts.join(' ');
           // Baris di sekitar ralat. MAIN_AT = nombor baris <script> utama dalam IndexUji.html (disemak oleh ujian).
-          var MAIN_AT = 728, bl = window.__bootLine;
+          var MAIN_AT = 732, bl = window.__bootLine;
           if (bl) {
             pre.textContent += '\nSkrip sekitar baris ' + bl + ' (dianggap baris fail ' + bl + '):';
             for (var j = Math.max(1, bl - MAIN_AT - 3); j <= Math.min(SL.length - 1, bl - MAIN_AT + 1); j++)
@@ -506,6 +506,10 @@
       border:3px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,.45); }
     .wazer { font-size:22px; filter:drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
     .leaflet-control-attribution { font-size:10px; }
+    /* iPhone: jubin peta ialah lapisan GPU tersendiri (backface-visibility di atas). Tanpa lapisan GPU sendiri, tulisan
+       "Leaflet | © OpenStreetMap" kadang-kadang dilukis di BAWAH jubin semasa peta bergerak → muncul-hilang (berkelip).
+       translateZ(0) memberi kawalan peta lapisan sendiri di atas jubin. */
+    .leaflet-top, .leaflet-bottom { -webkit-transform:translateZ(0); transform:translateZ(0); z-index:1000; }
     .leaflet-top.leaflet-right { top:calc(env(safe-area-inset-top) + 76px); }
     body[data-mode="nav"] .leaflet-top.leaflet-right { top:calc(var(--nav-h, 120px) + 72px); }
     .leaflet-popup-content-wrapper, .leaflet-popup-tip { background:var(--sheet); color:var(--fg); }

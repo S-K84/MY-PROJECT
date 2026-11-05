@@ -233,3 +233,8 @@ test('saluran uji: peringatan rehat, kecemasan & saiz tulisan', () => {
   assert.match(s, /textSize: \[\['normal', 'Biasa'\], \['large', 'Besar'\]\]/);
   assert.match(s, /'https:\\\/\\\/api\.open-meteo\.com/);
 });
+
+test('saluran uji: kawalan peta (tulisan OpenStreetMap) ada lapisan GPU sendiri — tidak berkelip di iPhone', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'IndexUji.html'), 'utf8');
+  assert.match(html, /\.leaflet-top, \.leaflet-bottom \{[^}]*transform:translateZ\(0\)/);
+});
