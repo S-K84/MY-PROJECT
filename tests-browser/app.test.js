@@ -178,3 +178,28 @@ for (const [file, row, url] of [['Index.html', 'ujiOn', /\?uji=1$/], ['IndexUji.
     } finally { await close(); }
   });
 }
+
+test('IndexUji.html: tekan lama pada peta → Pergi ke sini / Simpan sebagai Rumah (lokasi tepat)', async () => {
+  const { page, errors, close } = await open('IndexUji.html', { hasTouch: true });
+  try {
+    await page.evaluate(() => { setMe({ lat: 3.1, lng: 101.7, heading: 0, speed: 0, t: Date.now() }); map.setView([3.1, 101.7], 16, { animate: false }); });
+    const box = await page.locator('#map').boundingBox();
+    const x = box.x + box.width / 2 + 40, y = box.y + 300;
+    // tekan lama (≥ 550 ms tanpa bergerak)
+    await page.mouse.move(x, y); await page.mouse.down(); await page.waitForTimeout(800); await page.mouse.up();
+    await page.waitForSelector('.leaflet-popup [data-lp="home"]');
+    const expected = await page.evaluate(([x, y]) => { const ll = map.containerPointToLatLng(L.point(x - map.getContainer().getBoundingClientRect().left, y - map.getContainer().getBoundingClientRect().top)); return { lat: ll.lat, lng: ll.lng }; }, [x, y]);
+    await page.click('.leaflet-popup [data-lp="home"]');
+    const home = await page.evaluate(() => places().home);
+    assert.ok(home && Math.abs(home.lat - expected.lat) < 1e-5 && Math.abs(home.lng - expected.lng) < 1e-5, JSON.stringify([home, expected]));
+    // tekan sekejap (klik biasa) tidak membuka menu
+    await page.mouse.click(x - 80, y + 40); await page.waitForTimeout(900);
+    assert.strictEqual(await page.locator('.leaflet-popup [data-lp]').count(), 0);
+    assert.strictEqual(await page.locator('.lp-pin').count(), 0);           // pin dibuang bila menu ditutup
+    // tekan lama lagi → Pergi ke sini → laluan dirancang
+    await page.mouse.move(x, y); await page.mouse.down(); await page.waitForTimeout(800); await page.mouse.up();
+    await page.click('.leaflet-popup [data-lp="go"]');
+    await page.waitForFunction(() => state.dest && state.routes.length > 0);
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});

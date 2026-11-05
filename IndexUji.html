@@ -50,7 +50,7 @@
           parts.push(n + '/' + ln);
           pre.textContent += '\nBahagian: ' + parts.join(' ');
           // Baris di sekitar ralat. MAIN_AT = nombor baris <script> utama dalam IndexUji.html (disemak oleh ujian).
-          var MAIN_AT = 732, bl = window.__bootLine;
+          var MAIN_AT = 737, bl = window.__bootLine;
           if (bl) {
             pre.textContent += '\nSkrip sekitar baris ' + bl + ' (dianggap baris fail ' + bl + '):';
             for (var j = Math.max(1, bl - MAIN_AT - 3); j <= Math.min(SL.length - 1, bl - MAIN_AT + 1); j++)
@@ -415,6 +415,11 @@
       padding:18px; margin:0 0 10px; font-size:20px; font-weight:800; color:#fff; background:#d32f2f; }
     .sos-btn.wa { background:#25d366; color:#04260f; }
     .sos-btn.alt { background:var(--sheet); color:var(--fg); font-size:17px; font-weight:700; }
+    #map { -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
+    .lp-pin { font-size:34px; line-height:40px; text-align:center; filter:drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
+    .lp-acts { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+    .lp-acts button { border:0; border-radius:10px; padding:9px 10px; font-weight:700; font-size:14px; text-align:left;
+      background:var(--sheet-2); color:var(--fg); }
     .hs { background:var(--sheet); border-radius:14px; padding:6px 12px; margin:0 0 6px; }
     .hs-step { display:flex; gap:12px; align-items:flex-start; padding:8px 0; font-size:15px; line-height:1.4; }
     .hs-step .n { flex:none; width:26px; height:26px; border-radius:50%; background:var(--accent); color:#000; font-style:normal;
@@ -1043,7 +1048,8 @@ const EN = {
   'Boleh pilih lebih daripada satu (maks 5)': 'You can pick more than one (max 5)',
   'Atau pilih jenis & butiran (boleh lebih daripada satu, maks 5)': 'Or choose type & details (more than one allowed, max 5)',
   'Versi baharu tersedia': 'New version available', 'Muat semula untuk kemas kini JalanKita': 'Reload to update JalanKita',
-  'Nanti': 'Later', 'Buka versi uji': 'Open test version', 'Kembali ke versi biasa': 'Back to normal version',
+  'Nanti': 'Later', 'Lokasi dipilih': 'Selected location', '🚗 Pergi ke sini': '🚗 Go here',
+  '🏠 Simpan sebagai Rumah': '🏠 Save as Home', '💼 Simpan sebagai Kerja': '💼 Save as Work', '⭐ Kegemaran': '⭐ Favourite', 'Buka versi uji': 'Open test version', 'Kembali ke versi biasa': 'Back to normal version',
   'Pemilik sahaja · ciri baharu sebelum dilancar': 'Owner only · new features before release', 'Anggaran kos minyak': 'Fuel cost estimate', 'Penggunaan minyak': 'Fuel consumption',
   'Harga minyak': 'Fuel price', 'Kongsi JalanKita': 'Share JalanKita', 'Kod QR & WhatsApp untuk rakan': 'QR code & WhatsApp for friends',
   '💬 Hantar ke WhatsApp': '💬 Send to WhatsApp', '📋 Salin pautan': '📋 Copy link',
@@ -1680,6 +1686,60 @@ document.addEventListener('click', e => {
 });
 
 function goTo(pl) { addRecent(pl); planRoute(pl); }
+
+// ---- Tekan lama pada peta (seperti Waze / Google Maps): pilih tempat tepat bila carian alamat hanya "Anggaran".
+// Safari iPhone tidak menghantar 'contextmenu' bila ditekan lama, jadi dikesan sendiri: jari kekal ≥ 550 ms tanpa bergerak.
+const LP_MS = 550, LP_MOVE = 10;
+let lpTimer = null, lpStart = null, lpMarker = null;
+function lpCancel() { clearTimeout(lpTimer); lpTimer = null; lpStart = null; }
+map.getContainer().addEventListener('pointerdown', e => {
+  if (!e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0)) return lpCancel();
+  lpCancel();
+  lpStart = { x: e.clientX, y: e.clientY, ev: e };
+  lpTimer = setTimeout(() => { const ev = lpStart && lpStart.ev; lpCancel(); if (ev) onLongPress(map.mouseEventToLatLng(ev)); }, LP_MS);
+});
+map.getContainer().addEventListener('pointermove', e => {
+  if (lpStart && Math.hypot(e.clientX - lpStart.x, e.clientY - lpStart.y) > LP_MOVE) lpCancel();
+});
+['pointerup', 'pointercancel', 'pointerleave'].forEach(t => map.getContainer().addEventListener(t, lpCancel));
+map.on('zoomstart', lpCancel);   // cubit untuk zum bukan tekan lama
+map.getContainer().addEventListener('contextmenu', e => e.preventDefault());   // menu "Simpan imej" pelayar
+
+function onLongPress(ll) {
+  state.lpAt = Date.now();
+  if (navigator.vibrate) try { navigator.vibrate(15); } catch (e) {}
+  const pl = { title: 'Lokasi dipilih', sub: Number(ll.lat).toFixed(5) + ', ' + Number(ll.lng).toFixed(5), lat: ll.lat, lng: ll.lng };
+  if (lpMarker) lpMarker.remove();
+  // Pin tidak boleh ditekan (interactive: false) & popup tidak tertutup oleh klik peta: bila jari diangkat selepas
+  // tekan lama, pelayar menghantar "klik" pada tempat yang sama — tanpa ini popup terus tertutup semula.
+  lpMarker = L.marker(ll, { interactive: false, icon: L.divIcon({ className: '', iconSize: [30, 40], iconAnchor: [15, 38],
+    html: '<div class="lp-pin">📍</div>' }) }).addTo(map);
+  state.lpPlace = pl;
+  const popup = L.popup({ closeButton: true, autoPan: true, closeOnClick: false, offset: [0, -30] })
+    .setLatLng(ll).setContent(lpPopup(pl)).openOn(map);
+  state.lpPopupObj = popup;
+  popup.on('remove', () => { if (state.lpPopupObj === popup && lpMarker) { lpMarker.remove(); lpMarker = null; } });
+  // Nama jalan (jika ada) — hanya untuk paparan; koordinat tepat yang dipilih pengguna dikekalkan
+  if (token && !offline) call('whereAmI', token, ll.lat, ll.lng).then(r => {
+    if (state.lpPlace !== pl || !r || !r.road) return;
+    pl.title = String(r.road).slice(0, 80);
+    if (state.lpPopupObj && state.lpPopupObj.isOpen()) state.lpPopupObj.setContent(lpPopup(pl));
+  }).catch(() => {});
+}
+function lpPopup(pl) {
+  return `<b>${esc(pl.title)}</b><br><span class="pop-muted">${esc(pl.sub)}</span><div class="lp-acts">
+    <button data-lp="go">🚗 Pergi ke sini</button><button data-lp="home">🏠 Simpan sebagai Rumah</button>
+    <button data-lp="work">💼 Simpan sebagai Kerja</button><button data-lp="fav">⭐ Kegemaran</button></div>`;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-lp]'); const pl = state.lpPlace;
+  if (!b || !pl) return;
+  const a = b.dataset.lp, place = { title: pl.title, sub: pl.sub, lat: pl.lat, lng: pl.lng };
+  map.closePopup();
+  if (a === 'go') goTo(place);
+  else if (a === 'fav') { toggleFav(place); }
+  else { const p = places(); p[a] = place; savePlaces(p); toast(a === 'home' ? '🏠 Rumah disimpan.' : '💼 Kerja disimpan.'); }
+});
 
 // ------------------------------------------------------------ Carian skrin penuh
 function openSearch(mode) {
@@ -2453,6 +2513,7 @@ function geoFallback() {
 }
 
 map.on('click', e => {
+  if (Date.now() - (state.lpAt || 0) < 800) return;   // klik selepas tekan lama — abaikan
   if (state.manualLoc || !state.me) {
     state.manualLoc = true;
     setMe({ lat: e.latlng.lat, lng: e.latlng.lng, heading: null, speed: 0 });
