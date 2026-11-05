@@ -238,3 +238,13 @@ test('saluran uji: kawalan peta (tulisan OpenStreetMap) ada lapisan GPU sendiri 
   const html = fs.readFileSync(path.join(ROOT, 'IndexUji.html'), 'utf8');
   assert.match(html, /\.leaflet-top, \.leaflet-bottom \{[^}]*transform:translateZ\(0\)/);
 });
+
+test('Index.html: ciri yang disahkan pemilik (tukar laluan bila kemalangan, rehat, hujan, solat, kecemasan, saiz tulisan, kos minyak, QR, tekan lama, kawalan peta)', () => {
+  const s = clientScript();
+  const html = fs.readFileSync(path.join(ROOT, 'Index.html'), 'utf8');
+  ['function jamPenalty(', 'function checkRest(', 'function checkRain(', 'function prayerTimes(', 'function sosShare(',
+    "textSize: [['normal', 'Biasa']", 'function fuelCost(', 'create-qr-code', 'function onLongPress('].forEach(k =>
+    assert.ok(s.includes(k), 'tiada: ' + k));
+  assert.match(html, /\.leaflet-top, \.leaflet-bottom \{[^}]*transform:translateZ\(0\)/);
+  assert.match(html, /\.qr-box \{[^}]*box-sizing:content-box/);
+});

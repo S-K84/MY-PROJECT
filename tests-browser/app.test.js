@@ -137,8 +137,8 @@ for (const file of FILES) {
   });
 }
 
-test('IndexUji.html: anggaran kos minyak pada pilihan laluan & halaman Kongsi JalanKita', async () => {
-  const { page, errors, close } = await open('IndexUji.html');
+for (const file of FILES) test(`${file}: anggaran kos minyak pada pilihan laluan & halaman Kongsi JalanKita`, async () => {
+  const { page, errors, close } = await open(file);
   try {
     const r = await page.evaluate(async () => {
       state.manualLoc = false;
@@ -179,8 +179,8 @@ for (const [file, row, url] of [['Index.html', 'ujiOn', /\?uji=1$/], ['IndexUji.
   });
 }
 
-test('IndexUji.html: tekan lama pada peta → Pergi ke sini / Simpan sebagai Rumah (lokasi tepat)', async () => {
-  const { page, errors, close } = await open('IndexUji.html', { hasTouch: true });
+for (const file of FILES) test(`${file}: tekan lama pada peta → Pergi ke sini / Simpan sebagai Rumah (lokasi tepat)`, async () => {
+  const { page, errors, close } = await open(file, { hasTouch: true });
   try {
     await page.evaluate(() => { setMe({ lat: 3.1, lng: 101.7, heading: 0, speed: 0, t: Date.now() }); map.setView([3.1, 101.7], 16, { animate: false }); });
     const box = await page.locator('#map').boundingBox();
