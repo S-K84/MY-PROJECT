@@ -7,7 +7,7 @@
 
 // Versi aplikasi — SATU-SATUNYA tempat versi ditulis. Ia disuntik ke Index.html oleh doGet() (menu ☰ & skrin ralat).
 // Naikkan setiap kali kod berubah supaya mudah semak telefon sudah guna kod terkini.
-const APP_VERSION = '2026.11.05-y';
+const APP_VERSION = '2026.11.05-z';
 
 const CONFIG = {
   // ttlMin = berapa minit laporan kekal aktif sebelum luput
@@ -1627,7 +1627,8 @@ const ALONG_CATS_ = {
 // Pelayan Overpass awam (percuma). Pelayan utama kadang-kadang tidak dapat dihubungi dari server Google
 // ("Address unavailable"), jadi cuba pelayan sandaran mengikut giliran. Senarai TETAP — bukan dari pengguna (tiada SSRF).
 const OVERPASS_URLS_ = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter',
-  'https://overpass.private.coffee/api/interpreter'];
+  'https://overpass.private.coffee/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+  'https://overpass.osm.jp/api/interpreter'];
 
 /** Hantar pertanyaan ke pelayan Overpass yang berfungsi. Pelayan yang berjaya diingat 1 jam. Ralat dalaman tidak didedahkan. */
 function overpass_(q) {
