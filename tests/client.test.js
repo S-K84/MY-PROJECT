@@ -272,6 +272,7 @@ test('saluran uji: identiti papan tanda jalan raya — banner hijau dengan bingk
   assert.match(s, /--nav-bg:var\(--sign-green\)/);
   assert.match(s, /inset 0 0 0 8\.5px var\(--sign-white\)/);
   assert.match(s, /fonts\.googleapis\.com\/css2\?family=Overpass/);
-  assert.match(s, /font-family:"Overpass", system-ui/);                  // fon sistem sebagai sandaran
+  assert.match(s, /font-family:"JKDot", "Overpass", system-ui/);        // fon sistem sebagai sandaran
+  assert.match(s, /font-family:"JKDot"; src:local\("Helvetica Neue"\)[^}]*unicode-range:U\+00B7;/);  // "·" dari fon sistem
   assert.doesNotMatch(s, /\.sec-title \{[^}]*text-transform:uppercase/);
 });
