@@ -400,6 +400,7 @@
     .lp-acts { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
     .lp-acts button { border:0; border-radius:10px; padding:9px 10px; font-weight:700; font-size:14px; text-align:left;
       background:var(--sheet-2); color:var(--fg); }
+    .route-card .jam-warn { color:var(--t-red); font-weight:700; }
     .hs { background:var(--sheet); border-radius:14px; padding:6px 12px; margin:0 0 6px; }
     .hs-step { display:flex; gap:12px; align-items:flex-start; padding:8px 0; font-size:15px; line-height:1.4; }
     .hs-step .n { flex:none; width:26px; height:26px; border-radius:50%; background:var(--accent); color:#000; font-style:normal;
@@ -1030,7 +1031,8 @@ const EN = {
   'Boleh pilih lebih daripada satu (maks 5)': 'You can pick more than one (max 5)',
   'Atau pilih jenis & butiran (boleh lebih daripada satu, maks 5)': 'Or choose type & details (more than one allowed, max 5)',
   'Versi baharu tersedia': 'New version available', 'Muat semula untuk kemas kini Jalan Malaysia': 'Reload to update Jalan Malaysia',
-  'Nanti': 'Later', 'Lokasi dipilih': 'Selected location', '🚗 Pergi ke sini': '🚗 Go here',
+  'Nanti': 'Later', 'Elak sesak': 'Avoids traffic', 'Beritahu keluarga?': 'Tell your family?',
+  'Hantar anggaran tiba melalui WhatsApp': 'Send your arrival time via WhatsApp', 'Lokasi dipilih': 'Selected location', '🚗 Pergi ke sini': '🚗 Go here',
   '🏠 Simpan sebagai Rumah': '🏠 Save as Home', '💼 Simpan sebagai Kerja': '💼 Save as Work', '⭐ Kegemaran': '⭐ Favourite', 'Buka versi uji': 'Open test version', 'Kembali ke versi biasa': 'Back to normal version',
   'Pemilik sahaja · ciri baharu sebelum dilancar': 'Owner only · new features before release', 'Anggaran kos minyak': 'Fuel cost estimate', 'Penggunaan minyak': 'Fuel consumption',
   'Harga minyak': 'Fuel price', 'Kongsi Jalan Malaysia': 'Share Jalan Malaysia', 'Kod QR & WhatsApp untuk rakan': 'QR code & WhatsApp for friends',
@@ -1289,6 +1291,10 @@ const EN = {
 };
 // Corak untuk teks bernombor / berstruktur. Fungsi menerima padanan; tr() menterjemah bahagian dalam.
 const EN_RULES = [
+  [/^🙏 (\d+) pemandu berterima kasih atas laporan anda \(\+(\d+) mata\)$/,
+    m => '🙏 ' + m[1] + ' drivers thanked you for your reports (+' + m[2] + ' points)'],
+  [/^⚠️ (\d+) kemalangan(?: · (.+))?$/, m => '⚠️ ' + m[1] + ' accident' + (m[1] === '1' ? '' : 's') + (m[2] ? ' · ' + tr(m[2]) : '')],
+  [/^🔴 sesak (.+)$/, m => '🔴 jam ' + m[1]], [/^🟠 perlahan (.+)$/, m => '🟠 slow ' + m[1]],
   [/^🌧️ Hujan lebat dijangka · (.+) di hadapan$/, m => '🌧️ Heavy rain expected · ' + m[1] + ' ahead'],
   [/^⛈️ Ribut petir dijangka · (.+) di hadapan$/, m => '⛈️ Thunderstorm expected · ' + m[1] + ' ahead'],
   [/^☕ Anda sudah memandu (\d+) jam\. Berehatlah sebentar\.$/, m => '☕ You have been driving for ' + m[1] + ' hours. Take a break.'],
@@ -1846,9 +1852,18 @@ async function loadProfile() {
   if (!token || offline) return;
   try {
     state.profile = await call('getProfile', token);
+    thankReporter(state.profile);
     if ($('drawer').classList.contains('open')) renderDrawer();
     if (setStack[setStack.length - 1] === 'achievements') renderSet();
   } catch (e) { /* profil tidak kritikal */ }
+}
+/** Laporan anda dapat 👍 baharu sejak kali terakhir dibuka → ucapan terima kasih (sekali; kiraan disimpan di telefon). */
+function thankReporter(p) {
+  const n = Number(p && p.upReceived) || 0, seen = store.get('jk_upseen');
+  store.set('jk_upseen', String(n));
+  if (seen == null || n <= Number(seen)) return;
+  const k = n - Number(seen);
+  toast(`🙏 ${k} pemandu berterima kasih atas laporan anda (+${k * 5} mata)`, true);
 }
 function agoLong(ms) {
   const d = Math.floor((Date.now() - ms) / 86400000);
@@ -2704,7 +2719,8 @@ async function planRoute(dest, silent) {
     if (req !== state.routeReq || (silent && !state.navigating)) return;
     if (!routes || !routes.length) throw new Error('Laluan tidak dijumpai.');
     state.routes = routes.map(r => prepRoute(Object.assign(r, { pts: decodePolyline(r.polyline) })));
-    state.selRoute = 0;
+    // Laluan disyorkan = masa Google + anggaran lewat akibat kesesakan / kemalangan yang DILAPORKAN (Google tidak tahu)
+    state.selRoute = navigating() ? 0 : bestRouteIdx();
     drawRoutes();
     if (state.navigating) {
       resetNavRoute();
@@ -2886,19 +2902,41 @@ function navTrafficInfo(r, frac) {
   return delay == null ? null : delayInfo(delay * (r.fresh ? freshRatio(r) : frac));
 }
 
+const navigating = () => state.navigating;
+/** Indeks laluan dengan (masa + lewat kesesakan dilaporkan) terendah. */
+function bestRouteIdx() {
+  let best = 0, bestCost = Infinity;
+  state.routes.forEach((r, i) => { const c = r.durationSec + jamPenalty(r, 0); if (c < bestCost) { best = i; bestCost = c; } });
+  return best;
+}
+/** Ringkasan kesesakan dilaporkan pada laluan: '⚠️ 1 kemalangan · 🔴 sesak 1.2 km' atau ''. */
+function jamSummary(r) {
+  const segs = trafficSegs(r), acc = hazardsOnRoute(r).filter(h => h.type === 'KEMALANGAN').length;
+  const red = segs.filter(t => t.lvl > 1).reduce((a, t) => a + (t.e - t.s), 0);
+  const orange = segs.filter(t => t.lvl === 1).reduce((a, t) => a + (t.e - t.s), 0);
+  const parts = [];
+  if (acc) parts.push(`⚠️ ${acc} kemalangan`);
+  if (red) parts.push(`🔴 sesak ${fmtDist(red)}`);
+  else if (orange) parts.push(`🟠 perlahan ${fmtDist(orange)}`);
+  return parts.join(' · ');
+}
+
 function renderRouteChoices() {
   const fastest = Math.min.apply(null, state.routes.map(r => r.durationSec));
+  const best = state.routes.length > 1 ? bestRouteIdx() : -1;
   const isFav = (places().favs || []).some(x => samePlace(x, state.dest));
   const cards = state.routes.map((r, i) => {
     const hz = hazardsOnRoute(r);
     const icons = hz.slice(0, 6).map(h => (TYPES[h.type] || {}).icon || '').join(' ');
     return `<button class="route-card ${i === state.selRoute ? 'sel' : ''}" onclick="pickRoute(${i})">
       <div class="top"><span class="dur">${esc(fmtMin(r.durationSec))}${
-        r.durationSec === fastest && state.routes.length > 1 ? '<span class="tag">Terpantas</span>' : ''}</span>
+        i === best && r.durationSec !== fastest ? '<span class="tag">Elak sesak</span>'
+          : r.durationSec === fastest && state.routes.length > 1 ? '<span class="tag">Terpantas</span>' : ''}</span>
         <span class="meta">${esc(r.distanceText)}</span></div>
       <div class="meta">Tiba ${clock(Date.now() + r.durationSec * 1000)} · melalui ${esc(r.summary || '—')}</div>
       ${fuelCost(r.distanceM) ? `<div class="meta">⛽ ~RM ${fuelCost(r.distanceM)}</div>` : ''}
       ${r.delaySec != null ? `<div class="meta">${delayHtml(r.delaySec)}</div>` : ''}
+      ${jamSummary(r) ? `<div class="meta jam-warn">${esc(jamSummary(r))}</div>` : ''}
       <div class="meta">${hz.length ? hz.length + ' laporan: ' + icons : 'Tiada laporan di laluan ini'}</div>
     </button>`;
   }).join('');
@@ -3042,12 +3080,31 @@ function startNav() {
   followMe(true);
   requestWakeLock();
   const s = state.routes[state.selRoute].steps[0];
+  offerTellFamily();                 // dahulu: jika tidak, kad lain (cth. waktu solat dari onNavTick) mendahuluinya
   onNavTick();                       // boleh terus "sampai" jika sudah di destinasi
   if (state.navigating && s) speak(s.text, 'info');
 }
 
+/** Pulang ke 🏠 Rumah → tawar mesej WhatsApp "dalam perjalanan pulang, tiba …" (satu tekan; pengguna pilih kenalan). */
+function offerTellFamily() {
+  const home = places().home, r = state.routes[state.selRoute];
+  if (!home || !r || !samePlace(home, state.dest) || !state.navigating) return;
+  if (state.me && dist(state.me, state.dest) < 300) return;                     // sudah di rumah
+  // Kad lain sedang dipaparkan → tunggu giliran (dicuba semula dalam onNavTick), jangan terus dilupakan.
+  if (askBusy()) { state.familyWait = state.navId; return; }
+  state.familyWait = null;
+  const navId = state.navId;
+  showAsk({ icon: '🏠', text: 'Beritahu keluarga?', sub: 'Hantar anggaran tiba melalui WhatsApp', yes: 'WhatsApp', no: 'Tidak',
+    ms: 12000, onYes: () => {
+      if (navId !== state.navId) return;
+      const cur = state.routes[state.selRoute] || r;
+      openWhatsApp(`🏠 Saya dalam perjalanan pulang, anggaran tiba ${clock(Date.now() + remainingSec(cur) * 1000)}.`);
+    } });
+}
+
 function onNavTick() {
   const r = state.routes[state.selRoute]; if (!r || !state.me) return;
+  if (state.familyWait === state.navId && !askBusy()) offerTellFamily();
   const me = state.me;
   // Cari kedudukan hanya di sekitar kedudukan terakhir (maks ~400 m ke hadapan, atau lebih jika laju).
   // Tanpa had ini, laluan yang berpusing melalui lorong & kembali dekat kenderaan boleh disangka "hujung laluan".
