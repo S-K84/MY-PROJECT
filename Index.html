@@ -105,7 +105,9 @@
     }
     /* iPhone: elak jubin peta berkelip semasa peta digerakkan/diputar dengan transform */
     .leaflet-tile { -webkit-backface-visibility:hidden; backface-visibility:hidden; }
-    body.dark-map .leaflet-tile-pane { filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9); }
+    /* Peta malam: DIMALAPKAN, bukan diterbalikkan. invert() menjadikan jalan putih hitam di atas latar yang juga gelap —
+       pemilik hanya nampak tulisan pada waktu malam. Malap: jalan kekal lebih cerah daripada latar, warna lebuh raya kekal. */
+    body.dark-map .leaflet-tile-pane { filter:brightness(.48) contrast(1.5) saturate(.7); }
     body.dark-map #map { background:#1c2028; }
     * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
     html,body { margin:0; height:100%; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -873,6 +875,10 @@ const tileCache = (() => {
   try { return window.caches && window.isSecureContext ? caches.open(TILE_CACHE).catch(() => null) : Promise.resolve(null); }
   catch (e) { return Promise.resolve(null); }
 })();
+// CARTO kini memerlukan kunci API: jubinnya memaparkan "API KEY REQUIRED" (Nov 2026). Buang jubin CARTO
+// yang sudah tersimpan dalam telefon.
+tileCache.then(c => c && c.keys().then(ks => Promise.all(ks.filter(k => /cartocdn\.com/.test(k.url)).map(k => c.delete(k)))))
+  .catch(() => {});
 async function tilePrune(c) {
   const keys = await c.keys(); tileStat.count = keys.length;
   if (keys.length <= TILE_MAX) return;

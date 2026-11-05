@@ -249,8 +249,8 @@ test('Index.html: ciri yang disahkan pemilik (tukar laluan bila kemalangan, reha
   assert.match(html, /\.qr-box \{[^}]*box-sizing:content-box/);
 });
 
-test('saluran uji: peta malam dimalapkan, bukan diterbalikkan (invert menjadikan jalan hitam atas latar gelap)', () => {
-  const s = fs.readFileSync(path.join(ROOT, 'IndexUji.html'), 'utf8');
+for (const file of ['Index.html', 'IndexUji.html']) test(`${file}: peta malam dimalapkan, bukan diterbalikkan (invert menjadikan jalan hitam atas latar gelap)`, () => {
+  const s = fs.readFileSync(path.join(ROOT, file), 'utf8');
   const rule = s.match(/body\.dark-map(?::not\(\.dark-tiles\))? \.leaflet-tile-pane \{ filter:([^;]+);/);
   assert.ok(rule, 'peraturan penapis peta malam tiada');
   assert.doesNotMatch(rule[1], /invert/);
