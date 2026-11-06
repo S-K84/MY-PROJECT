@@ -460,70 +460,78 @@ for (const file of FILES) test(`${file}: setiap destinasi yang dinavigasi masuk 
   } finally { await close(); }
 });
 
-test('IndexUji.html: kamera AES diberi amaran walaupun dilapor dari arah bertentangan; laporan lain arah bertentangan senyap', async () => {
-  const { page, errors, close } = await open('IndexUji.html');
-  try {
-    const r = await page.evaluate(async () => {
-      const w = ms => new Promise(r => setTimeout(r, ms));
-      const said = []; window.speechSynthesis && (window.speechSynthesis.speak = u => said.push(u.text));
-      S.alertTypes = Object.keys(TYPES); state.manualLoc = false; state.alerted = new Set();
-      // Memandu ke utara (heading 0); laporan 300 m di hadapan, dilapor oleh pemandu arah selatan (heading 180)
-      state.reports = [
-        { id: 'cam-x', type: 'KAMERA', lat: 3.1027, lng: 101.7, heading: 180, name: 'A', up: 1, down: 0, time: Date.now() },
-        { id: 'pol-x', type: 'POLIS', lat: 3.1027, lng: 101.7001, heading: 180, name: 'B', up: 1, down: 0, time: Date.now() }];
-      setMe({ lat: 3.1, lng: 101.7, heading: 0, speed: 25, t: Date.now() }); await w(50);
-      checkHazards(); await w(50);
-      return { alerted: [...state.alerted] };
-    });
-    assert.ok(r.alerted.includes('cam-x'), 'kamera AES arah bertentangan tidak diberi amaran');
-    assert.ok(!r.alerted.includes('pol-x'), 'laporan polis arah bertentangan diberi amaran');
-    assert.deepStrictEqual(errors, []);
-  } finally { await close(); }
-});
+for (const file of ['Index.html', 'IndexUji.html']) {
+  test(`${file}: kamera AES diberi amaran walaupun dilapor dari arah bertentangan; laporan lain arah bertentangan senyap`, async () => {
+    const { page, errors, close } = await open(file);
+    try {
+      const r = await page.evaluate(async () => {
+        const w = ms => new Promise(r => setTimeout(r, ms));
+        const said = []; window.speechSynthesis && (window.speechSynthesis.speak = u => said.push(u.text));
+        S.alertTypes = Object.keys(TYPES); state.manualLoc = false; state.alerted = new Set();
+        // Memandu ke utara (heading 0); laporan 300 m di hadapan, dilapor oleh pemandu arah selatan (heading 180)
+        state.reports = [
+          { id: 'cam-x', type: 'KAMERA', lat: 3.1027, lng: 101.7, heading: 180, name: 'A', up: 1, down: 0, time: Date.now() },
+          { id: 'pol-x', type: 'POLIS', lat: 3.1027, lng: 101.7001, heading: 180, name: 'B', up: 1, down: 0, time: Date.now() }];
+        setMe({ lat: 3.1, lng: 101.7, heading: 0, speed: 25, t: Date.now() }); await w(50);
+        checkHazards(); await w(50);
+        return { alerted: [...state.alerted] };
+      });
+      assert.ok(r.alerted.includes('cam-x'), 'kamera AES arah bertentangan tidak diberi amaran');
+      assert.ok(!r.alerted.includes('pol-x'), 'laporan polis arah bertentangan diberi amaran');
+      assert.deepStrictEqual(errors, []);
+    } finally { await close(); }
+  });
+}
 
-test('IndexUji.html: kad lokasi muncul sebelum pertanyaan lokasi telefon; GPS hanya bermula selepas pengguna tekan Benarkan', async () => {
-  const { page, errors, close } = await open('IndexUji.html', null, { geoPerm: 'prompt' });
-  try {
-    await page.evaluate(() => {
-      window.__geoCalls = 0;
-      const w = navigator.geolocation.watchPosition.bind(navigator.geolocation);
-      navigator.geolocation.watchPosition = (a, b, c) => { window.__geoCalls++; return w(a, b, c); };
-    });
-    await page.waitForSelector('#locModal', { state: 'visible' });
-    assert.strictEqual(await page.textContent('#locTitle'), 'Benarkan lokasi');
-    assert.strictEqual(await page.evaluate(() => window.__geoCalls), 0, 'GPS dimulakan sebelum pengguna setuju');
-    await page.click('#locGo');
-    await page.waitForSelector('#locModal', { state: 'hidden' });
-    assert.ok(await page.evaluate(() => window.__geoCalls) >= 1, 'GPS tidak bermula selepas tekan Benarkan');
-    assert.deepStrictEqual(errors, []);
-  } finally { await close(); }
-});
+for (const file of ['Index.html', 'IndexUji.html']) {
+  test(`${file}: kad lokasi muncul sebelum pertanyaan lokasi telefon; GPS hanya bermula selepas pengguna tekan Benarkan`, async () => {
+    const { page, errors, close } = await open(file, null, { geoPerm: 'prompt' });
+    try {
+      await page.evaluate(() => {
+        window.__geoCalls = 0;
+        const w = navigator.geolocation.watchPosition.bind(navigator.geolocation);
+        navigator.geolocation.watchPosition = (a, b, c) => { window.__geoCalls++; return w(a, b, c); };
+      });
+      await page.waitForSelector('#locModal', { state: 'visible' });
+      assert.strictEqual(await page.textContent('#locTitle'), 'Benarkan lokasi');
+      assert.strictEqual(await page.evaluate(() => window.__geoCalls), 0, 'GPS dimulakan sebelum pengguna setuju');
+      await page.click('#locGo');
+      await page.waitForSelector('#locModal', { state: 'hidden' });
+      assert.ok(await page.evaluate(() => window.__geoCalls) >= 1, 'GPS tidak bermula selepas tekan Benarkan');
+      assert.deepStrictEqual(errors, []);
+    } finally { await close(); }
+  });
+}
 
-test('IndexUji.html: lokasi disekat → kad langkah tetapan; lokasi sudah dibenarkan → tiada kad', async () => {
-  let t = await open('IndexUji.html', null, { geoPerm: 'denied' });
-  try {
-    await t.page.waitForSelector('#locModal', { state: 'visible' });
-    assert.strictEqual(await t.page.textContent('#locTitle'), 'Lokasi disekat');
-    assert.ok(await t.page.isVisible('#locDenied'));
-    await t.page.click('#locManual');
-    await t.page.waitForSelector('#locModal', { state: 'hidden' });
-    assert.ok(await t.page.evaluate(() => state.manualLoc), 'pilihan peta tidak menetapkan lokasi manual');
-    assert.deepStrictEqual(t.errors, []);
-  } finally { await t.close(); }
-  t = await open('IndexUji.html');
-  try {
-    await t.page.waitForTimeout(500);
-    assert.ok(!(await t.page.isVisible('#locModal')), 'kad lokasi muncul walaupun lokasi sudah dibenarkan');
-  } finally { await t.close(); }
-});
+for (const file of ['Index.html', 'IndexUji.html']) {
+  test(`${file}: lokasi disekat → kad langkah tetapan; lokasi sudah dibenarkan → tiada kad`, async () => {
+    let t = await open(file, null, { geoPerm: 'denied' });
+    try {
+      await t.page.waitForSelector('#locModal', { state: 'visible' });
+      assert.strictEqual(await t.page.textContent('#locTitle'), 'Lokasi disekat');
+      assert.ok(await t.page.isVisible('#locDenied'));
+      await t.page.click('#locManual');
+      await t.page.waitForSelector('#locModal', { state: 'hidden' });
+      assert.ok(await t.page.evaluate(() => state.manualLoc), 'pilihan peta tidak menetapkan lokasi manual');
+      assert.deepStrictEqual(t.errors, []);
+    } finally { await t.close(); }
+    t = await open(file);
+    try {
+      await t.page.waitForTimeout(500);
+      assert.ok(!(await t.page.isVisible('#locModal')), 'kad lokasi muncul walaupun lokasi sudah dibenarkan');
+    } finally { await t.close(); }
+  });
+}
 
-test('IndexUji.html: kad lokasi ditutup sendiri bila pengguna membenarkan lokasi dari tempat lain', async () => {
-  const { page, errors, close } = await open('IndexUji.html', null, { geoPerm: 'prompt' });
-  try {
-    await page.waitForSelector('#locModal', { state: 'visible' });
-    await page.evaluate(() => window.__setGeoPerm('granted'));
-    await page.waitForSelector('#locModal', { state: 'hidden' });
-    assert.ok(await page.evaluate(() => geoReady));
-    assert.deepStrictEqual(errors, []);
-  } finally { await close(); }
-});
+for (const file of ['Index.html', 'IndexUji.html']) {
+  test(`${file}: kad lokasi ditutup sendiri bila pengguna membenarkan lokasi dari tempat lain`, async () => {
+    const { page, errors, close } = await open(file, null, { geoPerm: 'prompt' });
+    try {
+      await page.waitForSelector('#locModal', { state: 'visible' });
+      await page.evaluate(() => window.__setGeoPerm('granted'));
+      await page.waitForSelector('#locModal', { state: 'hidden' });
+      assert.ok(await page.evaluate(() => geoReady));
+      assert.deepStrictEqual(errors, []);
+    } finally { await close(); }
+  });
+}
