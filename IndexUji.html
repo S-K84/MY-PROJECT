@@ -630,7 +630,7 @@
       <div><div id="trackTitle">Memuatkan…</div><div id="trackEta"></div><div id="trackSub"></div></div></div>
     <div class="btns">
       <button class="btn btn-soft" id="trackCenter">🎯 Pusat</button>
-      <button class="btn btn-accent" id="trackOpen">Buka Jalan Malaysia</button>
+      <button class="btn btn-accent" id="trackOpen">Buka JomRoute</button>
     </div>
   </div>
 
@@ -733,7 +733,7 @@
       <div class="loc-sign">
         <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 4c-8 0-14 6.1-14 13.8C10 28.4 24 44 24 44s14-15.6 14-26.2C38 10.1 32 4 24 4z"
           fill="#fff"/><circle cx="24" cy="18" r="5.5" fill="var(--sign-green)"/></svg>
-        <div><h3 id="locTitle">Benarkan lokasi</h3><p id="locLead">Jalan Malaysia perlukan lokasi anda untuk navigasi dan amaran di jalan.</p></div>
+        <div><h3 id="locTitle">Benarkan lokasi</h3><p id="locLead">JomRoute perlukan lokasi anda untuk navigasi dan amaran di jalan.</p></div>
       </div>
       <div id="locAsk">
         <ul class="loc-why">
@@ -817,7 +817,7 @@
   <div class="modal" id="nameModal">
     <div class="sheet">
       <span class="handle"></span>
-      <h3>Selamat datang ke Jalan Malaysia 🚘</h3>
+      <h3>Selamat datang ke JomRoute 🚘</h3>
       <p class="pop-muted" style="font-size:14px">Nama samaran ini dipaparkan pada laporan anda.</p>
       <input type="text" class="field" id="nameInput" maxlength="30" placeholder="Nama samaran">
       <button class="btn btn-accent" id="btnName" style="width:100%; margin-top:14px">Mula</button>
@@ -828,7 +828,7 @@
     <div class="sheet">
       <span class="handle"></span>
       <h3>Pulihkan data anda?</h3>
-      <p class="pop-muted" style="font-size:14px">Google menukar ID akaun anda untuk Jalan Malaysia setiap 30 hari. Pelayar ini ada data dari akaun sebelum ini:</p>
+      <p class="pop-muted" style="font-size:14px">Google menukar ID akaun anda untuk JomRoute setiap 30 hari. Pelayar ini ada data dari akaun sebelum ini:</p>
       <div class="linkbox" id="migrateWho"></div>
       <p class="pop-muted" style="font-size:14px">Pulihkan mata, tetapan dan tempat (Rumah, Kerja, kegemaran) ke akaun anda sekarang?</p>
       <p class="pop-muted" style="font-size:14px">Pilih "Bukan saya" jika ia milik orang lain yang pernah guna pelayar ini.</p>
@@ -1173,8 +1173,8 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&am
 // setiap teks yang dipaparkan diterjemah (kamus frasa + corak untuk teks bernombor). Teks pengguna (nama tempat,
 // komen) tidak berada dalam kamus, jadi kekal seperti asal. Terjemahan hanya menukar teks — tiada HTML disuntik.
 const EN = {
-  'Benarkan lokasi': 'Allow location', 'Jalan Malaysia perlukan lokasi anda untuk navigasi dan amaran di jalan.':
-    'Jalan Malaysia needs your location for navigation and road alerts.',
+  'Benarkan lokasi': 'Allow location', 'JomRoute perlukan lokasi anda untuk navigasi dan amaran di jalan.':
+    'JomRoute needs your location for navigation and road alerts.',
   'Tunjuk kedudukan kereta anda di peta': 'Show your car on the map', 'Beri arahan belok semasa navigasi':
     'Give turn-by-turn directions', 'Beri amaran kamera, had laju dan laporan di hadapan':
     'Warn you about cameras, speed limits and reports ahead', 'Tetapkan lokasi di peta': 'Set location on the map',
@@ -1184,13 +1184,13 @@ const EN = {
   'Pilih Chrome, kemudian Location': 'Choose Chrome, then Location',
   'Pilih While Using the App': 'Choose While Using the App',
   'Kembali ke sini dan tekan Cuba lagi': 'Come back here and tap Try again',
-  'Jalan Malaysia tidak dapat melihat lokasi anda. Hidupkan semula dalam tetapan telefon.':
-    'Jalan Malaysia cannot see your location. Turn it back on in your phone settings.',
+  'JomRoute tidak dapat melihat lokasi anda. Hidupkan semula dalam tetapan telefon.':
+    'JomRoute cannot see your location. Turn it back on in your phone settings.',
   'Ke mana?': 'Where to?', 'Menu': 'Menu', 'Lapor': 'Report', 'Laporkan': 'Report', 'Suara': 'Voice', 'Kelajuan': 'Speed',
   'Kompas: pusat ke lokasi / tukar arah peta': 'Compass: recentre / change map direction', 'Kembali': 'Back', 'Tutup': 'Close',
   'Kembangkan / kecilkan': 'Expand / collapse', 'Terkini': 'Recent', 'Rumah': 'Home', 'Kerja': 'Work', 'Kegemaran': 'Favourites',
   'Tetapkan lokasi': 'Set location', 'Tetapkan': 'Set', 'Destinasi': 'Destination', 'Destinasi yang anda tuju akan muncul di sini.':
-    'Destinations you go to will appear here.', 'Mula': 'Go', 'Pulang ke rumah?': 'Heading home?', 'Ke tempat kerja?': 'Going to work?', 'Navigasi terus dengan laluan disyorkan': 'Start navigation on the recommended route', 'Cadangan perjalanan': 'Trip suggestions', 'Pagi: ke tempat kerja': 'Morning: to work', 'petang: pulang ke rumah': 'evening: heading home', 'Isnin–Jumaat. Bila anda buka aplikasi pukul 6–10 pagi atau 4–9 petang, Jalan Malaysia bertanya sekali sehari. Simpan Rumah & Kerja dahulu.': 'Monday–Friday. When you open the app between 6–10 am or 4–9 pm, Jalan Malaysia asks once a day. Save Home & Work first.', 'Kongsi': 'Share', 'Kongsi ke WhatsApp': 'Share to WhatsApp',
+    'Destinations you go to will appear here.', 'Mula': 'Go', 'Pulang ke rumah?': 'Heading home?', 'Ke tempat kerja?': 'Going to work?', 'Navigasi terus dengan laluan disyorkan': 'Start navigation on the recommended route', 'Cadangan perjalanan': 'Trip suggestions', 'Pagi: ke tempat kerja': 'Morning: to work', 'petang: pulang ke rumah': 'evening: heading home', 'Isnin–Jumaat. Bila anda buka aplikasi pukul 6–10 pagi atau 4–9 petang, JomRoute bertanya sekali sehari. Simpan Rumah & Kerja dahulu.': 'Monday–Friday. When you open the app between 6–10 am or 4–9 pm, JomRoute asks once a day. Save Home & Work first.', 'Kongsi': 'Share', 'Kongsi ke WhatsApp': 'Share to WhatsApp',
   'Elak tol': 'Avoid tolls', '✓ Elak tol': '✓ Avoid tolls', 'Terpantas': 'Fastest', 'Tiada laporan di laluan ini': 'No reports on this route',
   'Kemudian': 'Then', 'Tamat navigasi': 'End navigation', 'Senarai belokan': 'Turn list', 'Lihat senarai belokan': 'View turn list',
   'Belokan seterusnya': 'Next turns', 'Laporan di hadapan': 'Reports ahead', 'Destinasi ': 'Destination ',
@@ -1212,7 +1212,7 @@ const EN = {
   'Tekan lama mesej →': 'Long-press the message →', 'Salin': 'Copy', 'Tekan': 'Tap', '📋 Tampal lokasi': '📋 Paste location',
   'atau tampal dalam kotak carian': 'or paste into the search box', 'Pin lokasi (kotak peta kecil)': 'Location pin (small map box)',
   'Tekan pin →': 'Tap the pin →', 'Buka dalam Google Maps': 'Open in Google Maps', 'Salin pautan': 'Copy link',
-  'Kembali ke Jalan Malaysia dan tampal': 'Return to Jalan Malaysia and paste', 'Lokasi langsung (Live Location)': 'Live Location',
+  'Kembali ke JomRoute dan tampal': 'Return to JomRoute and paste', 'Lokasi langsung (Live Location)': 'Live Location',
   'Tidak boleh dibuka di luar WhatsApp. Minta rakan hantar pin lokasi biasa.':
     'Cannot be opened outside WhatsApp. Ask your friend for a normal location pin.',
   'Lokasi daripada pautan': 'Location from link', '📍 Membuka pautan lokasi…': '📍 Opening location link…', 'Lokasi dikongsi':
@@ -1224,12 +1224,12 @@ const EN = {
   // Lapor
   'Boleh pilih lebih daripada satu (maks 5)': 'You can pick more than one (max 5)',
   'Atau pilih jenis & butiran (boleh lebih daripada satu, maks 5)': 'Or choose type & details (more than one allowed, max 5)',
-  'Versi baharu tersedia': 'New version available', 'Muat semula untuk kemas kini Jalan Malaysia': 'Reload to update Jalan Malaysia',
+  'Versi baharu tersedia': 'New version available', 'Muat semula untuk kemas kini JomRoute': 'Reload to update JomRoute',
   'Nanti': 'Later', 'Elak sesak': 'Avoids traffic', 'Beritahu keluarga?': 'Tell your family?',
   'Hantar anggaran tiba melalui WhatsApp': 'Send your arrival time via WhatsApp', 'Lokasi dipilih': 'Selected location', '🚗 Pergi ke sini': '🚗 Go here',
   '🏠 Simpan sebagai Rumah': '🏠 Save as Home', '💼 Simpan sebagai Kerja': '💼 Save as Work', '⭐ Kegemaran': '⭐ Favourite', 'Buka versi uji': 'Open test version', 'Kembali ke versi biasa': 'Back to normal version',
   'Pemilik sahaja · ciri baharu sebelum dilancar': 'Owner only · new features before release', 'Anggaran kos minyak': 'Fuel cost estimate', 'Penggunaan minyak': 'Fuel consumption',
-  'Harga minyak': 'Fuel price', 'Kongsi Jalan Malaysia': 'Share Jalan Malaysia', 'Kod QR & WhatsApp untuk rakan': 'QR code & WhatsApp for friends',
+  'Harga minyak': 'Fuel price', 'Kongsi JomRoute': 'Share JomRoute', 'Kod QR & WhatsApp untuk rakan': 'QR code & WhatsApp for friends',
   '💬 Hantar ke WhatsApp': '💬 Send to WhatsApp', '📋 Salin pautan': '📋 Copy link',
   'Minta rakan imbas kod QR ini dengan kamera telefon, atau hantar pautan melalui WhatsApp.':
     'Ask friends to scan this QR code with their phone camera, or send the link via WhatsApp.',
@@ -1251,11 +1251,11 @@ const EN = {
   '📞 112 (dari telefon bimbit)': '📞 112 (from a mobile phone)',
   '999: polis, ambulans & bomba. 112 boleh didail dari telefon bimbit walaupun tiada kredit. PLUSLine untuk kerosakan / kemalangan di lebuh raya PLUS.':
     '999: police, ambulance & fire. 112 can be dialled from a mobile phone even without credit. PLUSLine for breakdowns / accidents on PLUS highways.', 'Laporan dihantar': 'Report sent', 'Laporan dibatalkan.': 'Report cancelled.', 'OK': 'OK',
-  'Tambah ke skrin utama': 'Add to home screen', 'Buka Jalan Malaysia seperti app': 'Open Jalan Malaysia like an app',
-  'Selepas ini Jalan Malaysia boleh dibuka terus dari ikon di skrin utama, seperti app — tidak perlu cari pautan dalam WhatsApp.':
-    'After this, Jalan Malaysia opens straight from an icon on your home screen, like an app — no need to find the link in WhatsApp.',
-  'Kongsi pautan Jalan Malaysia kepada rakan, kemudian ajar mereka langkah yang sama.':
-    'Share the Jalan Malaysia link with friends, then show them the same steps.', '🗑️ Padam laporan saya': '🗑️ Delete my report',
+  'Tambah ke skrin utama': 'Add to home screen', 'Buka JomRoute seperti app': 'Open JomRoute like an app',
+  'Selepas ini JomRoute boleh dibuka terus dari ikon di skrin utama, seperti app — tidak perlu cari pautan dalam WhatsApp.':
+    'After this, JomRoute opens straight from an icon on your home screen, like an app — no need to find the link in WhatsApp.',
+  'Kongsi pautan JomRoute kepada rakan, kemudian ajar mereka langkah yang sama.':
+    'Share the JomRoute link with friends, then show them the same steps.', '🗑️ Padam laporan saya': '🗑️ Delete my report',
   'Hanya pelapor boleh memadam laporan ini.': 'Only the person who reported this can delete it.', 'Seterusnya': 'Next', 'Hantar': 'Send', 'Batal': 'Cancel',
   'Tambah komen (pilihan)': 'Add a comment (optional)', 'Maksimum 5 jenis dalam satu laporan.': 'Maximum 5 types in one report.',
   'Pilih jenis laporan.': 'Choose a report type.', 'Laporan dihantar. Terima kasih! 🙏': 'Report sent. Thank you! 🙏',
@@ -1269,7 +1269,7 @@ const EN = {
   '👍 Terima kasih! Laporan dikekalkan.': '👍 Thanks! Report kept.',
   '👎 Terima kasih! Laporan akan dibuang jika orang lain setuju.': '👎 Thanks! The report is removed if others agree.',
   'Laluan lebih pantas': 'Faster route', 'Tukar laluan': 'Switch route', 'Kekal': 'Keep',
-  'Selamat datang ke Jalan Malaysia 🚘': 'Welcome to Jalan Malaysia 🚘', 'Nama samaran': 'Nickname',
+  'Selamat datang ke JomRoute 🚘': 'Welcome to JomRoute 🚘', 'Nama samaran': 'Nickname',
   'Nama samaran ini dipaparkan pada laporan anda.': 'This nickname is shown on your reports.',
   // Menu & tetapan
   'Mata': 'Points', 'Tukar nama': 'Change name',
@@ -1314,8 +1314,8 @@ const EN = {
     'Automatic: while navigating, the speed limit comes from the OpenStreetMap map (not every road has data). ' +
     'The speedometer turns red and the voice warns you when you exceed it.', 'Automatik (ikut jalan)': 'Automatic (follow road)',
   'Notifikasi dalam aplikasi': 'In-app notifications', 'Amaran laporan di hadapan': 'Alerts for reports ahead', 'Peringatan anak': 'Child reminder',
-  'Bila tiba di destinasi, Jalan Malaysia mengingatkan anda (paparan & suara) supaya memeriksa tempat duduk belakang.':
-    'When you arrive, Jalan Malaysia reminds you (screen & voice) to check the back seat.',
+  'Bila tiba di destinasi, JomRoute mengingatkan anda (paparan & suara) supaya memeriksa tempat duduk belakang.':
+    'When you arrive, JomRoute reminds you (screen & voice) to check the back seat.',
   'Rumah, kerja & kegemaran': 'Home, work & favourites', 'Pintasan pantas untuk perjalanan biasa': 'Quick shortcuts for usual trips',
   'Tekan ⭐ pada skrin laluan untuk simpan kegemaran.': 'Tap ⭐ on the route screen to save a favourite.', 'Tekan untuk buang': 'Tap to remove',
   'Data anda': 'Your data', 'Tukar nama samaran': 'Change nickname',
@@ -1329,25 +1329,25 @@ const EN = {
   'Buat 1 laporan': 'Make 1 report', '10 laporan': '10 reports', '50 laporan': '50 reports', 'Terima 10 undi 👍': 'Receive 10 👍 votes',
   'Undi 20 laporan': 'Vote on 20 reports', 'Tiba di destinasi 10 kali': 'Arrive 10 times', 'Guna selama 1 tahun': 'Use for 1 year',
   'Mata: laporan +10, setiap 👍 diterima +5, setiap undi anda +1.': 'Points: report +10, each 👍 received +5, each of your votes +1.',
-  'Mulakan muzik sebelum memandu.': 'Start your music before driving.', '⚠️ GPS pelayar mungkin berhenti bila anda keluar dari Jalan Malaysia.':
-    '⚠️ Browser GPS may stop when you leave Jalan Malaysia.', 'Notifikasi push dan e-mel seperti Waze': 'Push and e-mail notifications like Waze',
+  'Mulakan muzik sebelum memandu.': 'Start your music before driving.', '⚠️ GPS pelayar mungkin berhenti bila anda keluar dari JomRoute.':
+    '⚠️ Browser GPS may stop when you leave JomRoute.', 'Notifikasi push dan e-mel seperti Waze': 'Push and e-mail notifications like Waze',
   'tidak boleh': 'cannot', 'bukan': 'not', 'alamat e-mel anda.': 'your e-mail address.',
-  'dihantar oleh aplikasi web Apps Script: ia tidak boleh berjalan bila ditutup, dan Jalan Malaysia tidak menyimpan e-mel anda.':
-    'be sent by an Apps Script web app: it cannot run when closed, and Jalan Malaysia does not store your e-mail.',
-  '✅ Anda log masuk dengan akaun Google. Jalan Malaysia hanya menerima kunci rawak,':
-    '✅ You are signed in with Google. Jalan Malaysia only receives a random key,',
+  'dihantar oleh aplikasi web Apps Script: ia tidak boleh berjalan bila ditutup, dan JomRoute tidak menyimpan e-mel anda.':
+    'be sent by an Apps Script web app: it cannot run when closed, and JomRoute does not store your e-mail.',
+  '✅ Anda log masuk dengan akaun Google. JomRoute hanya menerima kunci rawak,':
+    '✅ You are signed in with Google. JomRoute only receives a random key,',
   // Kongsi perjalanan
   '📡 Kongsi perjalanan langsung': '📡 Share live drive', 'Sehingga sampai': 'Until I arrive', '15 minit': '15 minutes', '1 jam': '1 hour',
   '4 jam': '4 hours', '📡 Perjalanan anda dikongsi': '📡 Your drive is being shared', 'Tamat bila anda sampai di destinasi':
     'Ends when you arrive',
   'Hantar ke WhatsApp': 'Send to WhatsApp', 'Henti kongsi': 'Stop sharing', '📡 Berkongsi langsung': '📡 Sharing live',
-  'Urus perkongsian perjalanan': 'Manage drive sharing', 'Rakan perlu log masuk akaun Google. Lokasi hanya dihantar semasa Jalan Malaysia terbuka.':
-    'Friends need to sign in with Google. Location is only sent while Jalan Malaysia is open.',
+  'Urus perkongsian perjalanan': 'Manage drive sharing', 'Rakan perlu log masuk akaun Google. Lokasi hanya dihantar semasa JomRoute terbuka.':
+    'Friends need to sign in with Google. Location is only sent while JomRoute is open.',
   'Rakan yang buka pautan nampak kereta anda bergerak di peta dan anggaran masa tiba. Pautan mati sendiri bila tamat.':
     'Friends who open the link see your car moving on the map and your ETA. The link stops working when it ends.',
   'Rakan yang buka pautan nampak kereta anda bergerak di peta . Pautan mati sendiri bila tamat.':
     'Friends who open the link see your car moving on the map. The link stops working when it ends.',
-  '📋 Pautan disalin.': '📋 Link copied.', 'Jejak perjalanan': 'Drive tracking', '🎯 Pusat': '🎯 Centre', 'Buka Jalan Malaysia': 'Open Jalan Malaysia',
+  '📋 Pautan disalin.': '📋 Link copied.', 'Jejak perjalanan': 'Drive tracking', '🎯 Pusat': '🎯 Centre', 'Buka JomRoute': 'Open JomRoute',
   'Perkongsian perjalanan sudah tamat': 'This drive share has ended', 'Lokasi tidak lagi dikongsi.': 'Location is no longer shared.',
   'Menunggu lokasi…': 'Waiting for location…', 'Memuatkan…': 'Loading…', 'Tidak dapat memuatkan': 'Could not load',
   '📡 Perkongsian dihentikan. Pautan tidak lagi berfungsi.': '📡 Sharing stopped. The link no longer works.',
@@ -1374,8 +1374,8 @@ const EN = {
   'Laporan (24 jam)': 'Reports (24 h)', 'Perkongsian langsung': 'Live shares', '🗺️ Lihat': '🗺️ View', '🗑️ Padam': '🗑️ Delete',
   '🚫 Sekat pengguna': '🚫 Block user', 'Nyahsekat': 'Unblock', 'disembunyikan': 'hidden', 'Pasti? Tekan lagi': 'Sure? Tap again',
   'Tiada laporan aktif.': 'No active reports.', 'Tiada pengguna disekat.': 'No blocked users.', 'Muat semula': 'Reload',
-  'Menyekat pengguna memadam semua laporan aktifnya dan menghalang akaun Google itu daripada menggunakan Jalan Malaysia.':
-    "Blocking a user deletes all their active reports and stops that Google account from using Jalan Malaysia.",
+  'Menyekat pengguna memadam semua laporan aktifnya dan menghalang akaun Google itu daripada menggunakan JomRoute.':
+    "Blocking a user deletes all their active reports and stops that Google account from using JomRoute.",
   '🗑️ Laporan dipadam.': '🗑️ Report deleted.', '🚫 Pengguna disekat & laporannya dipadam.': '🚫 User blocked & reports deleted.',
   'Pengguna dinyahsekat.': 'User unblocked.',
   // Notis
@@ -1400,8 +1400,8 @@ const EN = {
   'Sistem sibuk. Cuba lagi sebentar.': 'The system is busy. Try again shortly.',
   'Token lama tidak sah.': 'The old session is not valid.', 'Tiada data untuk dipulihkan.': 'There is no data to restore.',
   'Pulihkan data anda?': 'Restore your data?', 'Bukan saya': 'Not me', 'Pulihkan': 'Restore',
-  'Google menukar ID akaun anda untuk Jalan Malaysia setiap 30 hari. Pelayar ini ada data dari akaun sebelum ini:':
-    'Google changes your Jalan Malaysia account ID every 30 days. This browser has data from the previous account:',
+  'Google menukar ID akaun anda untuk JomRoute setiap 30 hari. Pelayar ini ada data dari akaun sebelum ini:':
+    'Google changes your JomRoute account ID every 30 days. This browser has data from the previous account:',
   'Pulihkan mata, tetapan dan tempat (Rumah, Kerja, kegemaran) ke akaun anda sekarang?':
     'Restore points, settings and places (Home, Work, favourites) to your current account?',
   'Pilih "Bukan saya" jika ia milik orang lain yang pernah guna pelayar ini.':
@@ -1463,8 +1463,8 @@ const EN = {
     'Stored on the server: nickname, mood, settings, reports & votes, point stats, and your latest location (blurred ~100 m, ' +
     'deleted after 3 minutes). Home, work & favourites are stored on this phone only. ' +
     'Search history always stays on this phone only. The app owner can see the data on the server.',
-  'Anda menggunakan Jalan Malaysia tanpa log masuk. Identiti anda disimpan dalam pelayar ini sahaja.':
-    'You are using Jalan Malaysia without signing in. Your identity is stored in this browser only.',
+  'Anda menggunakan JomRoute tanpa log masuk. Identiti anda disimpan dalam pelayar ini sahaja.':
+    'You are using JomRoute without signing in. Your identity is stored in this browser only.',
   'Had laju anda': 'Your speed limit', 'Mod perjalanan': 'Travel mode',
   ['Servis laluan Google dalam Apps Script tiada mod khas teksi atau motosikal, jadi laluan adalah sama. ' +
     'Pilihan ini menukar ikon kenderaan anda.']:
@@ -1528,7 +1528,7 @@ const EN_RULES = [
   [/^📵 Tiada liputan · (\d+) laporan menunggu$/, m => '📵 No signal · ' + m[1] + ' reports waiting'],
   [/^(\d+(?:\.\d+)?) (km|m)$/, m => m[0]], [/^(\d+) km\/j$/, m => m[1] + ' km/h'], [/^km\/j$/, () => 'km/h'], [/^bt\/j$/, () => 'mph'],
   [/^(.+) laporan dihantar\. Terima kasih! 🙏$/, m => m[1] + ' reports sent. Thank you! 🙏'],
-  [/^Jalan Malaysia · Peta © OpenStreetMap · Laluan oleh Google$/, () => 'Jalan Malaysia · Map © OpenStreetMap · Routes by Google'],
+  [/^JomRoute · Peta © OpenStreetMap · Laluan oleh Google$/, () => 'JomRoute · Map © OpenStreetMap · Routes by Google'],
   [/^Pilih 1 hingga (\d+) jenis laporan\.$/, m => 'Choose 1 to ' + m[1] + ' report types.'],
   [/^Arah ke (.+)$/, m => 'Heading ' + tr(m[1])], [/^(\d+) mata$/, m => m[1] + ' points'],
   [/^✅ Data anda dipulihkan · (\d+) mata$/, m => '✅ Your data was restored · ' + m[1] + ' points'], [/^oleh ([^·]+)$/, m => 'by ' + m[1]],
@@ -2022,7 +2022,7 @@ function linkHelp(open, err) {
     <ol><li>Tekan lama mesej → <b>Salin</b></li><li>Tekan <b>📋 Tampal lokasi</b> atau tampal dalam kotak carian</li></ol>
     <h4>Pin lokasi (kotak peta kecil)</h4>
     <ol><li>Tekan pin → <b>Buka dalam Google Maps</b></li><li>Tekan <b>Kongsi</b> → <b>Salin pautan</b></li>
-      <li>Kembali ke Jalan Malaysia dan tampal</li></ol>
+      <li>Kembali ke JomRoute dan tampal</li></ol>
     <h4>Lokasi langsung (Live Location)</h4>
     <p style="margin:0">Tidak boleh dibuka di luar WhatsApp. Minta rakan hantar pin lokasi biasa.</p>
   </div></details>`;
@@ -2154,9 +2154,9 @@ const PAGES = {
     // Pautan aplikasi biasa (bukan saluran uji). QR dijana oleh api.qrserver.com — hanya pautan awam aplikasi dihantar.
     const url = INVITE_URL;
     const qr = url ? 'https:\/\/api.qrserver.com/v1/create-qr-code/?size=480x480&margin=12&data=' + encodeURIComponent(url) : '';
-    return { title: 'Kongsi Jalan Malaysia', html:
+    return { title: 'Kongsi JomRoute', html:
       note('Minta rakan imbas kod QR ini dengan kamera telefon, atau hantar pautan melalui WhatsApp.') +
-      (qr ? `<div class="qr-box"><img src="${esc(qr)}" alt="Kod QR Jalan Malaysia" width="240" height="240"
+      (qr ? `<div class="qr-box"><img src="${esc(qr)}" alt="Kod QR JomRoute" width="240" height="240"
         onerror="this.parentNode.textContent='Kod QR tidak dapat dimuat. Guna butang di bawah.'"></div>` : '') +
       `<button class="sos-btn wa" data-do="inviteWa">💬 Hantar ke WhatsApp</button>` +
       `<button class="sos-btn alt" data-do="inviteCopy">📋 Salin pautan</button>` +
@@ -2172,20 +2172,20 @@ const PAGES = {
   homescreen: () => {
     // Ikon skrin utama datang dari halaman pembuka (GitHub Pages) — Apps Script tidak boleh menetapkan apple-touch-icon.
     // Langkah "Kongsi → Tambah ke Skrin Utama" TIDAK dipapar di sini: jika diikut pada halaman aplikasi, ikon jadi huruf
-    // "J" (alamat script.google.com). Langkah hanya dipapar di halaman pembuka, tempat ikon 🇲🇾 diambil.
+    // "J" (alamat script.google.com). Langkah hanya dipapar di halaman pembuka, tempat ikon kereta diambil.
     const en = voiceLang === 'en';
     return { title: 'Tambah ke skrin utama', html:
       `<p class="pop-muted" style="margin:4px 4px 12px">${en
-        ? 'Jalan Malaysia then opens straight from the 🇲🇾 icon on your home screen, like an app.'
-        : 'Selepas ini Jalan Malaysia boleh dibuka terus dari ikon 🇲🇾 di skrin utama, seperti app.'}</p>` +
-      `<a class="sos-btn" id="hsInstall" href="${esc(INVITE_URL)}" target="_top" style="background:#1e63d6">🇲🇾 ${en
-        ? 'Install the Jalan Malaysia icon' : 'Pasang ikon Jalan Malaysia'}</a>` +
+        ? 'JomRoute then opens straight from the 🚗 icon on your home screen, like an app.'
+        : 'Selepas ini JomRoute boleh dibuka terus dari ikon 🚗 di skrin utama, seperti app.'}</p>` +
+      `<a class="sos-btn" id="hsInstall" href="${esc(INVITE_URL)}" target="_top" style="background:#1e63d6">🚗 ${en
+        ? 'Install the JomRoute icon' : 'Pasang ikon JomRoute'}</a>` +
       `<div class="hs" style="margin-top:12px">` +
       `<div class="hs-step"><i class="n">!</i><span>${en
         ? 'Tap the blue button <b>first</b>. The add-to-home-screen steps appear on that page. ' +
-          'Adding from this page gives a plain letter “J” icon instead of the 🇲🇾 flag.'
+          'Adding from this page gives a plain letter “J” icon instead of the 🚗 car icon.'
         : 'Tekan butang biru <b>dahulu</b>. Langkah tambah ke skrin utama dipapar di halaman itu. ' +
-          'Jika ditambah dari halaman ini, ikon jadi huruf “J”, bukan bendera 🇲🇾.'}</span></div></div>` +
+          'Jika ditambah dari halaman ini, ikon jadi huruf “J”, bukan ikon kereta 🚗.'}</span></div></div>` +
       `<p class="pop-muted" style="margin:12px 4px">${en
         ? '⚠️ iPhone: use <b>Chrome</b>. Safari cannot open this app. If an old icon (letter “J” or arrow) is on your home screen, remove it first.'
         : '⚠️ iPhone: guna <b>Chrome</b>. Safari tidak dapat membuka aplikasi ini. Jika ikon lama (huruf “J” atau anak panah) ada di skrin utama, buang dahulu.'}</p>` };
@@ -2280,7 +2280,7 @@ const PAGES = {
   audio: () => ({ title: 'Pemain audio', html:
     note('Waze boleh mengawal Spotify dan app lain kerana ia app yang dipasang. ' +
       'Aplikasi web tidak boleh mengawal app lain, jadi butang di bawah hanya membuka app muzik.<br>' +
-      '<b>⚠️ GPS pelayar mungkin berhenti bila anda keluar dari Jalan Malaysia.</b> Mulakan muzik sebelum memandu.') +
+      '<b>⚠️ GPS pelayar mungkin berhenti bila anda keluar dari JomRoute.</b> Mulakan muzik sebelum memandu.') +
     `<div class="slist">${[['Spotify', 'https:\/\/open.spotify.com', '#1db954'],
       ['YouTube Music', 'https:\/\/music.youtube.com', '#ff0000'], ['Apple Music', 'https:\/\/music.apple.com', '#fa2d48']]
       .map(a => `<a class="srow" href="${a[1]}" target="_blank" rel="noopener noreferrer" style="color:inherit; text-decoration:none">
@@ -2289,7 +2289,7 @@ const PAGES = {
 
   notif: () => ({ title: 'Notifikasi', html:
     note('Notifikasi push dan e-mel seperti Waze <b>tidak boleh</b> dihantar oleh aplikasi web Apps Script: ' +
-      'ia tidak boleh berjalan bila ditutup, dan Jalan Malaysia tidak menyimpan e-mel anda.') +
+      'ia tidak boleh berjalan bila ditutup, dan JomRoute tidak menyimpan e-mel anda.') +
     sec('Notifikasi dalam aplikasi') +
     list([sRow({ go: 'alertTypes', icon: '⚠️', color: '#fb8c00', label: 'Amaran laporan di hadapan',
         value: S.alertTypes.length ? 'Hidup' : 'Mati' }),
@@ -2299,7 +2299,7 @@ const PAGES = {
 
   reminders: () => ({ title: 'Peringatan', html:
     list([sRow({ toggle: 'childReminder', icon: '👶', color: '#5c6bc0', label: 'Peringatan anak' })]) +
-    note('Bila tiba di destinasi, Jalan Malaysia mengingatkan anda (paparan & suara) supaya memeriksa tempat duduk belakang.') +
+    note('Bila tiba di destinasi, JomRoute mengingatkan anda (paparan & suara) supaya memeriksa tempat duduk belakang.') +
     list([sRow({ toggle: 'restRemind', icon: '☕', color: '#8d6e63', label: 'Peringatan rehat',
         sub: 'Selepas 2 jam memandu tanpa henti' }),
       sRow({ toggle: 'rainAlert', icon: '🌧️', color: '#1e88e5', label: 'Amaran hujan lebat',
@@ -2311,7 +2311,7 @@ const PAGES = {
   planned: () => ({ title: 'Pemanduan dirancang', html:
     list([sRow({ toggle: 'tripSuggest', icon: '🧭', color: '#26a69a', label: 'Cadangan perjalanan',
       sub: 'Pagi: ke tempat kerja · petang: pulang ke rumah' })]) +
-    note('Isnin–Jumaat. Bila anda buka aplikasi pukul 6–10 pagi atau 4–9 petang, Jalan Malaysia bertanya sekali sehari. ' +
+    note('Isnin–Jumaat. Bila anda buka aplikasi pukul 6–10 pagi atau 4–9 petang, JomRoute bertanya sekali sehari. ' +
       'Simpan Rumah & Kerja dahulu.') +
     note('Belum tersedia. Peringatan "masa untuk bertolak" memerlukan notifikasi push dan akses kalendar, ' +
       'yang tidak boleh dibuat oleh aplikasi web Apps Script ketika ia ditutup.') +
@@ -2334,8 +2334,8 @@ const PAGES = {
   account: () => {
     const p = state.profile;
     return { title: 'Akaun & log masuk', html:
-      note(p && p.signedIn ? '✅ Anda log masuk dengan akaun Google. Jalan Malaysia hanya menerima kunci rawak, <b>bukan</b> alamat e-mel anda.'
-        : 'Anda menggunakan Jalan Malaysia tanpa log masuk. Identiti anda disimpan dalam pelayar ini sahaja.') +
+      note(p && p.signedIn ? '✅ Anda log masuk dengan akaun Google. JomRoute hanya menerima kunci rawak, <b>bukan</b> alamat e-mel anda.'
+        : 'Anda menggunakan JomRoute tanpa log masuk. Identiti anda disimpan dalam pelayar ini sahaja.') +
       sec('Data anda') +
       note('Disimpan di server: nama samaran, mood, tetapan, laporan & undi, statistik mata, ' +
         'dan lokasi terkini (dikaburkan ~100 m, dipadam selepas 3 minit). ' +
@@ -2420,11 +2420,11 @@ function renderDrawer() {
       / \(uji\)$/.test(APP_VERSION)
         ? sRow({ doAct: 'ujiOff', icon: '↩️', color: '#607d8b', label: 'Kembali ke versi biasa' })
         : sRow({ doAct: 'ujiOn', icon: '🧪', color: '#7b1fa2', label: 'Buka versi uji', sub: 'Pemilik sahaja · ciri baharu sebelum dilancar' })]) : ''}
-    ${list([sRow({ go: 'invite', icon: '🤝', color: '#00897b', label: 'Kongsi Jalan Malaysia', sub: 'Kod QR & WhatsApp untuk rakan' })])}
+    ${list([sRow({ go: 'invite', icon: '🤝', color: '#00897b', label: 'Kongsi JomRoute', sub: 'Kod QR & WhatsApp untuk rakan' })])}
     ${list([sRow({ go: 'sos', icon: '🆘', color: '#d32f2f', label: 'Kecemasan', sub: 'Telefon 999 · hantar lokasi ke keluarga' })])}
-    ${list([sRow({ go: 'homescreen', icon: '📲', color: '#5c6bc0', label: 'Tambah ke skrin utama', sub: 'Buka Jalan Malaysia seperti app' }),
+    ${list([sRow({ go: 'homescreen', icon: '📲', color: '#5c6bc0', label: 'Tambah ke skrin utama', sub: 'Buka JomRoute seperti app' }),
       sRow({ go: 'root', icon: '⚙️', color: '#78909c', label: 'Tetapan' })])}
-    <p class="pop-muted" style="margin:16px 4px">Jalan Malaysia · Peta © OpenStreetMap · Laluan oleh Google<br>Versi ${APP_VERSION}</p>`;
+    <p class="pop-muted" style="margin:16px 4px">JomRoute · Peta © OpenStreetMap · Laluan oleh Google<br>Versi ${APP_VERSION}</p>`;
 }
 
 // ---- Kesan setiap tetapan
@@ -2516,7 +2516,7 @@ function onSettingsClick(e) {
     else if (a === 'admin') { closeDrawer(); openAdmin(); }
     else if (a === 'ujiOn' || a === 'ujiOff') { if (APP_URL) window.open(APP_URL + (a === 'ujiOn' ? '?uji=1' : ''), '_top'); }
     else if (a === 'sosShare') sosShare();
-    else if (a === 'inviteWa') openWhatsApp('🚗 Jom guna Jalan Malaysia — navigasi & laporan trafik komuniti Malaysia (percuma, tanpa muat turun app):\n' + INVITE_URL);
+    else if (a === 'inviteWa') openWhatsApp('🚗 Jom guna JomRoute — navigasi & laporan trafik komuniti Malaysia (percuma, tanpa muat turun app):\n' + INVITE_URL);
     else if (a === 'inviteCopy') {
       (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(INVITE_URL) : Promise.reject())
         .then(() => toast('📋 Pautan disalin.'), () => toast('Tekan lama pautan di atas untuk salin.'));
@@ -2719,8 +2719,8 @@ function initGeo() {
 function openLocAsk(st) {
   const denied = st === 'denied';
   $('locTitle').textContent = denied ? 'Lokasi disekat' : 'Benarkan lokasi';
-  $('locLead').textContent = denied ? 'Jalan Malaysia tidak dapat melihat lokasi anda. Hidupkan semula dalam tetapan telefon.'
-    : 'Jalan Malaysia perlukan lokasi anda untuk navigasi dan amaran di jalan.';
+  $('locLead').textContent = denied ? 'JomRoute tidak dapat melihat lokasi anda. Hidupkan semula dalam tetapan telefon.'
+    : 'JomRoute perlukan lokasi anda untuk navigasi dan amaran di jalan.';
   $('locAsk').hidden = denied; $('locDenied').hidden = !denied;
   $('locGo').textContent = denied ? 'Cuba lagi' : 'Benarkan lokasi';
   $('locModal').style.display = 'flex';
@@ -2800,7 +2800,7 @@ function checkVersion(v) {
   if (!v || state.verOffered || String(v) === APP_VERSION.replace(/ \(uji\)$/, '')) return;
   if (state.navigating || askBusy()) return;              // cuba lagi pada segar seterusnya
   state.verOffered = true;
-  showAsk({ icon: '🆕', text: 'Versi baharu tersedia', sub: 'Muat semula untuk kemas kini Jalan Malaysia', yes: 'Muat semula',
+  showAsk({ icon: '🆕', text: 'Versi baharu tersedia', sub: 'Muat semula untuk kemas kini JomRoute', yes: 'Muat semula',
     no: 'Nanti', ms: 15000, onYes: reloadApp });
 }
 function reloadApp() {
@@ -3223,7 +3223,7 @@ function openWhatsApp(text) {
 function shareDest() {
   const d = state.dest; if (!d) return;
   const l = shareLink(d);
-  openWhatsApp(`📍 ${d.title || 'Lokasi'}\n` + (l.app ? `Buka dengan Jalan Malaysia: ${l.app}\n` : '') + `Google Maps: ${l.gmaps}`);
+  openWhatsApp(`📍 ${d.title || 'Lokasi'}\n` + (l.app ? `Buka dengan JomRoute: ${l.app}\n` : '') + `Google Maps: ${l.gmaps}`);
 }
 /** Kecemasan: hantar lokasi semasa (Google Maps) ke WhatsApp — pengguna pilih kenalan sendiri. */
 function sosShare() {
@@ -3235,7 +3235,7 @@ function sosShare() {
 function shareMyLocation() {
   if (!state.me) return toast('Lokasi anda belum diketahui.');
   const l = shareLink({ lat: state.me.lat, lng: state.me.lng, title: (userName || 'Kawan') + ' di sini' });
-  let text = `📍 Saya di sini\n` + (l.app ? `Buka dengan Jalan Malaysia: ${l.app}\n` : '') + `Google Maps: ${l.gmaps}`;
+  let text = `📍 Saya di sini\n` + (l.app ? `Buka dengan JomRoute: ${l.app}\n` : '') + `Google Maps: ${l.gmaps}`;
   if (state.navigating && state.routes[state.selRoute]) {
     const r = state.routes[state.selRoute];
     const etaTxt = clock(Date.now() + remainingSec(r) * 1000);
@@ -3920,7 +3920,7 @@ function renderShareBody() {
         ${nav ? opt(0, '🏁', 'Sehingga sampai', esc(state.dest.title || 'destinasi')) : ''}
         ${opt(15, '⏱️', '15 minit')}${opt(60, '🕐', '1 jam')}${opt(240, '🕓', '4 jam')}
       </div>
-      <p class="pop-muted" style="margin:10px 0 0">Rakan perlu log masuk akaun Google. Lokasi hanya dihantar semasa Jalan Malaysia terbuka.</p>`;
+      <p class="pop-muted" style="margin:10px 0 0">Rakan perlu log masuk akaun Google. Lokasi hanya dihantar semasa JomRoute terbuka.</p>`;
     return;
   }
   const until = sh.mode === 'arrive' ? 'Tamat bila anda sampai di destinasi' : 'Tamat pukul ' + clock(sh.exp);
@@ -3941,7 +3941,7 @@ $('shareBody').addEventListener('click', async e => {
   const sh = state.share;
   if (d.dataset.shareDo === 'wa') {
     const dest = sh.mode === 'arrive' && state.dest ? ' ke ' + (state.dest.title || 'destinasi') : '';
-    openWhatsApp(`🚗 Ikut perjalanan saya${dest} secara langsung (Jalan Malaysia):\n${sh.url}`);
+    openWhatsApp(`🚗 Ikut perjalanan saya${dest} secara langsung (JomRoute):\n${sh.url}`);
   } else if (d.dataset.shareDo === 'copy') {
     try { await navigator.clipboard.writeText(sh.url); toast('📋 Pautan disalin.'); }
     catch (err) { toast('Tekan lama pautan di atas untuk salin.'); }
@@ -4070,7 +4070,7 @@ $('trackOpen').onclick = () => { if (APP_URL) window.open(APP_URL, '_top'); };
 const ALONG = [['fuel', '⛽', 'Minyak'], ['rest', '🅿️', 'R&R'], ['mosque', '🕌', 'Masjid / surau'], ['toilet', '🚻', 'Tandas'],
   ['food', '🍜', 'Makan'], ['atm', '🏧', 'ATM'], ['ev', '🔌', 'Caj EV'], ['train', '🚆', 'Stesen tren'], ['bus', '🚌', 'Stesen bas']];
 // Telefon bertanya terus kepada Overpass (OpenStreetMap) — pelayan percuma ini kerap menyekat / lambat melayan server Google.
-// Kategori & URL dari senarai TETAP. Jika semua gagal, server Jalan Malaysia digunakan sebagai sandaran.
+// Kategori & URL dari senarai TETAP. Jika semua gagal, server JomRoute digunakan sebagai sandaran.
 const ALONG_Q = { fuel: ['["amenity"="fuel"]', 300, 'Stesen minyak'], rest: ['["highway"~"^(rest_area|services)$"]', 600, 'R&R'],
   mosque: ['["amenity"="place_of_worship"]["religion"="muslim"]', 400, 'Masjid / surau'], toilet: ['["amenity"="toilets"]', 300, 'Tandas'],
   food: ['["amenity"~"^(restaurant|fast_food|cafe|food_court)$"]', 300, 'Makan'], atm: ['["amenity"="atm"]', 300, 'ATM'],
@@ -4518,7 +4518,7 @@ function renderAdmin(d) {
     <div class="sec-title">Laporan aktif terkini</div>${reps}
     <div class="sec-title">Pengguna disekat</div>${banned}
     <p class="pop-muted" style="margin-top:14px">Menyekat pengguna memadam semua laporan aktifnya dan menghalang akaun Google itu
-      daripada menggunakan Jalan Malaysia.</p>`;
+      daripada menggunakan JomRoute.</p>`;
 }
 const QUOTA_LABEL = { G_maps: '🗺️ Google Maps (laluan & alamat)', G_recheck: '⚡ Semakan laluan lebih pantas',
   G_report: '⚠️ Laporan', G_photon: '🔍 Carian tempat (Photon)', G_overpass: '⛽ Cari sepanjang laluan (Overpass)',

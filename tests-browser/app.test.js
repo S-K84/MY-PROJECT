@@ -137,7 +137,7 @@ for (const file of FILES) {
   });
 }
 
-for (const file of FILES) test(`${file}: anggaran kos minyak pada pilihan laluan & halaman Kongsi Jalan Malaysia`, async () => {
+for (const file of FILES) test(`${file}: anggaran kos minyak pada pilihan laluan & halaman Kongsi JomRoute`, async () => {
   const { page, errors, close } = await open(file);
   try {
     const r = await page.evaluate(async () => {
@@ -267,7 +267,7 @@ for (const file of FILES) test(`${file}: 👍 baharu pada laporan anda → ucapa
   } finally { await close(); }
 });
 
-for (const file of FILES) test(`${file}: halaman "Tambah ke skrin utama" ada butang ke halaman ikon 🇲🇾 (GitHub Pages)`, async () => {
+for (const file of FILES) test(`${file}: halaman "Tambah ke skrin utama" ada butang ke halaman ikon (GitHub Pages)`, async () => {
   const { page, errors, close } = await open(file);
   try {
     const r = await page.evaluate(() => {

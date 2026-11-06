@@ -13,7 +13,7 @@ test('pembuka: ada apple-touch-icon & manifest, dan fail ikon wujud (PNG)', () =
     assert.strictEqual(fs.readFileSync(path.join(dir, f)).slice(1, 4).toString(), 'PNG', f);
   }
   const m = JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'));
-  assert.strictEqual(m.name, 'Jalan Malaysia');
+  assert.strictEqual(m.name, 'JomRoute');
 });
 
 test('pembuka: lompat ke /exec aplikasi, "#pasang" papar langkah tanpa lompat', () => {
@@ -47,7 +47,7 @@ test('pembuka "#pasang": suruh tambah ikon dari halaman INI; butang buka jadi pi
   assert.strictEqual(els.go.textContent, 'Buka tanpa ikon');
 });
 
-test('ikon Jalur Gemilang: kanton biru (kiri atas), jalur merah di bawah — sama dalam assets/ & docs/', () => {
+test('ikon JomRoute (kereta di jalan): langit biru atas, rumput hijau & jalan kelabu bawah — sama dalam assets/ & docs/', () => {
   const zlib = require('zlib');
   // Nyahkod PNG RGB 8-bit (tanpa pakej): kumpul IDAT, inflate, buka penapis baris.
   const pixel = (file, x, y) => {
@@ -71,10 +71,14 @@ test('ikon Jalur Gemilang: kanton biru (kiri atas), jalur merah di bawah — sam
   };
   for (const d of ['assets', 'docs']) {
     const f = path.join(__dirname, '..', d, 'icon-180.png');
-    const [r1, g1, b1] = pixel(f, 6, 60);     // kanton
-    assert.ok(b1 > 80 && r1 < 30 && g1 < 30, `${d}: kanton biru ${[r1, g1, b1]}`);
-    const [r2, g2, b2] = pixel(f, 170, 6);    // jalur merah teratas
-    assert.ok(r2 > 180 && g2 < 30 && b2 < 30, `${d}: jalur merah ${[r2, g2, b2]}`);
+    const [r1, g1, b1] = pixel(f, 20, 20);    // langit
+    assert.ok(b1 > 200 && r1 < 200, `${d}: langit biru ${[r1, g1, b1]}`);
+    const [r2, g2, b2] = pixel(f, 10, 160);   // rumput
+    assert.ok(g2 > 90 && r2 < 40 && b2 < 100, `${d}: rumput hijau ${[r2, g2, b2]}`);
+    const [r3, g3, b3] = pixel(f, 90, 168);   // jalan
+    assert.ok(r3 < 80 && g3 < 80 && b3 < 80, `${d}: jalan kelabu gelap ${[r3, g3, b3]}`);
+    const [r4, g4, b4] = pixel(f, 90, 142);   // kereta merah
+    assert.ok(r4 > 170 && g4 < 90 && b4 < 90, `${d}: kereta merah ${[r4, g4, b4]}`);
   }
 });
 
