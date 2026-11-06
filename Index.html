@@ -979,7 +979,10 @@ map.attributionControl.setPosition('topright');
 // Garisan laluan & trafik dilukis pada Canvas, bukan SVG. Semasa memandu peta bergerak setiap saat; selepas setiap
 // gerakan Leaflet melaras semula saiz/kedudukan lapisan SVG (lebih kerap bila peta berputar), dan Safari iPhone
 // memaparkannya kosong sekejap → garisan biru "berkelip". Canvas dilukis semula serta-merta dalam bingkai yang sama.
-const lineRenderer = L.canvas({ padding: 0.5, tolerance: 6 });
+// padding 0.15 (dahulu 0.5): bila peta berputar ikut arah kereta, leaflet-rotate membesarkan kanvas kepada kotak yang
+// meliputi segi empat yang diputar. Dengan 0.5 (2× skrin) kanvas boleh melebihi had memori grafik iPhone pada sudut
+// serong, lalu iPhone tidak melukis apa-apa (pemilik: tiada garisan biru semasa memandu, 6 Nov 2026).
+const lineRenderer = L.canvas({ padding: 0.15, tolerance: 6 });
 const reportLayer = L.layerGroup().addTo(map);
 const userLayer = L.layerGroup().addTo(map);
 // Ikon kenderaan (dilihat dari atas, menghala ke atas)

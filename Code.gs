@@ -7,7 +7,7 @@
 
 // Versi aplikasi — SATU-SATUNYA tempat versi ditulis. Ia disuntik ke Index.html oleh doGet() (menu ☰ & skrin ralat).
 // Naikkan setiap kali kod berubah supaya mudah semak telefon sudah guna kod terkini.
-const APP_VERSION = '2026.11.06-c';
+const APP_VERSION = '2026.11.06-d';
 
 const CONFIG = {
   // ttlMin = berapa minit laporan kekal aktif sebelum luput
