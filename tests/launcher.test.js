@@ -87,3 +87,7 @@ test('pembuka: ikon dibenam (data:) supaya tidak jadi tanda "?" bila halaman ter
   assert.ok(m, 'ikon mesti dibenam sebagai data: (bukan fail berasingan)');
   assert.ok(Buffer.from(m[1], 'base64').equals(fs.readFileSync(path.join(dir, 'icon-180.png'))), 'ikon dibenam mesti sama dengan icon-180.png');
 });
+
+test('docs/: ada .nojekyll supaya GitHub Pages terus menyiarkan fail statik (tanpa binaan Jekyll)', () => {
+  assert.ok(fs.existsSync(path.join(dir, '.nojekyll')));
+});
