@@ -432,8 +432,8 @@ for (const file of FILES) test(`${file}: WhatsApp di telefon dibuka terus (whats
   } finally { await close(); }
 });
 
-test('IndexUji.html: setiap destinasi yang dinavigasi masuk "Terkini" (bukan Rumah) & "Terkini" dipulihkan dari server', async () => {
-  const { page, errors, close } = await open('IndexUji.html');
+for (const file of FILES) test(`${file}: setiap destinasi yang dinavigasi masuk "Terkini" (bukan Rumah) & "Terkini" dipulihkan dari server`, async () => {
+  const { page, errors, close } = await open(file);
   try {
     const r = await page.evaluate(async () => {
       const w = ms => new Promise(r => setTimeout(r, ms));
