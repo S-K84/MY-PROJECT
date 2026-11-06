@@ -7,7 +7,7 @@
 
 // Versi aplikasi — SATU-SATUNYA tempat versi ditulis. Ia disuntik ke Index.html oleh doGet() (menu ☰ & skrin ralat).
 // Naikkan setiap kali kod berubah supaya mudah semak telefon sudah guna kod terkini.
-const APP_VERSION = '2026.11.05-z';
+const APP_VERSION = '2026.11.06-a';
 
 const CONFIG = {
   // ttlMin = berapa minit laporan kekal aktif sebelum luput
@@ -1063,7 +1063,8 @@ function cleanPrefs_(p) {
     name: String(p.name == null ? '' : p.name).replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 30),
     settings: cleanSettings_(p.settings),
     places: pl ? { home: cleanPlace_(pl.home), work: cleanPlace_(pl.work),
-      favs: (Array.isArray(pl.favs) ? pl.favs : []).slice(0, 10).map(cleanPlace_).filter(Boolean) } : null,
+      favs: (Array.isArray(pl.favs) ? pl.favs : []).slice(0, 10).map(cleanPlace_).filter(Boolean),
+      recent: (Array.isArray(pl.recent) ? pl.recent : []).slice(0, 8).map(cleanPlace_).filter(Boolean) } : null,
     voice: p.voice === 'en' ? 'en' : 'ms',
     sound: p.sound !== false, hidden: p.hidden === true, tol: p.tol === true, headup: p.headup !== false
   };
