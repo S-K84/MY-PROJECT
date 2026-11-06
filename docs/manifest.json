@@ -1,6 +1,6 @@
 {
-  "name": "Jalan Malaysia",
-  "short_name": "Jalan Malaysia",
+  "name": "JomRoute",
+  "short_name": "JomRoute",
   "start_url": "./",
   "display": "browser",
   "background_color": "#0b1220",
