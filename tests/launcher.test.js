@@ -19,13 +19,13 @@ test('pembuka: ada apple-touch-icon & manifest, dan fail ikon wujud (PNG)', () =
 test('pembuka: lompat ke /exec aplikasi, "#pasang" papar langkah tanpa lompat', () => {
   const js = html.match(/<script>([\s\S]*?)<\/script>/)[1];
   const run = (hash) => {
-    const els = {}, el = id => (els[id] = els[id] || { style: {}, href: '' });
+    const els = {}, el = id => (els[id] = els[id] || { style: {}, href: '' }), body = {};
     let replaced = null, rewritten = null;
     new Function('document', 'location', 'history', js)(
-      { getElementById: el },
+      { getElementById: el, body },
       { hash, search: '?x=1', pathname: '/MY-PROJECT/', replace: u => { replaced = u; } },
       { replaceState: (a, b, u) => { rewritten = u; } });
-    return { els, replaced, rewritten };
+    return { els, body, replaced, rewritten };
   };
   const a = run('');
   assert.match(a.replaced, /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec\?x=1$/);
@@ -34,6 +34,17 @@ test('pembuka: lompat ke /exec aplikasi, "#pasang" papar langkah tanpa lompat', 
   assert.strictEqual(b.els.pasang.style.display, 'block');
   assert.strictEqual(b.rewritten, '/MY-PROJECT/?x=1');   // ikon yang ditambah tidak membawa "#pasang"
   assert.strictEqual(b.els.go.href, a.replaced);
+});
+
+test('pembuka "#pasang": suruh tambah ikon dari halaman INI; butang buka jadi pilihan kedua (ikon "J" dari dalam aplikasi)', () => {
+  assert.match(html, /<b>dari halaman ini<\/b>/);
+  assert.match(html, /huruf “J”/);
+  const js = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+  const els = {}, body = {}, el = id => (els[id] = els[id] || { style: {}, href: '' });
+  new Function('document', 'location', 'history', js)({ getElementById: el, body },
+    { hash: '#pasang', search: '', pathname: '/MY-PROJECT/', replace: () => {} }, { replaceState: () => {} });
+  assert.strictEqual(body.className, 'pasang');
+  assert.strictEqual(els.go.textContent, 'Buka tanpa ikon');
 });
 
 test('ikon Jalur Gemilang: kanton biru (kiri atas), jalur merah di bawah — sama dalam assets/ & docs/', () => {

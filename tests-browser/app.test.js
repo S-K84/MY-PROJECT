@@ -279,6 +279,10 @@ for (const file of FILES) test(`${file}: halaman "Tambah ke skrin utama" ada but
     assert.strictEqual(r.target, '_top');
     assert.match(r.text, /guna Chrome/);
     assert.doesNotMatch(r.text, /iPhone · Safari/);
+    // Langkah "Kongsi → Tambah ke Skrin Utama" tidak dipapar dalam aplikasi: jika diikut di sini, ikon jadi huruf "J"
+    assert.doesNotMatch(r.text, /Pilih Tambah ke Skrin Utama/);
+    assert.match(r.text, /Tekan butang biru dahulu/);
+    assert.match(r.text, /ikon jadi huruf “J”/);
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });

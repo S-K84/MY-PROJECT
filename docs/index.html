@@ -21,6 +21,9 @@
     a.btn { display:block; margin:22px 0 0; padding:16px; border-radius:999px; background:#33ccff; color:#00121a;
       font-weight:800; font-size:18px; text-decoration:none; }
     #pasang { display:none; }
+    .ini { background:#13213a; border:1.5px solid #33ccff; border-radius:14px; padding:12px 14px; margin:16px 0 4px;
+      color:#e8f7ff; text-align:left; line-height:1.45; }
+    body.pasang a.btn { background:none; color:#b8c0cc; border:1.5px solid #3a4558; font-weight:700; font-size:16px; }
   </style>
 </head>
 <body>
@@ -31,10 +34,13 @@
     <p id="buka">Membuka Jalan Malaysia…</p>
     <div id="pasang">
       <p>Navigasi & laporan trafik komuniti Malaysia. Percuma, tanpa muat turun app.</p>
+      <div class="ini">👇 Tambah ke skrin utama <b>dari halaman ini</b>, sebelum membuka aplikasi. Jika ditambah dari dalam
+        aplikasi, ikon jadi huruf “J”, bukan bendera 🇲🇾.</div>
       <ol>
         <li>Tekan butang <b>Kongsi</b> ⬆️ (iPhone: di bar alamat Chrome / bawah skrin Safari).</li>
         <li>Pilih <b>Tambah ke Skrin Utama</b> (Add to Home Screen).</li>
-        <li>Tekan <b>Tambah</b>. Ikon Jalan Malaysia muncul di skrin utama.</li>
+        <li>Tekan <b>Tambah</b>. Ikon bendera 🇲🇾 Jalan Malaysia muncul di skrin utama.</li>
+        <li>Buka Jalan Malaysia dari ikon itu.</li>
       </ol>
       <p>Android: tekan <b>⋮</b> → <b>Tambah ke skrin utama</b>.</p>
     </div>
@@ -49,6 +55,8 @@
     if (location.hash === '#pasang') {
       document.getElementById('buka').style.display = 'none';
       document.getElementById('pasang').style.display = 'block';
+      document.body.className = 'pasang';
+      document.getElementById('go').textContent = 'Buka tanpa ikon';
       history.replaceState(null, '', location.pathname + location.search);
     } else {
       location.replace(APP + location.search);

@@ -179,7 +179,7 @@ test('saluran uji: kamera laju OSM, suara had laju baharu, batal lapor pantas, p
 test('saluran uji: panduan skrin utama ditulis penuh dalam bahasa paparan (tidak bercampur BM/English)', () => {
   const s = clientScript('IndexUji.html');
   assert.match(s, /const en = voiceLang === 'en';/);
-  assert.match(s, /'Tap the <b>Share<\/b> button/);
+  assert.match(s, /'Tap the blue button <b>first<\/b>/);   // langkah Kongsi hanya di halaman pembuka (ikon "J")
 });
 
 test('Index.html: kamera laju, suara had laju, batal lapor pantas, panduan skrin utama (disahkan di jalan)', () => {

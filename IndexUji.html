@@ -2171,28 +2171,21 @@ const PAGES = {
       'PLUSLine untuk kerosakan / kemalangan di lebuh raya PLUS.') }),
   homescreen: () => {
     // Ikon skrin utama datang dari halaman pembuka (GitHub Pages) — Apps Script tidak boleh menetapkan apple-touch-icon.
-    // Ditulis penuh dalam bahasa paparan (bukan diterjemah perkataan demi perkataan — hasilnya bercampur BM/English)
-    const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua), android = /Android/.test(ua);
+    // Langkah "Kongsi → Tambah ke Skrin Utama" TIDAK dipapar di sini: jika diikut pada halaman aplikasi, ikon jadi huruf
+    // "J" (alamat script.google.com). Langkah hanya dipapar di halaman pembuka, tempat ikon 🇲🇾 diambil.
     const en = voiceLang === 'en';
-    const step = (n, t) => `<div class="hs-step"><i class="n">${n}</i><span>${t}</span></div>`;
-    const box = (title, steps) => sec(title) + '<div class="hs">' + steps.map((t, i) => step(i + 1, t)).join('') + '</div>';
-    const open1 = en ? 'Tap the blue button above. A page with the 🇲🇾 icon opens.' : 'Tekan butang biru di atas. Halaman dengan ikon 🇲🇾 dibuka.';
-    const iphone = box('iPhone · Chrome', en
-      ? [open1, 'Tap the <b>Share</b> button (square with an up arrow) next to the address bar.',
-        'Choose <b>Add to Home Screen</b>, then tap <b>Add</b>.']
-      : [open1, 'Tekan butang <b>Kongsi</b> (petak dengan anak panah ke atas) di sebelah bar alamat.',
-        'Pilih <b>Tambah ke Skrin Utama</b> (Add to Home Screen), kemudian tekan <b>Tambah</b>.']);
-    const androidChrome = box('Android · Chrome', en
-      ? [open1, 'Tap <b>⋮</b> (three dots) at the top right.', 'Tap <b>Add to Home screen</b>, then <b>Add</b>.']
-      : [open1, 'Tekan <b>⋮</b> (tiga titik) di kanan atas.', 'Tekan <b>Tambah ke skrin utama</b>, kemudian <b>Tambah</b>.']);
-    const order = android && !ios ? [androidChrome, iphone] : [iphone, androidChrome];
     return { title: 'Tambah ke skrin utama', html:
       `<p class="pop-muted" style="margin:4px 4px 12px">${en
-        ? 'After this, Jalan Malaysia opens straight from the 🇲🇾 icon on your home screen, like an app.'
+        ? 'Jalan Malaysia then opens straight from the 🇲🇾 icon on your home screen, like an app.'
         : 'Selepas ini Jalan Malaysia boleh dibuka terus dari ikon 🇲🇾 di skrin utama, seperti app.'}</p>` +
       `<a class="sos-btn" id="hsInstall" href="${esc(INVITE_URL)}" target="_top" style="background:#1e63d6">🇲🇾 ${en
         ? 'Install the Jalan Malaysia icon' : 'Pasang ikon Jalan Malaysia'}</a>` +
-      order.join('') +
+      `<div class="hs" style="margin-top:12px">` +
+      `<div class="hs-step"><i class="n">!</i><span>${en
+        ? 'Tap the blue button <b>first</b>. The add-to-home-screen steps appear on that page. ' +
+          'Adding from this page gives a plain letter “J” icon instead of the 🇲🇾 flag.'
+        : 'Tekan butang biru <b>dahulu</b>. Langkah tambah ke skrin utama dipapar di halaman itu. ' +
+          'Jika ditambah dari halaman ini, ikon jadi huruf “J”, bukan bendera 🇲🇾.'}</span></div></div>` +
       `<p class="pop-muted" style="margin:12px 4px">${en
         ? '⚠️ iPhone: use <b>Chrome</b>. Safari cannot open this app. If an old icon (letter “J” or arrow) is on your home screen, remove it first.'
         : '⚠️ iPhone: guna <b>Chrome</b>. Safari tidak dapat membuka aplikasi ini. Jika ikon lama (huruf “J” atau anak panah) ada di skrin utama, buang dahulu.'}</p>` };
