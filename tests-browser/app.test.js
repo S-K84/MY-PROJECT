@@ -431,3 +431,31 @@ for (const file of FILES) test(`${file}: WhatsApp di telefon dibuka terus (whats
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+
+test('IndexUji.html: setiap destinasi yang dinavigasi masuk "Terkini" (bukan Rumah) & "Terkini" dipulihkan dari server', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
+  try {
+    const r = await page.evaluate(async () => {
+      const w = ms => new Promise(r => setTimeout(r, ms));
+      S.prayerRemind = false;
+      const p = places(); p.home = { title: 'Rumah', lat: 3.2, lng: 101.7 }; p.recent = []; savePlaces(p);
+      state.manualLoc = false; setMe({ lat: 3.1, lng: 101.7, heading: 0, speed: 0, t: Date.now() }); await w(50);
+      // Destinasi BUKAN dari carian (cth. tekan lama / pautan) → kini tetap dicatat
+      planRoute({ title: 'Kedai Ujian', sub: 'Kuantan', lat: 3.15, lng: 101.7 }); await w(300); startNav(); await w(100);
+      cancelRoute(); hideAsk(); await w(50);
+      planRoute({ title: 'Rumah', lat: 3.2, lng: 101.7 }); await w(300); startNav(); await w(100);
+      cancelRoute(); hideAsk(); await w(50);
+      const afterNav = places().recent.map(x => x.title);
+      const listText = $('recentList').textContent;
+      // Telefon kehilangan storan → server memulangkan "Terkini"
+      const q = places(); q.recent = []; savePlaces(q);
+      applyPrefs({ t: Date.now(), settings: {}, places: { home: q.home, work: null, favs: [], recent: [{ title: 'Dari Server', sub: '', lat: 3.3, lng: 101.8 }] } });
+      return { afterNav, listText, restored: places().recent.map(x => x.title), built: buildPrefs().places.recent.length };
+    });
+    assert.deepStrictEqual(r.afterNav, ['Kedai Ujian']);
+    assert.match(r.listText, /Kedai Ujian/);
+    assert.deepStrictEqual(r.restored, ['Dari Server']);
+    assert.strictEqual(r.built, 1);
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});

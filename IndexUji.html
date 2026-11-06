@@ -3210,6 +3210,10 @@ function stepLabel(st) { return st.road || st.text; }
 
 function startNav() {
   if (!state.routes.length || !state.me) return;
+  // Setiap destinasi yang dinavigasi masuk "Terkini" (dahulu hanya hasil carian) — kecuali Rumah/Kerja (sudah ada butang)
+  { const d = state.dest, p = places();
+    if (d && isFinite(d.lat) && isFinite(d.lng) && !samePlace(d, p.home) && !samePlace(d, p.work))
+      addRecent({ title: d.title || 'Lokasi', sub: d.sub || '', lat: d.lat, lng: d.lng }); }
   state.navigating = true; state.follow = true;
   if (geoLow) startGeo(false);
   state.routePts = state.routes[state.selRoute].pts;
@@ -4618,7 +4622,7 @@ function buildPrefs() {
   const p = places();
   return { t: Date.now(), name: userName || '', settings: S, voice: voiceLang, sound: soundOn, hidden: hidden,
     tol: store.get('jk_tol') === '1', headup: state.headingUp,
-    places: S.syncPlaces ? { home: p.home, work: p.work, favs: p.favs || [] } : null };
+    places: S.syncPlaces ? { home: p.home, work: p.work, favs: p.favs || [], recent: (p.recent || []).slice(0, 8) } : null };
 }
 function schedulePrefsSave() {
   if (applyingPrefs || !prefsReady || !token) return;
@@ -4645,6 +4649,10 @@ function applyPrefs(p) {
       const cur = places();
       cur.home = p.places.home || cur.home; cur.work = p.places.work || cur.work;
       if ((p.places.favs || []).length) cur.favs = p.places.favs;
+      // Terkini: gabung (telefon dahulu) — iPhone kadang-kadang membuang storan pelayar, jadi server ialah sandaran
+      const rec = (cur.recent || []).slice();
+      (p.places.recent || []).forEach(x => { if (x && !rec.some(y => samePlace(x, y))) rec.push(x); });
+      cur.recent = rec.slice(0, 8);
       store.set('jk_places', JSON.stringify(cur));
     }
     voiceLang = p.voice === 'en' ? 'en' : 'ms'; store.set('jk_voice', voiceLang); setUiLang(voiceLang);
