@@ -2814,7 +2814,9 @@ function checkHazards() {
     if (moving) {
       let diff = Math.abs(bearing(me, r) - me.heading); if (diff > 180) diff = 360 - diff;
       if (diff > 60) return;                       // bukan di hadapan
-      if (!sameDirection(r, me.heading)) return;   // laporan untuk arah lain (cth. seberang lebuh raya)
+      // Laporan untuk arah lain (cth. seberang lebuh raya) diabaikan — KECUALI kamera AES: ada kamera merakam kedua-dua
+      // arah, dan amaran lebih tidak merugikan (pemilik: tiada amaran di E8 kerana laporan dibuat dari arah bertentangan).
+      if (r.type !== 'KAMERA' && !sameDirection(r, me.heading)) return;
     }
     state.alerted.add(r.id);
     const t = TYPES[r.type] || { label: r.type, icon: '⚠️' };

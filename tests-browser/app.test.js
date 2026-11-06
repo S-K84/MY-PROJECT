@@ -459,3 +459,24 @@ for (const file of FILES) test(`${file}: setiap destinasi yang dinavigasi masuk 
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+
+test('IndexUji.html: kamera AES diberi amaran walaupun dilapor dari arah bertentangan; laporan lain arah bertentangan senyap', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
+  try {
+    const r = await page.evaluate(async () => {
+      const w = ms => new Promise(r => setTimeout(r, ms));
+      const said = []; window.speechSynthesis && (window.speechSynthesis.speak = u => said.push(u.text));
+      S.alertTypes = Object.keys(TYPES); state.manualLoc = false; state.alerted = new Set();
+      // Memandu ke utara (heading 0); laporan 300 m di hadapan, dilapor oleh pemandu arah selatan (heading 180)
+      state.reports = [
+        { id: 'cam-x', type: 'KAMERA', lat: 3.1027, lng: 101.7, heading: 180, name: 'A', up: 1, down: 0, time: Date.now() },
+        { id: 'pol-x', type: 'POLIS', lat: 3.1027, lng: 101.7001, heading: 180, name: 'B', up: 1, down: 0, time: Date.now() }];
+      setMe({ lat: 3.1, lng: 101.7, heading: 0, speed: 25, t: Date.now() }); await w(50);
+      checkHazards(); await w(50);
+      return { alerted: [...state.alerted] };
+    });
+    assert.ok(r.alerted.includes('cam-x'), 'kamera AES arah bertentangan tidak diberi amaran');
+    assert.ok(!r.alerted.includes('pol-x'), 'laporan polis arah bertentangan diberi amaran');
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});
