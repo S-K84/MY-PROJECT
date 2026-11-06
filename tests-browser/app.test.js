@@ -480,3 +480,50 @@ test('IndexUji.html: kamera AES diberi amaran walaupun dilapor dari arah bertent
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+
+test('IndexUji.html: kad lokasi muncul sebelum pertanyaan lokasi telefon; GPS hanya bermula selepas pengguna tekan Benarkan', async () => {
+  const { page, errors, close } = await open('IndexUji.html', null, { geoPerm: 'prompt' });
+  try {
+    await page.evaluate(() => {
+      window.__geoCalls = 0;
+      const w = navigator.geolocation.watchPosition.bind(navigator.geolocation);
+      navigator.geolocation.watchPosition = (a, b, c) => { window.__geoCalls++; return w(a, b, c); };
+    });
+    await page.waitForSelector('#locModal', { state: 'visible' });
+    assert.strictEqual(await page.textContent('#locTitle'), 'Benarkan lokasi');
+    assert.strictEqual(await page.evaluate(() => window.__geoCalls), 0, 'GPS dimulakan sebelum pengguna setuju');
+    await page.click('#locGo');
+    await page.waitForSelector('#locModal', { state: 'hidden' });
+    assert.ok(await page.evaluate(() => window.__geoCalls) >= 1, 'GPS tidak bermula selepas tekan Benarkan');
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});
+
+test('IndexUji.html: lokasi disekat → kad langkah tetapan; lokasi sudah dibenarkan → tiada kad', async () => {
+  let t = await open('IndexUji.html', null, { geoPerm: 'denied' });
+  try {
+    await t.page.waitForSelector('#locModal', { state: 'visible' });
+    assert.strictEqual(await t.page.textContent('#locTitle'), 'Lokasi disekat');
+    assert.ok(await t.page.isVisible('#locDenied'));
+    await t.page.click('#locManual');
+    await t.page.waitForSelector('#locModal', { state: 'hidden' });
+    assert.ok(await t.page.evaluate(() => state.manualLoc), 'pilihan peta tidak menetapkan lokasi manual');
+    assert.deepStrictEqual(t.errors, []);
+  } finally { await t.close(); }
+  t = await open('IndexUji.html');
+  try {
+    await t.page.waitForTimeout(500);
+    assert.ok(!(await t.page.isVisible('#locModal')), 'kad lokasi muncul walaupun lokasi sudah dibenarkan');
+  } finally { await t.close(); }
+});
+
+test('IndexUji.html: kad lokasi ditutup sendiri bila pengguna membenarkan lokasi dari tempat lain', async () => {
+  const { page, errors, close } = await open('IndexUji.html', null, { geoPerm: 'prompt' });
+  try {
+    await page.waitForSelector('#locModal', { state: 'visible' });
+    await page.evaluate(() => window.__setGeoPerm('granted'));
+    await page.waitForSelector('#locModal', { state: 'hidden' });
+    assert.ok(await page.evaluate(() => geoReady));
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});

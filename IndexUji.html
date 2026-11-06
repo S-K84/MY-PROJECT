@@ -50,7 +50,7 @@
           parts.push(n + '/' + ln);
           pre.textContent += '\nBahagian: ' + parts.join(' ');
           // Baris di sekitar ralat. MAIN_AT = nombor baris <script> utama dalam IndexUji.html (disemak oleh ujian).
-          var MAIN_AT = 792, bl = window.__bootLine;
+          var MAIN_AT = 845, bl = window.__bootLine;
           if (bl) {
             pre.textContent += '\nSkrip sekitar baris ' + bl + ' (dianggap baris fail ' + bl + '):';
             for (var j = Math.max(1, bl - MAIN_AT - 3); j <= Math.min(SL.length - 1, bl - MAIN_AT + 1); j++)
@@ -575,6 +575,30 @@
     .nav-dist { font-weight:800; letter-spacing:-.01em; }
     .nav-road { font-weight:700; }
     .tabs button.on { color:var(--sign-green); }
+    /* ---------- Minta lokasi: papan tanda hijau sebelum pertanyaan lokasi telefon ---------- */
+    #locModal { z-index:2700; background:rgba(0,20,12,.55); }
+    #locModal .sheet { padding-top:18px; }
+    .loc-sign { background:var(--sign-green); color:var(--sign-white); border-radius:16px; padding:20px 20px 18px;
+      box-shadow:inset 0 0 0 5px var(--sign-green), inset 0 0 0 7.5px var(--sign-white), 0 6px 18px rgba(0,0,0,.22);
+      display:flex; align-items:center; gap:16px; }
+    .loc-sign svg { flex:none; width:58px; height:58px; }
+    .loc-sign h3 { margin:0; font-size:22px; line-height:1.2; font-weight:800; letter-spacing:-.01em; color:inherit; }
+    .loc-sign p { margin:4px 0 0; font-size:15px; line-height:1.35; color:rgba(255,255,255,.86); }
+    .loc-why { list-style:none; margin:16px 2px 6px; padding:0; display:grid; gap:12px; }
+    .loc-why li { display:flex; align-items:center; gap:12px; font-size:16px; line-height:1.4; }
+    .loc-why svg { flex:none; width:24px; height:24px; fill:none; stroke:var(--sign-green); stroke-width:2;
+      stroke-linecap:round; stroke-linejoin:round; }
+    :root[data-theme="dark"] .loc-why svg { stroke:#5fd39f; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .loc-why svg { stroke:#5fd39f; } }
+    .loc-steps { margin:14px 2px 18px; padding-left:22px; font-size:16px; line-height:1.5; }
+    .loc-steps li { margin:4px 0; }
+    .loc-note { margin:10px 2px 14px; font-size:14px; line-height:1.45; color:var(--muted); }
+    .loc-go { display:block; width:100%; min-height:54px; border-radius:999px; background:var(--sign-green); color:#fff;
+      font-weight:800; font-size:18px; box-shadow:0 4px 14px rgba(0,112,74,.35); }
+    .loc-alt { display:block; width:100%; min-height:48px; margin-top:6px; font-weight:700; font-size:16px; color:var(--fg);
+      background:none; text-decoration:underline; text-underline-offset:3px; }
+    .loc-go:active, .loc-alt:active { transform:scale(.97); }
+    .loc-go:focus-visible, .loc-alt:focus-visible { outline:3px solid var(--sign-green); outline-offset:3px; }
   </style>
 </head>
 <body data-mode="idle">
@@ -701,6 +725,35 @@
       <button class="round" id="setClose" aria-label="Tutup"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="full-body" id="setBody"></div>
+  </div>
+
+  <!-- Minta lokasi (sebelum pertanyaan lokasi telefon) -->
+  <div class="modal" id="locModal" role="dialog" aria-modal="true" aria-labelledby="locTitle">
+    <div class="sheet">
+      <div class="loc-sign">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 4c-8 0-14 6.1-14 13.8C10 28.4 24 44 24 44s14-15.6 14-26.2C38 10.1 32 4 24 4z"
+          fill="#fff"/><circle cx="24" cy="18" r="5.5" fill="var(--sign-green)"/></svg>
+        <div><h3 id="locTitle">Benarkan lokasi</h3><p id="locLead">Jalan Malaysia perlukan lokasi anda untuk navigasi dan amaran di jalan.</p></div>
+      </div>
+      <div id="locAsk">
+        <ul class="loc-why">
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8z"/></svg>Tunjuk kedudukan kereta anda di peta</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 20V10a4 4 0 0 1 4-4h6"/><path d="M15 2l4 4-4 4"/></svg>Beri arahan belok semasa navigasi</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>Beri amaran kamera, had laju dan laporan di hadapan</li>
+        </ul>
+        <p class="loc-note">Selepas ini telefon akan bertanya. Pilih Allow (Benarkan).</p>
+      </div>
+      <div id="locDenied" hidden>
+        <ol class="loc-steps">
+          <li>Buka Settings (Tetapan) di iPhone</li>
+          <li>Pilih Chrome, kemudian Location</li>
+          <li>Pilih While Using the App</li>
+          <li>Kembali ke sini dan tekan Cuba lagi</li>
+        </ol>
+      </div>
+      <button class="loc-go" id="locGo">Benarkan lokasi</button>
+      <button class="loc-alt" id="locManual">Tetapkan lokasi di peta</button>
+    </div>
   </div>
 
   <!-- Lapor -->
@@ -1120,6 +1173,19 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&am
 // setiap teks yang dipaparkan diterjemah (kamus frasa + corak untuk teks bernombor). Teks pengguna (nama tempat,
 // komen) tidak berada dalam kamus, jadi kekal seperti asal. Terjemahan hanya menukar teks — tiada HTML disuntik.
 const EN = {
+  'Benarkan lokasi': 'Allow location', 'Jalan Malaysia perlukan lokasi anda untuk navigasi dan amaran di jalan.':
+    'Jalan Malaysia needs your location for navigation and road alerts.',
+  'Tunjuk kedudukan kereta anda di peta': 'Show your car on the map', 'Beri arahan belok semasa navigasi':
+    'Give turn-by-turn directions', 'Beri amaran kamera, had laju dan laporan di hadapan':
+    'Warn you about cameras, speed limits and reports ahead', 'Tetapkan lokasi di peta': 'Set location on the map',
+  'Lokasi disekat': 'Location blocked',
+  'Selepas ini telefon akan bertanya. Pilih Allow (Benarkan).': 'Your phone will ask next. Choose Allow.',
+  'Buka Settings (Tetapan) di iPhone': 'Open Settings on your iPhone',
+  'Pilih Chrome, kemudian Location': 'Choose Chrome, then Location',
+  'Pilih While Using the App': 'Choose While Using the App',
+  'Kembali ke sini dan tekan Cuba lagi': 'Come back here and tap Try again',
+  'Jalan Malaysia tidak dapat melihat lokasi anda. Hidupkan semula dalam tetapan telefon.':
+    'Jalan Malaysia cannot see your location. Turn it back on in your phone settings.',
   'Ke mana?': 'Where to?', 'Menu': 'Menu', 'Lapor': 'Report', 'Laporkan': 'Report', 'Suara': 'Voice', 'Kelajuan': 'Speed',
   'Kompas: pusat ke lokasi / tukar arah peta': 'Compass: recentre / change map direction', 'Kembali': 'Back', 'Tutup': 'Close',
   'Kembangkan / kecilkan': 'Expand / collapse', 'Terkini': 'Recent', 'Rumah': 'Home', 'Kerja': 'Work', 'Kegemaran': 'Favourites',
@@ -2572,12 +2638,13 @@ function setMe(pos) {
 
 // GPS. Di iPhone, watchPosition boleh berhenti selepas satu ralat (cth. masa tamat) atau bila skrin dikunci,
 // jadi ia dimulakan semula secara automatik dan dipantau oleh "watchdog".
-let watchId = null, lastFixAt = 0, gpsWarnAt = 0, geoLow = false;
+let watchId = null, lastFixAt = 0, gpsWarnAt = 0, geoLow = false, geoReady = false;
 /** Diam > 3 minit dan tidak menavigasi → mod jimat bateri. */
 const IDLE_MS = 180000;
 function isIdle() { return !state.navigating && !!state.stillSince && Date.now() - state.stillSince > IDLE_MS; }
 /** low = true: GPS ketepatan rendah (Wi-Fi/menara sel, jauh lebih jimat bateri) — hanya bila telefon diam lama. */
 function startGeo(low) {
+  if (!geoReady) return;                      // tunggu pengguna setuju dalam kad lokasi (initGeo)
   if (!navigator.geolocation) return geoFallback();
   if (watchId != null) navigator.geolocation.clearWatch(watchId);
   geoLow = !!low;
@@ -2588,6 +2655,7 @@ function startGeo(low) {
 
 function onFix(p) {
   lastFixAt = Date.now();
+  if ($('locModal').style.display === 'flex') closeLocAsk();
   state.manualLoc = false;
   const c = p.coords, prev = state.me, here = { lat: c.latitude, lng: c.longitude };
   // iPhone beri speed = -1 / null bila tiada data → kira sendiri daripada dua kedudukan
@@ -2636,6 +2704,37 @@ async function requestWakeLock() {
   } catch (e) { wakeLock = null; }
 }
 function releaseWakeLock() { try { if (wakeLock) wakeLock.release(); } catch (e) {} wakeLock = null; }
+
+// Kad lokasi: pertanyaan lokasi telefon tidak boleh diubah rupanya, jadi kad ini menerangkan sebabnya DAHULU.
+// Dipapar hanya bila telefon memang akan bertanya ('prompt') atau lokasi disekat ('denied'). Sudah dibenarkan → terus mula.
+function initGeo() {
+  if (!navigator.geolocation) return geoFallback();
+  const go = () => { geoReady = true; startGeo(false); };
+  let done = false;
+  const decide = st => {
+    if (done) return; done = true;
+    if (st === 'prompt' || st === 'denied') openLocAsk(st); else go();
+  };
+  setTimeout(() => decide('unknown'), 2000);  // API tidak menjawab → cara lama
+  try {
+    navigator.permissions.query({ name: 'geolocation' }).then(ps => {
+      decide(ps.state);
+      ps.onchange = () => { if (ps.state === 'granted' && !geoReady) { closeLocAsk(); go(); } };
+    }, () => decide('unknown'));
+  } catch (e) { decide('unknown'); }
+}
+function openLocAsk(st) {
+  const denied = st === 'denied';
+  $('locTitle').textContent = denied ? 'Lokasi disekat' : 'Benarkan lokasi';
+  $('locLead').textContent = denied ? 'Jalan Malaysia tidak dapat melihat lokasi anda. Hidupkan semula dalam tetapan telefon.'
+    : 'Jalan Malaysia perlukan lokasi anda untuk navigasi dan amaran di jalan.';
+  $('locAsk').hidden = denied; $('locDenied').hidden = !denied;
+  $('locGo').textContent = denied ? 'Cuba lagi' : 'Benarkan lokasi';
+  $('locModal').style.display = 'flex';
+}
+function closeLocAsk() { $('locModal').style.display = 'none'; }
+$('locGo').onclick = () => { closeLocAsk(); geoReady = true; startGeo(false); };
+$('locManual').onclick = () => { closeLocAsk(); geoFallback(); };
 
 function geoFallback() {
   if (state.me && !state.manualLoc) return;
@@ -4747,7 +4846,7 @@ call('getSession', prevToken, pendingOld).then(async s => {
 renderNet();
 if (TRACK) document.body.dataset.mode = 'track';
 else {
-  restoreShare(); startGeo(false);
+  restoreShare(); initGeo();
   // Segar laporan & pengguna setiap 15 s; bila telefon diam lama (bukan navigasi) hanya setiap 60 s (jimat bateri & kuota)
   setInterval(() => {
     if (Date.now() < (state.liveBackoffUntil || 0)) return;   // server sibuk: tunggu
