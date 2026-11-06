@@ -277,8 +277,8 @@ for (const file of ['Index.html', 'IndexUji.html']) test(`${file}: identiti papa
   assert.doesNotMatch(s, /\.sec-title \{[^}]*text-transform:uppercase/);
 });
 
-test('saluran uji: kanvas garisan laluan kecil (padding ≤ 0.2) — kanvas besar + putaran peta melebihi had iPhone', () => {
-  const s = fs.readFileSync(path.join(ROOT, 'IndexUji.html'), 'utf8');
+for (const file of ['Index.html', 'IndexUji.html']) test(`${file}: kanvas garisan laluan kecil (padding ≤ 0.2) — kanvas besar + putaran peta melebihi had iPhone`, () => {
+  const s = fs.readFileSync(path.join(ROOT, file), 'utf8');
   const m = s.match(/const lineRenderer = L\.canvas\(\{ padding: ([\d.]+)/);
   assert.ok(m, 'lineRenderer tiada');
   assert.ok(Number(m[1]) <= 0.2, 'padding kanvas terlalu besar: ' + m[1]);
