@@ -82,7 +82,7 @@ function serve() {
 // Jubin PNG 1×1 (untuk ujian simpanan jubin peta).
 const TILE_PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 
-/** extra.tiles: layan jubin OSM & CARTO palsu (dengan CORS) & kira permintaan dalam tiles.requests. */
+/** extra.geoPerm: keadaan kebenaran lokasi. extra.tiles: layan jubin OSM & CARTO palsu (dengan CORS) & kira permintaan dalam tiles.requests. */
 async function open(file, opts, extra) {
   const server = await serve();
   const browser = await chromium.launch();
@@ -96,6 +96,16 @@ async function open(file, opts, extra) {
     try { if (!localStorage.getItem('jk_settings')) localStorage.setItem('jk_settings', JSON.stringify({ tripSuggest: false })); }
     catch (e) { /* tiada storan */ }
   });
+  // Kebenaran lokasi olok-olok: lalai 'granted' (kad lokasi tidak muncul). extra.geoPerm = 'prompt' / 'denied' untuk menguji kad.
+  // window.__setGeoPerm(st) menukar keadaan dan memanggil onchange (seperti bila pengguna tekan Allow).
+  await page.addInitScript(st => {
+    const ps = { state: st, onchange: null };
+    window.__setGeoPerm = v => { ps.state = v; if (ps.onchange) ps.onchange(); };
+    try {
+      const q = navigator.permissions.query.bind(navigator.permissions);
+      navigator.permissions.query = d => (d && d.name === 'geolocation' ? Promise.resolve(ps) : q(d));
+    } catch (e) { /* tiada Permissions API */ }
+  }, (extra && extra.geoPerm) || 'granted');
   const tiles = { requests: [] };
   if (extra && extra.tiles) {
     await page.route(/^https:\/\/([abc]\.tile\.openstreetmap\.org|[abcd]\.basemaps\.cartocdn\.com)\//, r => {
