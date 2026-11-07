@@ -50,7 +50,7 @@
           parts.push(n + '/' + ln);
           pre.textContent += '\nBahagian: ' + parts.join(' ');
           // Baris di sekitar ralat. MAIN_AT = nombor baris <script> utama dalam IndexUji.html (disemak oleh ujian).
-          var MAIN_AT = 845, bl = window.__bootLine;
+          var MAIN_AT = 852, bl = window.__bootLine;
           if (bl) {
             pre.textContent += '\nSkrip sekitar baris ' + bl + ' (dianggap baris fail ' + bl + '):';
             for (var j = Math.max(1, bl - MAIN_AT - 3); j <= Math.min(SL.length - 1, bl - MAIN_AT + 1); j++)
@@ -575,6 +575,13 @@
     .nav-dist { font-weight:800; letter-spacing:-.01em; }
     .nav-road { font-weight:700; }
     .tabs button.on { color:var(--sign-green); }
+    /* Lampu isyarat di atas laluan (seperti Waze): kotak gelap kecil, tiga lampu, bingkai putih supaya jelas atas jalan */
+    .sig-wrap { background:none; border:0; }
+    .sig { display:flex; flex-direction:column; align-items:center; justify-content:space-between; width:16px; height:32px;
+      padding:3px 0; box-sizing:border-box; background:#23262c; border:2px solid #fff; border-radius:6px;
+      box-shadow:0 1px 4px rgba(0,0,0,.45); }
+    .sig i { display:block; width:6px; height:6px; border-radius:50%; }
+    .sig .r { background:#ff3b30; } .sig .y { background:#ffcc00; } .sig .g { background:#34c759; }
     /* ---------- Minta lokasi: papan tanda hijau sebelum pertanyaan lokasi telefon ---------- */
     #locModal { z-index:2700; background:rgba(0,20,12,.55); }
     #locModal .sheet { padding-top:18px; }
@@ -1058,6 +1065,7 @@ map.attributionControl.setPosition('topright');
 const lineRenderer = L.canvas({ padding: 0.15, tolerance: 6 });
 const reportLayer = L.layerGroup().addTo(map);
 const userLayer = L.layerGroup().addTo(map);
+const sigLayer = L.layerGroup().addTo(map);   // lampu isyarat di atas laluan semasa navigasi
 // Ikon kenderaan (dilihat dari atas, menghala ke atas)
 const ME_SHAPES = {
   walk: '<circle cx="20" cy="20" r="9" fill="#33ccff" stroke="#fff" stroke-width="3"/><path d="M20 3 L26 13 H14 Z" fill="#0b6f8f"/>',
@@ -3861,6 +3869,7 @@ function cancelRoute() {
   releaseWakeLock(); clearTimeout(followTimer);
   state.navigating = false; state.routes = []; state.autoStart = false;
   state.roadLimit = 0; state.slRoute = null; state.slInt = []; state.shownLimit = 0; renderSpeedSign();
+  clearSignals();
   store.del('jk_active');
   state.routeLayers.forEach(l => l.remove()); state.routeLayers = [];
   (state.trafficLayers || []).forEach(l => l.remove()); state.trafficLayers = []; state.trafficKey = null;
@@ -4149,25 +4158,28 @@ function updateRoadLimit() {
   const along = state.meAlong || 0;
   // Muat (semula) bila laluan bertukar atau kedudukan menghampiri hujung kawasan yang sudah dimuat
   if (!state.slBusy && (state.slRoute !== r || state.slTo < Math.min(r.total, along + 10000))) {
+    if (state.slRoute !== r) clearSignals();   // laluan baharu (cth. dilencongkan): buang lampu isyarat laluan lama
     state.slBusy = true;
     const navId = state.navId, from = Math.max(0, along - 200), to = Math.min(r.total, along + SL_AHEAD), pts = [];
     for (let d = from; d < to; d += 1000) pts.push(slicePts(r, d, d)[0]);
     pts.push(slicePts(r, to, to)[0]);
-    // Satu pertanyaan: jalan ber-maxspeed + kamera laju (highway=speed_camera) di sepanjang laluan
+    // Satu pertanyaan: jalan ber-maxspeed + kamera laju (highway=speed_camera) + lampu isyarat di sepanjang laluan
     const q = `[out:json][timeout:25];(${routeBoxes(pts, 40).map(b =>
-      `way["highway"]["maxspeed"](${b});node["highway"="speed_camera"](${b});`).join('')});out tags geom;`;
+      `way["highway"]["maxspeed"](${b});node["highway"="speed_camera"](${b});node["highway"="traffic_signals"](${b});`).join('')});out tags geom;`;
     overpassRaw(q, []).then(data => {
       if (navId !== state.navId || state.routes[state.selRoute] !== r) return;
       const keep = state.slRoute === r ? (state.slInt || []).filter(x => x.e < from) : [];
       state.slInt = keep.concat(speedIntervals(r, data.elements, Math.max(0, (state.meSeg || 0) - 5), to + 100));
       const keepCams = state.slRoute === r ? (state.cams || []).filter(x => x.a < from) : [];
       state.cams = keepCams.concat(routeCameras(r, data.elements, Math.max(0, (state.meSeg || 0) - 5), to + 100));
-      state.slRoute = r; state.slTo = to;
+      const keepSigs = state.slRoute === r ? (state.sigs || []).filter(x => x.a < from) : [];
+      state.sigs = keepSigs.concat(routeSignals(r, data.elements, Math.max(0, (state.meSeg || 0) - 5), to + 100));
+      state.slRoute = r; state.slTo = to; state.sigDrawn = null;
       updateRoadLimit();
     }, () => { state.slRetryAt = Date.now() + 60000; })
       .finally(() => { setTimeout(() => { state.slBusy = false; }, Math.max(0, (state.slRetryAt || 0) - Date.now())); });
   }
-  if (state.slRoute === r) checkCameras(along);
+  if (state.slRoute === r) { checkCameras(along); renderSignals(along); }
   if (S.speedLimit !== -1) return;
   const v = state.slRoute === r ? speedAt(state.slInt, along) : 0;
   if (v) { state.roadLimit = v; state.roadLimitAt = along; }
@@ -4192,6 +4204,34 @@ function routeCameras(r, elements, fromSeg, maxAlong) {
   });
   return out;
 }
+/**
+ * Lampu isyarat OSM (highway=traffic_signals) di atas laluan (≤ 20 m). Dua lorong lebuh yang berdekatan (< 35 m pada
+ * laluan) dianggap satu persimpangan. Pulangkan [{ a: jarak pada laluan, lat, lng, id }] mengikut jarak.
+ */
+function routeSignals(r, elements, fromSeg, maxAlong) {
+  const found = [];
+  (elements || []).forEach(el => {
+    if (el.type !== 'node' || !el.tags || el.tags.highway !== 'traffic_signals') return;
+    const l = locate({ lat: el.lat, lng: el.lon }, r, fromSeg, maxAlong);
+    if (l.off <= 20) found.push({ a: l.along, lat: el.lat, lng: el.lon, id: 'sig-' + el.id });
+  });
+  found.sort((x, y) => x.a - y.a);
+  return found.filter((x, i) => i === 0 || x.a - found[i - 1].a >= 35);
+}
+const SIG_SHOW_M = 5000;
+/** Lukis lampu isyarat dalam ~5 km di hadapan (maks 40). Dilukis semula setiap ~250 m, atau bila data baharu tiba. */
+function renderSignals(along) {
+  if (!state.navigating) return;
+  if (state.sigDrawn !== null && state.sigDrawn !== undefined && Math.abs(along - state.sigDrawn) < 250) return;
+  state.sigDrawn = along;
+  sigLayer.clearLayers();
+  (state.sigs || []).filter(x => x.a > along - 30 && x.a <= along + SIG_SHOW_M).slice(0, 40).forEach(x => {
+    L.marker([x.lat, x.lng], { icon: L.divIcon({ className: 'sig-wrap', iconSize: [18, 34], iconAnchor: [9, 17],
+      html: '<span class="sig"><i class="r"></i><i class="y"></i><i class="g"></i></span>' }),
+      interactive: false, keyboard: false, zIndexOffset: -200 }).addTo(sigLayer);
+  });
+}
+function clearSignals() { state.sigs = []; state.sigDrawn = null; sigLayer.clearLayers(); }
 /** Amaran suara sekali bagi setiap kamera di hadapan (jarak amaran sama seperti laporan; +400 m bila laju). */
 function checkCameras(along) {
   if (S.alertTypes.indexOf('KAMERA') < 0 || S.travel === 'walk' || !state.me) return;

@@ -7,7 +7,7 @@
 
 // Versi aplikasi — SATU-SATUNYA tempat versi ditulis. Ia disuntik ke Index.html oleh doGet() (menu ☰ & skrin ralat).
 // Naikkan setiap kali kod berubah supaya mudah semak telefon sudah guna kod terkini.
-const APP_VERSION = '2026.11.06-i';
+const APP_VERSION = '2026.11.07-a';
 
 const CONFIG = {
   // ttlMin = berapa minit laporan kekal aktif sebelum luput
@@ -1212,7 +1212,7 @@ function getRoute(token, origin, dest, opts) {
       // Lewat akibat trafik (masa semasa − masa biasa). null jika Google tidak memulangkan data trafik.
       delaySec: hasTraffic ? Math.max(0, durSec - normal) : null,
       steps: [].concat.apply([], legs.map(l => l.steps)).map(s => {
-        const html = String(s.html_instructions || '');
+        const html = fixRouteText_(String(s.html_instructions || ''));
         return {
           text: stripHtml_(html),
           road: roadName_(html),
@@ -1226,6 +1226,17 @@ function getRoute(token, origin, dest, opts) {
       })
     };
   });
+}
+
+/**
+ * Salah eja dalam data Google yang pernah dilihat di jalan (arahan dibaca apa adanya oleh aplikasi & suara).
+ * Senarai TETAP; dibetulkan di server supaya teks di banner dan suara sama-sama betul.
+ */
+const ROUTE_TEXT_FIXES_ = [
+  [/\bNifai\b/g, 'Nilai']   // papan tanda susur keluar 10 (Nov 2026): Google memulangkan "Nifai"
+];
+function fixRouteText_(html) {
+  return ROUTE_TEXT_FIXES_.reduce((t, f) => t.replace(f[0], f[1]), String(html || ''));
 }
 
 const DIRECTION_WORDS_ = new RegExp('^(' + [

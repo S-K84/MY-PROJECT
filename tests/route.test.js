@@ -62,3 +62,15 @@ test('"ferries" ditolak oleh servis: cuba semula tanpa feri', () => {
 test('status lain: "Laluan tidak dijumpai."', () => {
   assert.strictEqual(setup(() => ({ status: 'NOT_FOUND' })).route(KL, NEAR), 'Laluan tidak dijumpai.');
 });
+
+test('papan tanda "Nifai" dalam arahan Google dibetulkan kepada "Nilai" (teks banner & suara datang dari sini)', () => {
+  const step = html => ({ html_instructions: html, distance: { text: '9.7 km', value: 9700 }, start_location: { lat: 3.2, lng: 101.7 }, maneuver: 'turn-left' });
+  const env = setup(() => ({ status: 'OK', routes: [{ summary: 'E2', overview_polyline: { points: '_p~iF~ps|U' },
+    legs: [{ distance: { text: '10 km', value: 10000, }, duration: { text: '9 min', value: 540 },
+      steps: [step('Take exit <b>10</b> toward <b>Nifai</b>'), step('Ke <b>Nilai</b>')] }] }] }));
+  const routes = env.ctx.getRoute('g_t', NEAR, { lat: 2.8, lng: 101.8 }, {});
+  const st = routes[0].steps;
+  assert.strictEqual(st[0].road, 'Nilai');
+  assert.match(st[0].text, /toward Nilai$/);
+  assert.strictEqual(st[1].road, 'Nilai');
+});
