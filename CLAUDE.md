@@ -92,6 +92,10 @@ npm test
 - **Jubin peta:** `tile.openstreetmap.org` (siang & malam). Malam: jubin OSM **dimalapkan** (`body.dark-map .leaflet-tile-pane`),
   bukan `invert` (jalan jadi hitam). CARTO kini memerlukan kunci API (jubin "API KEY REQUIRED", Nov 2026) — jangan guna
   tanpa akaun. MapTiler/Stadia (perlu akaun & kunci) ditangguh sehingga pemilik memutuskan.
+- **Tulisan peta terbalik semasa peta berputar:** jubin OSM ialah gambar raster (tulisan dicetak dalam gambar), jadi ia berputar bersama
+  peta (leaflet-rotate). Pemilik memilih KEKALKAN (A): butang kompas menetapkan peta tetap utara jika tulisan terbalik mengganggu.
+  Peta vektor (MapLibre + OpenFreeMap, percuma tanpa kunci, tulisan sentiasa tegak) ditangguh; ia menukar enjin peta, jadi perlu
+  melalui saluran uji dan ujian di iPhone.
 - **ID 30 hari:** pindah data perlu pengesahan pengguna ("Pulihkan data anda?"), kerana pelayar boleh dikongsi oleh akaun Google
   lain. Sekatan dipindah automatik. Data dipindah, bukan disalin.
 - **Deploy:** `@google/clasp@2.4.2` dipin. `clasp login` pemilik juga guna versi ini (format `.clasprc.json` berbeza antara versi).
