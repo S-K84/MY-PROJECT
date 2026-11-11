@@ -22,7 +22,9 @@ jobs:
   # Buka aplikasi dalam Chromium sebenar (Leaflet dari npm, servis Apps Script olok-olok) — tangkap ralat skrin,
   # navigasi, laporan & carian sebelum merge. Tidak menggantikan ujian iPhone melalui saluran uji (?uji=1).
   browser:
-    runs-on: ubuntu-latest
+    # Disemat: 'ubuntu-latest' bertukar ke Ubuntu baharu (resolute) pada 11 Nov 2026 dan 'playwright install --with-deps' gagal
+    # (apt tidak dapat mencapai pelayan Ubuntu). Naikkan semula bila Playwright disahkan berfungsi di versi baharu.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
