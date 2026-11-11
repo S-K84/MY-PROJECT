@@ -539,3 +539,28 @@ for (const file of ['Index.html', 'IndexUji.html']) {
     } finally { await close(); }
   });
 }
+
+test('IndexUji.html: lampu isyarat OSM dilukis di atas laluan (bukan yang jauh), dua lorong bersebelahan jadi satu, dan dibuang bila navigasi tamat', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
+  try {
+    await page.evaluate(() => {
+      const line = (a, b, n) => Array.from({ length: n }, (_, i) => ({ lat: a[0] + (b[0] - a[0]) * i / (n - 1), lon: a[1] + (b[1] - a[1]) * i / (n - 1) }));
+      window.fetch = () => Promise.resolve({ ok: true, status: 200, json: async () => ({ elements: [
+        { type: 'way', tags: { highway: 'primary', maxspeed: '90' }, geometry: line([3.1, 101.7], [3.2, 101.7], 11) },
+        { type: 'node', id: 11, lat: 3.12, lon: 101.70003, tags: { highway: 'traffic_signals' } },
+        { type: 'node', id: 12, lat: 3.12, lon: 101.70012, tags: { highway: 'traffic_signals' } },   // lorong sebelah (~13 m)
+        { type: 'node', id: 13, lat: 3.14, lon: 101.7005, tags: { highway: 'traffic_signals' } },    // ~55 m dari laluan: bukan di laluan
+        { type: 'node', id: 14, lat: 3.16, lon: 101.70002, tags: { highway: 'traffic_signals' } }] }) });
+      S.speedLimit = -1;
+    });
+    await startNav(page);
+    await drive(page, 90, 30);
+    const r = await page.evaluate(() => ({ ids: (state.sigs || []).map(x => x.id), drawn: document.querySelectorAll('.sig').length,
+      layers: sigLayer.getLayers().length }));
+    assert.deepStrictEqual(r.ids, ['sig-11', 'sig-14']);
+    assert.ok(r.drawn >= 1 && r.drawn === r.layers, `lampu dilukis: ${r.drawn}, lapisan: ${r.layers}`);
+    await page.evaluate(() => cancelRoute());
+    assert.strictEqual(await page.evaluate(() => document.querySelectorAll('.sig').length), 0);
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});
