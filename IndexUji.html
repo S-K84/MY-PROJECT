@@ -4175,8 +4175,17 @@ function updateRoadLimit() {
       const keepSigs = state.slRoute === r ? (state.sigs || []).filter(x => x.a < from) : [];
       state.sigs = keepSigs.concat(routeSignals(r, data.elements, Math.max(0, (state.meSeg || 0) - 5), to + 100));
       state.slRoute = r; state.slTo = to; state.sigDrawn = null;
+      // Diagnostik sementara (buang bila lampu isyarat disahkan di jalan): berapa lampu di laluan, berapa di sekitar
+      if (state.sigToast !== r) {
+        state.sigToast = r;
+        const near = (data.elements || []).filter(e => e.tags && e.tags.highway === 'traffic_signals').length;
+        toast(`🚦 ${state.sigs.length} lampu isyarat di laluan (${near} berhampiran)`, true);
+      }
       updateRoadLimit();
-    }, () => { state.slRetryAt = Date.now() + 60000; })
+    }, () => {
+      state.slRetryAt = Date.now() + 60000;
+      if (state.sigFailed !== r) { state.sigFailed = r; toast('🚦 Data lampu isyarat gagal dimuat, mencuba lagi', true); }
+    })
       .finally(() => { setTimeout(() => { state.slBusy = false; }, Math.max(0, (state.slRetryAt || 0) - Date.now())); });
   }
   if (state.slRoute === r) { checkCameras(along); renderSignals(along); }

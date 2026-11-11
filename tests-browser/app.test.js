@@ -552,9 +552,11 @@ test('IndexUji.html: lampu isyarat OSM dilukis di atas laluan (bukan yang jauh),
         { type: 'node', id: 13, lat: 3.14, lon: 101.7005, tags: { highway: 'traffic_signals' } },    // ~55 m dari laluan: bukan di laluan
         { type: 'node', id: 14, lat: 3.16, lon: 101.70002, tags: { highway: 'traffic_signals' } }] }) });
       S.speedLimit = -1;
+      window.__toasts = []; const t0 = window.toast; window.toast = (m, ...a) => { __toasts.push(m); return t0(m, ...a); };
     });
     await startNav(page);
     await drive(page, 90, 30);
+    assert.ok((await page.evaluate(() => __toasts)).some(m => /2 lampu isyarat di laluan \(4 berhampiran\)/.test(m)), 'mesej diagnostik tiada');
     const r = await page.evaluate(() => ({ ids: (state.sigs || []).map(x => x.id), drawn: document.querySelectorAll('.sig').length,
       layers: sigLayer.getLayers().length }));
     assert.deepStrictEqual(r.ids, ['sig-11', 'sig-14']);
