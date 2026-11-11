@@ -22,9 +22,7 @@ jobs:
   # Buka aplikasi dalam Chromium sebenar (Leaflet dari npm, servis Apps Script olok-olok) — tangkap ralat skrin,
   # navigasi, laporan & carian sebelum merge. Tidak menggantikan ujian iPhone melalui saluran uji (?uji=1).
   browser:
-    # Disemat: 'ubuntu-latest' bertukar ke Ubuntu baharu (resolute) pada 11 Nov 2026 dan 'playwright install --with-deps' gagal
-    # (apt tidak dapat mencapai pelayan Ubuntu). Naikkan semula bila Playwright disahkan berfungsi di versi baharu.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -34,6 +32,8 @@ jobs:
       - name: Pasang pakej ujian
         run: npm ci
       - name: Pasang Chromium
-        run: npx playwright install --with-deps chromium
+        # 11 Nov 2026: apt tidak dapat mencapai pelayan Ubuntu (DNS) pada pelari GitHub, jadi '--with-deps' gagal walaupun
+        # kod tidak berubah. Jika apt gagal, pasang pelayar sahaja (pustaka sistem sudah ada pada imej pelari).
+        run: npx playwright install --with-deps chromium || npx playwright install chromium
       - name: Jalankan ujian pelayar
         run: npm run test:browser
