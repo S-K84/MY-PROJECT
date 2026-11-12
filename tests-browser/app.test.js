@@ -566,3 +566,17 @@ test('IndexUji.html: lampu isyarat OSM dilukis di atas laluan (bukan yang jauh),
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+
+test('IndexUji.html: bila data lampu isyarat gagal dimuat, mesej diagnostik menyebut sebab setiap pelayan', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
+  try {
+    await page.evaluate(() => {
+      window.fetch = () => Promise.resolve({ ok: false, status: 504 });
+      S.speedLimit = -1;
+      window.__toasts = []; const t0 = window.toast; window.toast = (m, ...a) => { __toasts.push(m); return t0(m, ...a); };
+    });
+    await startNav(page);
+    await page.waitForFunction(() => __toasts.some(m => /aksara · .*HTTP 504/.test(m)), null, { timeout: 20000 });
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});
