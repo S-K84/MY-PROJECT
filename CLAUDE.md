@@ -67,6 +67,11 @@ JalanKita (nama paparan: **JomRoute**, ikon kereta merah di jalan menuju matahar
   `tests/client.test.js`.
 - Pelayan percuma (Overpass, Photon) sering menyekat server Google → carian sepanjang laluan & had laju dibuat dari
   TELEFON (kotak kecil, pelayan ditanya serentak), server hanya cuba Photon sekali.
+- **Halaman kosong sejurus selepas deploy (13 Nov 2026, 2026.11.13-b):** app biasa jadi putih kosong di iPhone 2 minit selepas deploy,
+  ditarik balik (PR #73). Kod yang SAMA, diletak dalam `IndexUji.html`, berfungsi di telefon yang sama, dan apabila disalin semula ke
+  `Index.html` (PR #75) ia berfungsi juga selepas pemilik menunggu ~5 minit. Puncanya tidak dipastikan (disyaki kemas kini belum sampai
+  ke telefon). Selepas deploy, minta pemilik tunggu ~5 minit dan tutup app sepenuhnya sebelum menganggapnya rosak.
+  Jangan tarik balik terus jika kod yang sama sudah berfungsi di saluran uji.
 - **PR #5 (2026.11.04-b) gagal di Safari iPhone** dengan `SyntaxError: Unexpected EOF (baris 1946)` walaupun lulus semua ujian
   dan sah dalam V8/acorn/esprima/QuickJS; ditarik balik dalam PR #6. Skrin ralat kini memaparkan diagnostik (panjang & hujung
   skrip yang diterima pelayar) untuk siasatan melalui saluran uji.
