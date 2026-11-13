@@ -4163,32 +4163,42 @@ function updateRoadLimit() {
     const navId = state.navId, from = Math.max(0, along - 200), to = Math.min(r.total, along + SL_AHEAD), pts = [];
     for (let d = from; d < to; d += 1000) pts.push(slicePts(r, d, d)[0]);
     pts.push(slicePts(r, to, to)[0]);
-    // Satu pertanyaan: jalan ber-maxspeed + kamera laju (highway=speed_camera) + lampu isyarat di sepanjang laluan
-    const q = `[out:json][timeout:25];(${routeBoxes(pts, 40).map(b =>
-      `way["highway"]["maxspeed"](${b});node["highway"="speed_camera"](${b});node["highway"="traffic_signals"](${b});`).join('')});out tags geom;`;
-    const slDiag = [];
-    // Latar belakang (pengguna tidak menunggu): beri pelayan 30 s. Pada 13 Nov 2026 dua pelayan tamat masa pada 15 s.
-    overpassRaw(q, slDiag, 30000).then(data => {
-      if (navId !== state.navId || state.routes[state.selRoute] !== r) return;
-      const keep = state.slRoute === r ? (state.slInt || []).filter(x => x.e < from) : [];
-      state.slInt = keep.concat(speedIntervals(r, data.elements, Math.max(0, (state.meSeg || 0) - 5), to + 100));
+    // Dua pertanyaan berasingan (13 Nov 2026: pertanyaan gabungan tamat masa di semua pelayan walaupun 577 aksara).
+    // Titik (kamera laju + lampu isyarat) ringan dan dimuat dahulu; jalan ber-maxspeed + geometri lebih berat dan gagal sendirian.
+    const bx = routeBoxes(pts, 40), slDiag = [], wDiag = [], seg0 = Math.max(0, (state.meSeg || 0) - 5);
+    const stale = () => navId !== state.navId || state.routes[state.selRoute] !== r;
+    const qN = `[out:json][timeout:25];(${bx.map(b => `node["highway"="speed_camera"](${b});node["highway"="traffic_signals"](${b});`).join('')});out tags geom;`;
+    const qW = `[out:json][timeout:25];(${bx.map(b => `way["highway"]["maxspeed"](${b});`).join('')});out tags geom;`;
+    overpassRaw(qN, slDiag, 30000).then(data => {
+      if (stale()) return;
       const keepCams = state.slRoute === r ? (state.cams || []).filter(x => x.a < from) : [];
-      state.cams = keepCams.concat(routeCameras(r, data.elements, Math.max(0, (state.meSeg || 0) - 5), to + 100));
+      state.cams = keepCams.concat(routeCameras(r, data.elements, seg0, to + 100));
       const keepSigs = state.slRoute === r ? (state.sigs || []).filter(x => x.a < from) : [];
-      state.sigs = keepSigs.concat(routeSignals(r, data.elements, Math.max(0, (state.meSeg || 0) - 5), to + 100));
-      state.slRoute = r; state.slTo = to; state.sigDrawn = null;
-      // Diagnostik sementara (buang bila lampu isyarat disahkan di jalan): berapa lampu di laluan, berapa di sekitar
+      state.sigs = keepSigs.concat(routeSignals(r, data.elements, seg0, to + 100));
+      const keepInt = state.slRoute === r ? (state.slInt || []).filter(x => x.e < from) : [];
+      state.slInt = keepInt; state.slRoute = r; state.slTo = to; state.sigDrawn = null;
+      // Diagnostik sementara (buang bila lampu isyarat & had laju disahkan di jalan)
       if (state.sigToast !== r) {
         state.sigToast = r;
         const near = (data.elements || []).filter(e => e.tags && e.tags.highway === 'traffic_signals').length;
         toast(`🚦 ${state.sigs.length} lampu isyarat di laluan (${near} berhampiran)`, true);
       }
       updateRoadLimit();
+      return overpassRaw(qW, wDiag, 30000).then(wd => {
+        if (stale()) return;
+        state.slInt = state.slInt.concat(speedIntervals(r, wd.elements, seg0, to + 100));
+        if (state.wayToast !== r) { state.wayToast = r; toast(`🛣️ ${state.slInt.length} jalan ber-had laju dimuat`, true); }
+        updateRoadLimit();
+      }, () => {
+        state.slTo = 0; state.slRetryAt = Date.now() + 60000;    // muat semula kedua-duanya selepas 60 s
+        if (state.wayFailed !== r) { state.wayFailed = r; toast('🛣️ Jalan ber-had laju gagal dimuat, mencuba lagi', true);
+          setTimeout(() => toast('🛣️ ' + qW.length + ' aksara · ' + (wDiag.join(' | ') || 'tiada butiran'), true), 4000); }
+      });
     }, () => {
       state.slRetryAt = Date.now() + 60000;
       if (state.sigFailed !== r) { state.sigFailed = r; toast('🚦 Data lampu isyarat gagal dimuat, mencuba lagi', true);
         // Diagnostik sementara: sebab setiap pelayan (HTTP / tamat masa / disekat) & saiz pertanyaan
-        setTimeout(() => toast('🚦 ' + q.length + ' aksara · ' + (slDiag.join(' | ') || 'tiada butiran'), true), 4000); }
+        setTimeout(() => toast('🚦 ' + qN.length + ' aksara · ' + (slDiag.join(' | ') || 'tiada butiran'), true), 4000); }
     })
       .finally(() => { setTimeout(() => { state.slBusy = false; }, Math.max(0, (state.slRetryAt || 0) - Date.now())); });
   }
