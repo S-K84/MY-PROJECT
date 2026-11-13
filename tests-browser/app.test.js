@@ -603,3 +603,23 @@ test(`${file}: lampu isyarat & kamera dimuat walaupun pertanyaan jalan ber-had l
   } finally { await close(); }
 });
 }
+
+for (const file of FILES) {
+  test(`${file}: menu ☰ — pemilik nampak tarikh & bilangan data titik, pengguna biasa tidak; English diterjemah`, async () => {
+    const { page, errors, close } = await open(file);
+    try {
+      await page.evaluate(() => {
+        window.fetch = u => (/titik\.json/.test(String(u))
+          ? Promise.resolve({ ok: true, status: 200, json: async () => ({ v: 1, t: '2026-11-13', c: [[3, 101, 1], [3, 102, 2]], s: [[3, 101, 3]] }) })
+          : Promise.resolve({ ok: false, status: 504 }));
+        state.isOwner = true; renderDrawer();
+      });
+      await page.waitForFunction(() => /Data titik: 2026-11-13 · 2 kamera, 1 lampu isyarat/.test(($('titikInfo') || {}).textContent || ''), null, { timeout: 5000 });
+      await page.evaluate(() => { setVoiceLang('en'); renderDrawer(); });
+      await page.waitForFunction(() => /Point data: 2026-11-13 · 2 cameras, 1 traffic lights/.test(($('titikInfo') || {}).textContent || ''), null, { timeout: 5000 });
+      const other = await page.evaluate(() => { state.isOwner = false; renderDrawer(); return !!$('titikInfo'); });
+      assert.strictEqual(other, false);
+      assert.deepStrictEqual(errors, []);
+    } finally { await close(); }
+  });
+}
