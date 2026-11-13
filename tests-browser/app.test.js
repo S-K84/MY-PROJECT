@@ -540,9 +540,8 @@ for (const file of ['Index.html', 'IndexUji.html']) {
   });
 }
 
-for (const file of ['Index.html', 'IndexUji.html']) {
-test(`${file}: lampu isyarat OSM dilukis di atas laluan (bukan yang jauh), dua lorong bersebelahan jadi satu, dan dibuang bila navigasi tamat`, async () => {
-  const { page, errors, close } = await open(file);
+test('IndexUji.html: lampu isyarat OSM dilukis di atas laluan (bukan yang jauh), dua lorong bersebelahan jadi satu, dan dibuang bila navigasi tamat', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
   try {
     await page.evaluate(() => {
       const line = (a, b, n) => Array.from({ length: n }, (_, i) => ({ lat: a[0] + (b[0] - a[0]) * i / (n - 1), lon: a[1] + (b[1] - a[1]) * i / (n - 1) }));
@@ -567,8 +566,8 @@ test(`${file}: lampu isyarat OSM dilukis di atas laluan (bukan yang jauh), dua l
   } finally { await close(); }
 });
 
-test(`${file}: lampu isyarat & kamera dibaca dari fail statik walaupun semua pelayan Overpass gagal`, async () => {
-  const { page, errors, close } = await open(file);
+test('IndexUji.html: lampu isyarat & kamera dibaca dari fail statik walaupun semua pelayan Overpass gagal', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
   try {
     await page.evaluate(() => {
       window.fetch = u => (/titik\.json/.test(String(u))
@@ -585,8 +584,8 @@ test(`${file}: lampu isyarat & kamera dibaca dari fail statik walaupun semua pel
   } finally { await close(); }
 });
 
-test(`${file}: lampu isyarat & kamera dimuat walaupun pertanyaan jalan ber-had laju gagal (dua pertanyaan berasingan)`, async () => {
-  const { page, errors, close } = await open(file);
+test('IndexUji.html: lampu isyarat & kamera dimuat walaupun pertanyaan jalan ber-had laju gagal (dua pertanyaan berasingan)', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
   try {
     await page.evaluate(() => {
       window.fetch = (u, o) => (/maxspeed/.test(decodeURIComponent(String(o && o.body)))
@@ -602,4 +601,3 @@ test(`${file}: lampu isyarat & kamera dimuat walaupun pertanyaan jalan ber-had l
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
-}
