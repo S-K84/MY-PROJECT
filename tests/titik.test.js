@@ -30,16 +30,17 @@ test('ambil-titik: data kosong atau susut mendadak ditolak (fail lama dikekalkan
   assert.strictEqual(checkAgainst(null, { c: [[3, 101, 1]], s: [[3, 101, 1]] }), '');
 });
 
-test('saluran uji: titik dibaca dari fail statik dahulu, Overpass sandaran; mesej diagnostik sementara dibuang', () => {
-  const s = clientScript('IndexUji.html');
+for (const file of ['Index.html', 'IndexUji.html']) {
+test(`${file}: titik dibaca dari fail statik dahulu, Overpass sandaran; mesej diagnostik sementara dibuang`, () => {
+  const s = clientScript(file);
   assert.match(s, /TITIK_URL = 'https:\\\/\\\/s-k84\.github\.io\/MY-PROJECT\/data\/titik\.json'/);
   assert.match(s, /loadTitik\(\)\.then\(d => d \? titikElements\(d, bx\) : overpassRaw\(qN/);
   assert.ok(!/toast\(['`]🚦/.test(s) && !/toast\(['`]🛣️/.test(s), 'mesej diagnostik 🚦/🛣️ masih ada');
   assert.ok(!/slDiag|wDiag|sigToast|wayToast/.test(s));
 });
 
-test('saluran uji: titikElements memberi hanya titik dalam kotak, berbentuk Overpass', () => {
-  const s = clientScript('IndexUji.html');
+test(`${file}: titikElements memberi hanya titik dalam kotak, berbentuk Overpass`, () => {
+  const s = clientScript(file);
   const ctx = {};
   vm.runInNewContext(fn(s, 'titikElements') + ';this.f = titikElements;', ctx);
   const d = { c: [[3.1, 101.7, 11], [4.0, 102.0, 12]], s: [[3.1005, 101.7005, 21], [9, 9, 22]] };
@@ -50,8 +51,8 @@ test('saluran uji: titikElements memberi hanya titik dalam kotak, berbentuk Over
   assert.strictEqual(out[0].lon, 101.7);
 });
 
-test('saluran uji: loadTitik memuat sekali sahaja; gagal → null (sandaran Overpass)', async () => {
-  const s = clientScript('IndexUji.html');
+test(`${file}: loadTitik memuat sekali sahaja; gagal → null (sandaran Overpass)`, async () => {
+  const s = clientScript(file);
   let calls = 0, mode = 'ok';
   const ctx = { window: { fetch: true }, Date, Promise, TITIK_URL: 'u',
     fetch: () => { calls++; return mode === 'ok'
@@ -64,6 +65,7 @@ test('saluran uji: loadTitik memuat sekali sahaja; gagal → null (sandaran Over
   vm.runInNewContext('let titikP = null, titikFailAt = 0;' + fn(s, 'loadTitik') + ';this.f = loadTitik;', ctx2);
   assert.strictEqual(await ctx2.f(), null);
 });
+}
 
 test('titik-bulanan.yml: berjadual bulanan, hanya menyimpan docs/data/titik.json', () => {
   const y = fs.readFileSync(path.join(ROOT, '.github/workflows/titik-bulanan.yml'), 'utf8');
