@@ -4172,6 +4172,62 @@ function titikElements(d, boxes) {
   add(d.c, 'speed_camera'); add(d.s, 'traffic_signals');
   return out;
 }
+// ---- Jalan ber-had laju dari fail statik (docs/data/had/, dikemas kini sebulan sekali oleh .github/workflows/had-bulanan.yml).
+// Kawasan 0.5° (kunci lantai(lat*2)_lantai(lng*2)); hanya kawasan di sekitar laluan dimuat. indeks.json menyenaraikan kawasan yang ada.
+// Gagal / belum ada fail → null, dan Overpass digunakan sebagai sandaran.
+const HAD_URL = 'https:\/\/s-k84.github.io/MY-PROJECT/data/had/';
+let hadIdxP = null, hadIdxFailAt = 0;
+const hadTiles = {};
+function fetchHad(name) {
+  return fetch(HAD_URL + name, { credentials: 'omit', referrerPolicy: 'no-referrer' }).then(res => {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  });
+}
+/** Indeks kawasan (sekali; dicuba semula selepas 5 minit jika gagal). Pulangkan Promise<{k:[...]}> atau null. */
+function loadHadIndex() {
+  if (hadIdxP && !(hadIdxFailAt && Date.now() - hadIdxFailAt > 300000)) return hadIdxP;
+  hadIdxFailAt = 0;
+  if (!window.fetch) return (hadIdxP = Promise.resolve(null));
+  hadIdxP = fetchHad('indeks.json').then(d => {
+    if (!d || !Array.isArray(d.k)) throw new Error('format');
+    return d;
+  }).catch(() => { hadIdxFailAt = Date.now(); return null; });
+  return hadIdxP;
+}
+/** Kunci kawasan yang dilitupi kotak "s,w,n,e". */
+function hadKeys(boxes) {
+  const keys = {};
+  boxes.forEach(b => {
+    const v = b.split(',').map(Number);
+    for (let i = Math.floor(v[0] * 2); i <= Math.floor(v[2] * 2); i++)
+      for (let j = Math.floor(v[1] * 2); j <= Math.floor(v[3] * 2); j++) keys[i + '_' + j] = true;
+  });
+  return Object.keys(keys);
+}
+/** Jalan dalam kawasan yang mempunyai sekurang-kurangnya satu bucu dalam kotak -> elemen berbentuk Overpass (untuk speedIntervals). */
+function hadElements(tiles, boxes) {
+  const bb = boxes.map(b => b.split(',').map(Number)), out = [];
+  tiles.forEach(t => (t && t.w || []).forEach(w => {
+    const g = w[1], pts = [];
+    let hit = false;
+    for (let k = 0; k + 1 < g.length; k += 2) {
+      pts.push({ lat: g[k], lon: g[k + 1] });
+      if (!hit) hit = bb.some(b => g[k] >= b[0] && g[k] <= b[2] && g[k + 1] >= b[1] && g[k + 1] <= b[3]);
+    }
+    if (hit) out.push({ type: 'way', tags: { maxspeed: String(w[0]) }, geometry: pts });
+  }));
+  return out;
+}
+/** Elemen jalan ber-had laju sekitar kotak (dari fail statik). Pulangkan Promise<elements> atau null jika fail tiada / gagal (guna Overpass). */
+function loadHad(boxes) {
+  return loadHadIndex().then(idx => {
+    if (!idx) return null;
+    const want = hadKeys(boxes).filter(k => idx.k.indexOf(k) >= 0);
+    return Promise.all(want.map(k => hadTiles[k] || (hadTiles[k] = fetchHad(k + '.json').catch(e => { delete hadTiles[k]; throw e; }))))
+      .then(tiles => hadElements(tiles, boxes), () => null);
+  });
+}
 function updateRoadLimit() {
   const r = state.routes[state.selRoute];
   if (!r || !state.navigating) return;
@@ -4198,7 +4254,7 @@ function updateRoadLimit() {
       const keepInt = state.slRoute === r ? (state.slInt || []).filter(x => x.e < from) : [];
       state.slInt = keepInt; state.slRoute = r; state.slTo = to; state.sigDrawn = null;
       updateRoadLimit();
-      return overpassRaw(qW, [], 30000).then(wd => {
+      return loadHad(bx).then(els => els ? { elements: els } : overpassRaw(qW, [], 30000)).then(wd => {
         if (stale()) return;
         state.slInt = state.slInt.concat(speedIntervals(r, wd.elements, seg0, to + 100));
         updateRoadLimit();

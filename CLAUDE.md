@@ -105,7 +105,9 @@ npm test
   tamat masa walaupun pertanyaan kecil). Kini `.github/workflows/titik-bulanan.yml` (`scripts/ambil-titik.js`) mengambil semua titik
   Malaysia sebulan sekali ke `docs/data/titik.json` (GitHub Pages); klien membacanya dahulu (`loadTitik`), Overpass hanya sandaran.
   Ini satu-satunya pengecualian "jangan commit terus ke `main`": bot hanya menyimpan fail data itu (bukan kod, tiada deploy). Jalan
-  ber-`maxspeed` masih dari Overpass sahaja.
+  ber-`maxspeed` (had laju): `.github/workflows/had-bulanan.yml` (`scripts/ambil-had.js`) menyimpan kawasan 0.5° ke `docs/data/had/<i>_<j>.json`
+  + `indeks.json` (bot juga commit terus ke `main`, fail data sahaja); klien memuat hanya kawasan di sekitar laluan (`loadHad`), Overpass sandaran.
+  Had laju hanya ada di jalan yang OSM ada tanda `maxspeed`.
 - **ID 30 hari:** pindah data perlu pengesahan pengguna ("Pulihkan data anda?"), kerana pelayar boleh dikongsi oleh akaun Google
   lain. Sekatan dipindah automatik. Data dipindah, bukan disalin.
 - **Deploy:** `@google/clasp@2.4.2` dipin. `clasp login` pemilik juga guna versi ini (format `.clasprc.json` berbeza antara versi).

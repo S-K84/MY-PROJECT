@@ -623,3 +623,32 @@ for (const file of FILES) {
     } finally { await close(); }
   });
 }
+
+test('IndexUji.html: had laju jalan dibaca dari fail statik kawasan walaupun semua pelayan Overpass gagal', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
+  try {
+    await page.evaluate(() => {
+      const json = o => Promise.resolve({ ok: true, status: 200, json: async () => o });
+      const line = (a, b, n) => Array.from({ length: n }, (_, i) => [a[0] + (b[0] - a[0]) * i / (n - 1), a[1] + (b[1] - a[1]) * i / (n - 1)]).flat();
+      window.__hadCalls = [];
+      window.fetch = u => {
+        u = String(u);
+        if (/titik\.json/.test(u)) return json({ v: 1, c: [], s: [] });
+        if (/data\/had\//.test(u)) {
+          window.__hadCalls.push(u.split('/').pop());
+          if (/indeks\.json/.test(u)) return json({ v: 1, k: ['6_203', '9_999'] });
+          if (/6_203\.json/.test(u)) return json({ v: 1, w: [[90, line([3.1, 101.7], [3.2, 101.7], 11)], [50, [4.9, 100.1, 4.95, 100.1]]] });
+        }
+        return Promise.resolve({ ok: false, status: 504 });    // Overpass gagal
+      };
+      S.speedLimit = -1;
+    });
+    await startNav(page);
+    await page.waitForFunction(() => (state.slInt || []).length >= 1, null, { timeout: 20000 });
+    assert.strictEqual(await page.evaluate(() => state.slInt[0].v), 90);
+    const calls = await page.evaluate(() => __hadCalls);
+    assert.ok(calls.includes('indeks.json') && calls.includes('6_203.json'), calls.join());
+    assert.ok(!calls.includes('9_999.json'), 'kawasan di luar laluan tidak sepatutnya dimuat');
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});
