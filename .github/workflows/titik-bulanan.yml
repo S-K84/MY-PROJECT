@@ -1,0 +1,41 @@
+name: Data lampu isyarat & kamera (bulanan)
+
+# Sebulan sekali ambil lampu isyarat & kamera laju Malaysia dari OpenStreetMap (Overpass) dan simpan dalam
+# docs/data/titik.json. GitHub Pages menghidangnya; aplikasi membacanya dahulu (Overpass dari telefon = sandaran).
+# Hanya fail data itu yang diubah (bukan kod aplikasi). Push oleh GITHUB_TOKEN tidak mencetuskan deploy.
+on:
+  schedule:
+    - cron: '17 3 2 * *'      # hari ke-2 setiap bulan, 03:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: titik-bulanan
+  cancel-in-progress: false
+
+jobs:
+  ambil:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Ambil data dari Overpass
+        run: node scripts/ambil-titik.js
+      - name: Simpan jika berubah
+        run: |
+          git add -N docs/data/titik.json
+          if git diff --quiet -- docs/data/titik.json; then
+            echo "Tiada perubahan."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data/titik.json
+          git commit -m "Data bulanan: lampu isyarat & kamera laju Malaysia"
+          git push origin HEAD:main

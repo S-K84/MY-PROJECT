@@ -96,6 +96,11 @@ npm test
   peta (leaflet-rotate). Pemilik memilih KEKALKAN (A): butang kompas menetapkan peta tetap utara jika tulisan terbalik mengganggu.
   Peta vektor (MapLibre + OpenFreeMap, percuma tanpa kunci, tulisan sentiasa tegak) ditangguh; ia menukar enjin peta, jadi perlu
   melalui saluran uji dan ujian di iPhone.
+- **Lampu isyarat & kamera laju:** pertanyaan Overpass dari telefon tidak boleh diharap (13 Nov 2026, versi uji 2026.11.07-f: 5 pelayan
+  tamat masa walaupun pertanyaan kecil). Kini `.github/workflows/titik-bulanan.yml` (`scripts/ambil-titik.js`) mengambil semua titik
+  Malaysia sebulan sekali ke `docs/data/titik.json` (GitHub Pages); klien membacanya dahulu (`loadTitik`), Overpass hanya sandaran.
+  Ini satu-satunya pengecualian "jangan commit terus ke `main`": bot hanya menyimpan fail data itu (bukan kod, tiada deploy). Jalan
+  ber-`maxspeed` masih dari Overpass sahaja.
 - **ID 30 hari:** pindah data perlu pengesahan pengguna ("Pulihkan data anda?"), kerana pelayar boleh dikongsi oleh akaun Google
   lain. Sekatan dipindah automatik. Data dipindah, bukan disalin.
 - **Deploy:** `@google/clasp@2.4.2` dipin. `clasp login` pemilik juga guna versi ini (format `.clasprc.json` berbeza antara versi).
