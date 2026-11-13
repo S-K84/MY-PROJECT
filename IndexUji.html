@@ -4166,7 +4166,8 @@ function updateRoadLimit() {
     // Satu pertanyaan: jalan ber-maxspeed + kamera laju (highway=speed_camera) + lampu isyarat di sepanjang laluan
     const q = `[out:json][timeout:25];(${routeBoxes(pts, 40).map(b =>
       `way["highway"]["maxspeed"](${b});node["highway"="speed_camera"](${b});node["highway"="traffic_signals"](${b});`).join('')});out tags geom;`;
-    overpassRaw(q, []).then(data => {
+    const slDiag = [];
+    overpassRaw(q, slDiag).then(data => {
       if (navId !== state.navId || state.routes[state.selRoute] !== r) return;
       const keep = state.slRoute === r ? (state.slInt || []).filter(x => x.e < from) : [];
       state.slInt = keep.concat(speedIntervals(r, data.elements, Math.max(0, (state.meSeg || 0) - 5), to + 100));
@@ -4184,7 +4185,9 @@ function updateRoadLimit() {
       updateRoadLimit();
     }, () => {
       state.slRetryAt = Date.now() + 60000;
-      if (state.sigFailed !== r) { state.sigFailed = r; toast('🚦 Data lampu isyarat gagal dimuat, mencuba lagi', true); }
+      if (state.sigFailed !== r) { state.sigFailed = r; toast('🚦 Data lampu isyarat gagal dimuat, mencuba lagi', true);
+        // Diagnostik sementara: sebab setiap pelayan (HTTP / tamat masa / disekat) & saiz pertanyaan
+        setTimeout(() => toast('🚦 ' + q.length + ' aksara · ' + (slDiag.join(' | ') || 'tiada butiran'), true), 4000); }
     })
       .finally(() => { setTimeout(() => { state.slBusy = false; }, Math.max(0, (state.slRetryAt || 0) - Date.now())); });
   }
