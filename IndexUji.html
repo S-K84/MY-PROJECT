@@ -4167,7 +4167,8 @@ function updateRoadLimit() {
     const q = `[out:json][timeout:25];(${routeBoxes(pts, 40).map(b =>
       `way["highway"]["maxspeed"](${b});node["highway"="speed_camera"](${b});node["highway"="traffic_signals"](${b});`).join('')});out tags geom;`;
     const slDiag = [];
-    overpassRaw(q, slDiag).then(data => {
+    // Latar belakang (pengguna tidak menunggu): beri pelayan 30 s. Pada 13 Nov 2026 dua pelayan tamat masa pada 15 s.
+    overpassRaw(q, slDiag, 30000).then(data => {
       if (navId !== state.navId || state.routes[state.selRoute] !== r) return;
       const keep = state.slRoute === r ? (state.slInt || []).filter(x => x.e < from) : [];
       state.slInt = keep.concat(speedIntervals(r, data.elements, Math.max(0, (state.meSeg || 0) - 5), to + 100));
@@ -4280,7 +4281,7 @@ function overpassDirect(cat, pts, diag) {
   }).filter(Boolean));
 }
 /** Hantar pertanyaan ke pelayan Overpass (berlumba, lihat di atas). Pulangkan JSON jawapan pertama yang sah. */
-function overpassRaw(q, diag) {
+function overpassRaw(q, diag, ms) {
   if (!window.fetch || !window.AbortController) return Promise.reject(new Error('tiada'));
   const first = (Number(store.get('jk_ovok')) || 0) % OVERPASS.length;
   const order = OVERPASS.map((u, k) => (first + k) % OVERPASS.length);
@@ -4292,7 +4293,7 @@ function overpassRaw(q, diag) {
     order.forEach((i, k) => timers.push(setTimeout(async () => {
       if (done) return fail();
       const ctl = new AbortController(); ctls.push(ctl);
-      const timer = setTimeout(() => ctl.abort(), OVERPASS_TIMEOUT_MS); timers.push(timer);
+      const timer = setTimeout(() => ctl.abort(), ms || OVERPASS_TIMEOUT_MS); timers.push(timer);
       const host = OVERPASS[i].split('/')[2], t0 = Date.now();
       try {
         // Borang biasa (tanpa pengepala khas) → tiada "preflight" CORS
