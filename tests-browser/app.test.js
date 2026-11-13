@@ -556,7 +556,6 @@ test('IndexUji.html: lampu isyarat OSM dilukis di atas laluan (bukan yang jauh),
     });
     await startNav(page);
     await drive(page, 90, 30);
-    assert.ok((await page.evaluate(() => __toasts)).some(m => /2 lampu isyarat di laluan \(4 berhampiran\)/.test(m)), 'mesej diagnostik tiada');
     const r = await page.evaluate(() => ({ ids: (state.sigs || []).map(x => x.id), drawn: document.querySelectorAll('.sig').length,
       layers: sigLayer.getLayers().length }));
     assert.deepStrictEqual(r.ids, ['sig-11', 'sig-14']);
@@ -567,16 +566,20 @@ test('IndexUji.html: lampu isyarat OSM dilukis di atas laluan (bukan yang jauh),
   } finally { await close(); }
 });
 
-test('IndexUji.html: bila data lampu isyarat gagal dimuat, mesej diagnostik menyebut sebab setiap pelayan', async () => {
+test('IndexUji.html: lampu isyarat & kamera dibaca dari fail statik walaupun semua pelayan Overpass gagal', async () => {
   const { page, errors, close } = await open('IndexUji.html');
   try {
     await page.evaluate(() => {
-      window.fetch = () => Promise.resolve({ ok: false, status: 504 });
+      window.fetch = u => (/titik\.json/.test(String(u))
+        ? Promise.resolve({ ok: true, status: 200, json: async () => ({ v: 1, c: [[3.13, 101.70001, 31]],
+          s: [[3.12, 101.70003, 11], [3.16, 101.70002, 14], [3.14, 101.7005, 13]] }) })
+        : Promise.resolve({ ok: false, status: 504 }));
       S.speedLimit = -1;
-      window.__toasts = []; const t0 = window.toast; window.toast = (m, ...a) => { __toasts.push(m); return t0(m, ...a); };
     });
     await startNav(page);
-    await page.waitForFunction(() => __toasts.some(m => /aksara · .*HTTP 504/.test(m)), null, { timeout: 20000 });
+    await page.waitForFunction(() => (state.sigs || []).length === 2, null, { timeout: 20000 });
+    assert.deepStrictEqual(await page.evaluate(() => [state.sigs.map(x => x.id), state.cams.map(x => x.id)]),
+      [['sig-11', 'sig-14'], ['cam-31']]);
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
@@ -591,10 +594,9 @@ test('IndexUji.html: lampu isyarat & kamera dimuat walaupun pertanyaan jalan ber
           { type: 'node', id: 11, lat: 3.12, lon: 101.70003, tags: { highway: 'traffic_signals' } },
           { type: 'node', id: 14, lat: 3.16, lon: 101.70002, tags: { highway: 'traffic_signals' } }] }) }));
       S.speedLimit = -1;
-      window.__toasts = []; const t0 = window.toast; window.toast = (m, ...a) => { __toasts.push(m); return t0(m, ...a); };
     });
     await startNav(page);
-    await page.waitForFunction(() => __toasts.some(m => /Jalan ber-had laju gagal/.test(m)), null, { timeout: 20000 });
+    await page.waitForFunction(() => (state.sigs || []).length === 2, null, { timeout: 20000 });
     assert.deepStrictEqual(await page.evaluate(() => state.sigs.map(x => x.id)), ['sig-11', 'sig-14']);
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
