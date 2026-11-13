@@ -580,3 +580,22 @@ test('IndexUji.html: bila data lampu isyarat gagal dimuat, mesej diagnostik meny
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+
+test('IndexUji.html: lampu isyarat & kamera dimuat walaupun pertanyaan jalan ber-had laju gagal (dua pertanyaan berasingan)', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
+  try {
+    await page.evaluate(() => {
+      window.fetch = (u, o) => (/maxspeed/.test(decodeURIComponent(String(o && o.body)))
+        ? Promise.resolve({ ok: false, status: 504 })
+        : Promise.resolve({ ok: true, status: 200, json: async () => ({ elements: [
+          { type: 'node', id: 11, lat: 3.12, lon: 101.70003, tags: { highway: 'traffic_signals' } },
+          { type: 'node', id: 14, lat: 3.16, lon: 101.70002, tags: { highway: 'traffic_signals' } }] }) }));
+      S.speedLimit = -1;
+      window.__toasts = []; const t0 = window.toast; window.toast = (m, ...a) => { __toasts.push(m); return t0(m, ...a); };
+    });
+    await startNav(page);
+    await page.waitForFunction(() => __toasts.some(m => /Jalan ber-had laju gagal/.test(m)), null, { timeout: 20000 });
+    assert.deepStrictEqual(await page.evaluate(() => state.sigs.map(x => x.id)), ['sig-11', 'sig-14']);
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});
