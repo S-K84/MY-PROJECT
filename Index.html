@@ -555,6 +555,13 @@
     .nav-dist { font-weight:800; letter-spacing:-.01em; }
     .nav-road { font-weight:700; }
     .tabs button.on { color:var(--sign-green); }
+    /* Lampu isyarat di atas laluan (seperti Waze): kotak gelap kecil, tiga lampu, bingkai putih supaya jelas atas jalan */
+    .sig-wrap { background:none; border:0; }
+    .sig { display:flex; flex-direction:column; align-items:center; justify-content:space-between; width:16px; height:32px;
+      padding:3px 0; box-sizing:border-box; background:#23262c; border:2px solid #fff; border-radius:6px;
+      box-shadow:0 1px 4px rgba(0,0,0,.45); }
+    .sig i { display:block; width:6px; height:6px; border-radius:50%; }
+    .sig .r { background:#ff3b30; } .sig .y { background:#ffcc00; } .sig .g { background:#34c759; }
     /* ---------- Minta lokasi: papan tanda hijau sebelum pertanyaan lokasi telefon ---------- */
     #locModal { z-index:2700; background:rgba(0,20,12,.55); }
     #locModal .sheet { padding-top:18px; }
@@ -1038,6 +1045,7 @@ map.attributionControl.setPosition('topright');
 const lineRenderer = L.canvas({ padding: 0.15, tolerance: 6 });
 const reportLayer = L.layerGroup().addTo(map);
 const userLayer = L.layerGroup().addTo(map);
+const sigLayer = L.layerGroup().addTo(map);   // lampu isyarat di atas laluan semasa navigasi
 // Ikon kenderaan (dilihat dari atas, menghala ke atas)
 const ME_SHAPES = {
   walk: '<circle cx="20" cy="20" r="9" fill="#33ccff" stroke="#fff" stroke-width="3"/><path d="M20 3 L26 13 H14 Z" fill="#0b6f8f"/>',
@@ -3841,6 +3849,7 @@ function cancelRoute() {
   releaseWakeLock(); clearTimeout(followTimer);
   state.navigating = false; state.routes = []; state.autoStart = false;
   state.roadLimit = 0; state.slRoute = null; state.slInt = []; state.shownLimit = 0; renderSpeedSign();
+  clearSignals();
   store.del('jk_active');
   state.routeLayers.forEach(l => l.remove()); state.routeLayers = [];
   (state.trafficLayers || []).forEach(l => l.remove()); state.trafficLayers = []; state.trafficKey = null;
@@ -4084,9 +4093,10 @@ function routeBoxes(pts, padM) {
 }
 
 // ---- Had laju automatik (OpenStreetMap "maxspeed") semasa navigasi
-// Jalan ber-"maxspeed" dalam ~30 km di hadapan dimuat sekali (kotak kecil, sama seperti carian sepanjang laluan).
+// Jalan ber-"maxspeed" dalam ~10 km (dimuat semula bila baki < 4 km) di hadapan dimuat sekali (kotak kecil, sama seperti carian sepanjang laluan).
 // Setiap nod jalan yang berada di atas laluan (≤ 25 m, arah selari) memberi selang [mula, akhir] pada laluan.
-const SL_AHEAD = 30000;
+// 13 Nov 2026: tetingkap 30 km (8 kotak) gagal di semua pelayan; 11.5 km (3 kotak) berjaya. Tetingkap 10 km → ~3 kotak.
+const SL_AHEAD = 10000;
 function parseMaxspeed(v) {
   const m = String(v || '').match(/^\s*(\d{2,3})\s*(mph)?/i);
   if (!m) return 0;
@@ -4123,31 +4133,74 @@ function speedAt(intervals, along) {
   });
   return best ? best.v : 0;
 }
+// ---- Titik tetap (kamera laju + lampu isyarat seluruh Malaysia) dari fail statik GitHub Pages, dikemas kini sebulan sekali
+// oleh .github/workflows/titik-bulanan.yml. Pertanyaan Overpass dari telefon tidak boleh diharap (13 Nov 2026: 5 pelayan tamat
+// masa), jadi fail ini dibaca dahulu dan Overpass hanya sandaran (fail belum ada / tidak dapat dimuat).
+const TITIK_URL = 'https:\/\/s-k84.github.io/MY-PROJECT/data/titik.json';
+let titikP = null, titikFailAt = 0;
+/** Muat fail titik sekali (disimpan dalam ingatan). Pulangkan Promise<{c, s}> atau null jika gagal (dicuba semula selepas 5 minit). */
+function loadTitik() {
+  if (titikP && !(titikFailAt && Date.now() - titikFailAt > 300000)) return titikP;
+  titikFailAt = 0;
+  if (!window.fetch) return (titikP = Promise.resolve(null));
+  titikP = fetch(TITIK_URL, { credentials: 'omit', referrerPolicy: 'no-referrer' }).then(res => {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }).then(d => {
+    if (!d || !Array.isArray(d.c) || !Array.isArray(d.s)) throw new Error('format');
+    return d;
+  }).catch(() => { titikFailAt = Date.now(); return null; });
+  return titikP;
+}
+/** Titik dalam fail yang jatuh dalam mana-mana kotak "s,w,n,e" -> elemen berbentuk Overpass (untuk routeCameras / routeSignals). */
+function titikElements(d, boxes) {
+  const bb = boxes.map(b => b.split(',').map(Number)), out = [];
+  const add = (list, highway) => list.forEach(p => {
+    if (bb.some(b => p[0] >= b[0] && p[0] <= b[2] && p[1] >= b[1] && p[1] <= b[3]))
+      out.push({ type: 'node', id: p[2], lat: p[0], lon: p[1], tags: { highway } });
+  });
+  add(d.c, 'speed_camera'); add(d.s, 'traffic_signals');
+  return out;
+}
 function updateRoadLimit() {
   const r = state.routes[state.selRoute];
   if (!r || !state.navigating) return;
   const along = state.meAlong || 0;
   // Muat (semula) bila laluan bertukar atau kedudukan menghampiri hujung kawasan yang sudah dimuat
-  if (!state.slBusy && (state.slRoute !== r || state.slTo < Math.min(r.total, along + 10000))) {
+  if (!state.slBusy && (state.slRoute !== r || state.slTo < Math.min(r.total, along + 4000))) {
+    if (state.slRoute !== r) clearSignals();   // laluan baharu (cth. dilencongkan): buang lampu isyarat laluan lama
     state.slBusy = true;
     const navId = state.navId, from = Math.max(0, along - 200), to = Math.min(r.total, along + SL_AHEAD), pts = [];
     for (let d = from; d < to; d += 1000) pts.push(slicePts(r, d, d)[0]);
     pts.push(slicePts(r, to, to)[0]);
-    // Satu pertanyaan: jalan ber-maxspeed + kamera laju (highway=speed_camera) di sepanjang laluan
-    const q = `[out:json][timeout:25];(${routeBoxes(pts, 40).map(b =>
-      `way["highway"]["maxspeed"](${b});node["highway"="speed_camera"](${b});`).join('')});out tags geom;`;
-    overpassRaw(q, []).then(data => {
-      if (navId !== state.navId || state.routes[state.selRoute] !== r) return;
-      const keep = state.slRoute === r ? (state.slInt || []).filter(x => x.e < from) : [];
-      state.slInt = keep.concat(speedIntervals(r, data.elements, Math.max(0, (state.meSeg || 0) - 5), to + 100));
+    // Titik (kamera laju + lampu isyarat): fail statik dahulu, Overpass sebagai sandaran. Jalan ber-maxspeed + geometri
+    // lebih berat (hanya dari Overpass) dan gagal sendirian (13 Nov 2026: pertanyaan gabungan tamat masa di semua pelayan).
+    const bx = routeBoxes(pts, 40), seg0 = Math.max(0, (state.meSeg || 0) - 5);
+    const stale = () => navId !== state.navId || state.routes[state.selRoute] !== r;
+    const qN = `[out:json][timeout:25];(${bx.map(b => `node["highway"="speed_camera"](${b});node["highway"="traffic_signals"](${b});`).join('')});out tags geom;`;
+    const qW = `[out:json][timeout:25];(${bx.map(b => `way["highway"]["maxspeed"](${b});`).join('')});out tags geom;`;
+    loadTitik().then(d => d ? titikElements(d, bx) : overpassRaw(qN, [], 30000).then(x => x.elements)).then(elements => {
+      if (stale()) return;
       const keepCams = state.slRoute === r ? (state.cams || []).filter(x => x.a < from) : [];
-      state.cams = keepCams.concat(routeCameras(r, data.elements, Math.max(0, (state.meSeg || 0) - 5), to + 100));
-      state.slRoute = r; state.slTo = to;
+      state.cams = keepCams.concat(routeCameras(r, elements, seg0, to + 100));
+      const keepSigs = state.slRoute === r ? (state.sigs || []).filter(x => x.a < from) : [];
+      state.sigs = keepSigs.concat(routeSignals(r, elements, seg0, to + 100));
+      const keepInt = state.slRoute === r ? (state.slInt || []).filter(x => x.e < from) : [];
+      state.slInt = keepInt; state.slRoute = r; state.slTo = to; state.sigDrawn = null;
       updateRoadLimit();
-    }, () => { state.slRetryAt = Date.now() + 60000; })
+      return overpassRaw(qW, [], 30000).then(wd => {
+        if (stale()) return;
+        state.slInt = state.slInt.concat(speedIntervals(r, wd.elements, seg0, to + 100));
+        updateRoadLimit();
+      }, () => {
+        state.slTo = 0; state.slRetryAt = Date.now() + 60000;    // muat semula kedua-duanya selepas 60 s
+      });
+    }, () => {
+      state.slRetryAt = Date.now() + 60000;
+    })
       .finally(() => { setTimeout(() => { state.slBusy = false; }, Math.max(0, (state.slRetryAt || 0) - Date.now())); });
   }
-  if (state.slRoute === r) checkCameras(along);
+  if (state.slRoute === r) { checkCameras(along); renderSignals(along); }
   if (S.speedLimit !== -1) return;
   const v = state.slRoute === r ? speedAt(state.slInt, along) : 0;
   if (v) { state.roadLimit = v; state.roadLimitAt = along; }
@@ -4172,6 +4225,34 @@ function routeCameras(r, elements, fromSeg, maxAlong) {
   });
   return out;
 }
+/**
+ * Lampu isyarat OSM (highway=traffic_signals) di atas laluan (≤ 20 m). Dua lorong lebuh yang berdekatan (< 35 m pada
+ * laluan) dianggap satu persimpangan. Pulangkan [{ a: jarak pada laluan, lat, lng, id }] mengikut jarak.
+ */
+function routeSignals(r, elements, fromSeg, maxAlong) {
+  const found = [];
+  (elements || []).forEach(el => {
+    if (el.type !== 'node' || !el.tags || el.tags.highway !== 'traffic_signals') return;
+    const l = locate({ lat: el.lat, lng: el.lon }, r, fromSeg, maxAlong);
+    if (l.off <= 20) found.push({ a: l.along, lat: el.lat, lng: el.lon, id: 'sig-' + el.id });
+  });
+  found.sort((x, y) => x.a - y.a);
+  return found.filter((x, i) => i === 0 || x.a - found[i - 1].a >= 35);
+}
+const SIG_SHOW_M = 5000;
+/** Lukis lampu isyarat dalam ~5 km di hadapan (maks 40). Dilukis semula setiap ~250 m, atau bila data baharu tiba. */
+function renderSignals(along) {
+  if (!state.navigating) return;
+  if (state.sigDrawn !== null && state.sigDrawn !== undefined && Math.abs(along - state.sigDrawn) < 250) return;
+  state.sigDrawn = along;
+  sigLayer.clearLayers();
+  (state.sigs || []).filter(x => x.a > along - 30 && x.a <= along + SIG_SHOW_M).slice(0, 40).forEach(x => {
+    L.marker([x.lat, x.lng], { icon: L.divIcon({ className: 'sig-wrap', iconSize: [18, 34], iconAnchor: [9, 17],
+      html: '<span class="sig"><i class="r"></i><i class="y"></i><i class="g"></i></span>' }),
+      interactive: false, keyboard: false, zIndexOffset: -200 }).addTo(sigLayer);
+  });
+}
+function clearSignals() { state.sigs = []; state.sigDrawn = null; sigLayer.clearLayers(); }
 /** Amaran suara sekali bagi setiap kamera di hadapan (jarak amaran sama seperti laporan; +400 m bila laju). */
 function checkCameras(along) {
   if (S.alertTypes.indexOf('KAMERA') < 0 || S.travel === 'walk' || !state.me) return;
@@ -4208,7 +4289,7 @@ function overpassDirect(cat, pts, diag) {
   }).filter(Boolean));
 }
 /** Hantar pertanyaan ke pelayan Overpass (berlumba, lihat di atas). Pulangkan JSON jawapan pertama yang sah. */
-function overpassRaw(q, diag) {
+function overpassRaw(q, diag, ms) {
   if (!window.fetch || !window.AbortController) return Promise.reject(new Error('tiada'));
   const first = (Number(store.get('jk_ovok')) || 0) % OVERPASS.length;
   const order = OVERPASS.map((u, k) => (first + k) % OVERPASS.length);
@@ -4220,7 +4301,7 @@ function overpassRaw(q, diag) {
     order.forEach((i, k) => timers.push(setTimeout(async () => {
       if (done) return fail();
       const ctl = new AbortController(); ctls.push(ctl);
-      const timer = setTimeout(() => ctl.abort(), OVERPASS_TIMEOUT_MS); timers.push(timer);
+      const timer = setTimeout(() => ctl.abort(), ms || OVERPASS_TIMEOUT_MS); timers.push(timer);
       const host = OVERPASS[i].split('/')[2], t0 = Date.now();
       try {
         // Borang biasa (tanpa pengepala khas) → tiada "preflight" CORS
