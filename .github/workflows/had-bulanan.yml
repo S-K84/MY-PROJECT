@@ -1,0 +1,42 @@
+name: Data had laju jalan (bulanan)
+
+# Sebulan sekali ambil jalan ber-had laju Malaysia dari OpenStreetMap (Overpass), kawasan demi kawasan, ke docs/data/had/.
+# GitHub Pages menghidangnya; aplikasi memuat hanya kawasan di sekitar laluan (Overpass dari telefon = sandaran).
+# Hanya fail data yang diubah (bukan kod aplikasi). Push oleh GITHUB_TOKEN tidak mencetuskan deploy.
+on:
+  schedule:
+    - cron: '41 3 3 * *'      # hari ke-3 setiap bulan, 03:41 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: had-bulanan
+  cancel-in-progress: false
+
+jobs:
+  ambil:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Ambil data dari Overpass
+        run: node scripts/ambil-had.js
+      - name: Simpan jika berubah
+        run: |
+          git add -A docs/data/had
+          if git diff --cached --quiet; then
+            echo "Tiada perubahan."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Data bulanan: had laju jalan Malaysia"
+          git pull --rebase origin main
+          git push origin HEAD:main
