@@ -636,8 +636,8 @@ test('IndexUji.html: had laju jalan dibaca dari fail statik kawasan walaupun sem
         if (/titik\.json/.test(u)) return json({ v: 1, c: [], s: [] });
         if (/data\/had\//.test(u)) {
           window.__hadCalls.push(u.split('/').pop());
-          if (/indeks\.json/.test(u)) return json({ v: 1, k: ['6_203', '9_999'] });
-          if (/6_203\.json/.test(u)) return json({ v: 1, w: [[90, line([3.1, 101.7], [3.2, 101.7], 11)], [50, [4.9, 100.1, 4.95, 100.1]]] });
+          if (/indeks\.json/.test(u)) return json({ v: 1, k: ['12_406', '9_999'] });
+          if (/12_406\.json/.test(u)) return json({ v: 1, w: [[90, line([3.1, 101.7], [3.2, 101.7], 11)], [50, [4.9, 100.1, 4.95, 100.1]]] });
         }
         return Promise.resolve({ ok: false, status: 504 });    // Overpass gagal
       };
@@ -647,7 +647,7 @@ test('IndexUji.html: had laju jalan dibaca dari fail statik kawasan walaupun sem
     await page.waitForFunction(() => (state.slInt || []).length >= 1, null, { timeout: 20000 });
     assert.strictEqual(await page.evaluate(() => state.slInt[0].v), 90);
     const calls = await page.evaluate(() => __hadCalls);
-    assert.ok(calls.includes('indeks.json') && calls.includes('6_203.json'), calls.join());
+    assert.ok(calls.includes('indeks.json') && calls.includes('12_406.json'), calls.join());
     assert.ok(!calls.includes('9_999.json'), 'kawasan di luar laluan tidak sepatutnya dimuat');
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }

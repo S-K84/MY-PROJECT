@@ -4173,7 +4173,7 @@ function titikElements(d, boxes) {
   return out;
 }
 // ---- Jalan ber-had laju dari fail statik (docs/data/had/, dikemas kini sebulan sekali oleh .github/workflows/had-bulanan.yml).
-// Kawasan 0.5° (kunci lantai(lat*2)_lantai(lng*2)); hanya kawasan di sekitar laluan dimuat. indeks.json menyenaraikan kawasan yang ada.
+// Kawasan 0.25° (kunci lantai(lat*4)_lantai(lng*4)); hanya kawasan di sekitar laluan dimuat. indeks.json menyenaraikan kawasan yang ada.
 // Gagal / belum ada fail → null, dan Overpass digunakan sebagai sandaran.
 const HAD_URL = 'https:\/\/s-k84.github.io/MY-PROJECT/data/had/';
 let hadIdxP = null, hadIdxFailAt = 0;
@@ -4200,8 +4200,8 @@ function hadKeys(boxes) {
   const keys = {};
   boxes.forEach(b => {
     const v = b.split(',').map(Number);
-    for (let i = Math.floor(v[0] * 2); i <= Math.floor(v[2] * 2); i++)
-      for (let j = Math.floor(v[1] * 2); j <= Math.floor(v[3] * 2); j++) keys[i + '_' + j] = true;
+    for (let i = Math.floor(v[0] * 4); i <= Math.floor(v[2] * 4); i++)
+      for (let j = Math.floor(v[1] * 4); j <= Math.floor(v[3] * 4); j++) keys[i + '_' + j] = true;
   });
   return Object.keys(keys);
 }
