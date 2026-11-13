@@ -4113,9 +4113,10 @@ function routeBoxes(pts, padM) {
 }
 
 // ---- Had laju automatik (OpenStreetMap "maxspeed") semasa navigasi
-// Jalan ber-"maxspeed" dalam ~30 km di hadapan dimuat sekali (kotak kecil, sama seperti carian sepanjang laluan).
+// Jalan ber-"maxspeed" dalam ~10 km (dimuat semula bila baki < 4 km) di hadapan dimuat sekali (kotak kecil, sama seperti carian sepanjang laluan).
 // Setiap nod jalan yang berada di atas laluan (≤ 25 m, arah selari) memberi selang [mula, akhir] pada laluan.
-const SL_AHEAD = 30000;
+// 13 Nov 2026: tetingkap 30 km (8 kotak) gagal di semua pelayan; 11.5 km (3 kotak) berjaya. Tetingkap 10 km → ~3 kotak.
+const SL_AHEAD = 10000;
 function parseMaxspeed(v) {
   const m = String(v || '').match(/^\s*(\d{2,3})\s*(mph)?/i);
   if (!m) return 0;
@@ -4157,7 +4158,7 @@ function updateRoadLimit() {
   if (!r || !state.navigating) return;
   const along = state.meAlong || 0;
   // Muat (semula) bila laluan bertukar atau kedudukan menghampiri hujung kawasan yang sudah dimuat
-  if (!state.slBusy && (state.slRoute !== r || state.slTo < Math.min(r.total, along + 10000))) {
+  if (!state.slBusy && (state.slRoute !== r || state.slTo < Math.min(r.total, along + 4000))) {
     if (state.slRoute !== r) clearSignals();   // laluan baharu (cth. dilencongkan): buang lampu isyarat laluan lama
     state.slBusy = true;
     const navId = state.navId, from = Math.max(0, along - 200), to = Math.min(r.total, along + SL_AHEAD), pts = [];
