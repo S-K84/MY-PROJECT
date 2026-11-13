@@ -1512,7 +1512,9 @@ const EN_RULES = [
   [/^(\d+) \/ (\d+) setiap (\d+) jam$/, m => m[1] + ' / ' + m[2] + ' per ' + m[3] + ' h'],
     [/^\/ (\d+) setiap (\d+) jam$/, m => '/ ' + m[1] + ' per ' + m[2] + ' h'],
   [/^Mood ditukar (.+)$/, m => 'Mood changed ' + m[1]], [/^📍 Lokasi dikongsi: (.+)$/, m => '📍 Shared location: ' + m[1]],
-  [/^Versi (.+)$/, m => 'Version ' + m[1]], [/^⏳ (\d+) laporan menunggu$/, m => '⏳ ' + m[1] + ' reports waiting'],
+  [/^Versi (.+)$/, m => 'Version ' + m[1]],
+  [/^Data titik: (\S+) · (\d+) kamera, (\d+) lampu isyarat$/, m => 'Point data: ' + m[1] + ' · ' + m[2] + ' cameras, ' + m[3] + ' traffic lights'],
+  [/^Data titik: tiada \(guna Overpass\)$/, () => 'Point data: none (using Overpass)'], [/^⏳ (\d+) laporan menunggu$/, m => '⏳ ' + m[1] + ' reports waiting'],
   [/^📵 Tiada liputan · (\d+) laporan menunggu$/, m => '📵 No signal · ' + m[1] + ' reports waiting'],
   [/^(\d+(?:\.\d+)?) (km|m)$/, m => m[0]], [/^(\d+) km\/j$/, m => m[1] + ' km/h'], [/^km\/j$/, () => 'km/h'], [/^bt\/j$/, () => 'mph'],
   [/^(.+) laporan dihantar\. Terima kasih! 🙏$/, m => m[1] + ' reports sent. Thank you! 🙏'],
@@ -2412,7 +2414,15 @@ function renderDrawer() {
     ${list([sRow({ go: 'sos', icon: '🆘', color: '#d32f2f', label: 'Kecemasan', sub: 'Telefon 999 · hantar lokasi ke keluarga' })])}
     ${list([sRow({ go: 'homescreen', icon: '📲', color: '#5c6bc0', label: 'Tambah ke skrin utama', sub: 'Buka JomRoute seperti app' }),
       sRow({ go: 'root', icon: '⚙️', color: '#78909c', label: 'Tetapan' })])}
-    <p class="pop-muted" style="margin:16px 4px">JomRoute · Peta © OpenStreetMap · Laluan oleh Google<br>Versi ${APP_VERSION}</p>`;
+    <p class="pop-muted" style="margin:16px 4px">JomRoute · Peta © OpenStreetMap · Laluan oleh Google<br>Versi ${APP_VERSION}${state.isOwner ? '<br><span id="titikInfo"></span>' : ''}</p>`;
+  if (state.isOwner) showTitikInfo();
+}
+/** Pemilik sahaja: tarikh & bilangan data titik (fail bulanan) di bawah versi dalam menu, untuk nampak jika tugas bulanan berhenti. */
+function showTitikInfo() {
+  loadTitik().then(d => {
+    const e = $('titikInfo');
+    if (e) e.textContent = d ? 'Data titik: ' + d.t + ' · ' + d.c.length + ' kamera, ' + d.s.length + ' lampu isyarat' : 'Data titik: tiada (guna Overpass)';
+  });
 }
 
 // ---- Kesan setiap tetapan
