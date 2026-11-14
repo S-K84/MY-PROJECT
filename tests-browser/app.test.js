@@ -669,10 +669,10 @@ test(`${file}: menu ☰ — pemilik nampak tarikh & bilangan kawasan data had la
       state.isOwner = true; renderDrawer();
     });
     await page.waitForFunction(() => /Data had laju: 2026-11-14 · 3 kawasan/.test(($('hadInfo') || {}).textContent || ''), null, { timeout: 5000 });
-    if (file === 'IndexUji.html') await page.waitForFunction(() => /Data tempat: 2026-11-14 · 3 kawasan/.test(($('poiInfo') || {}).textContent || ''), null, { timeout: 5000 });
+    await page.waitForFunction(() => /Data tempat: 2026-11-14 · 3 kawasan/.test(($('poiInfo') || {}).textContent || ''), null, { timeout: 5000 });
     await page.evaluate(() => { setVoiceLang('en'); renderDrawer(); });
     await page.waitForFunction(() => /Speed limit data: 2026-11-14 · 3 areas/.test(($('hadInfo') || {}).textContent || ''), null, { timeout: 5000 });
-    if (file === 'IndexUji.html') await page.waitForFunction(() => /Places data: 2026-11-14 · 3 areas/.test(($('poiInfo') || {}).textContent || ''), null, { timeout: 5000 });
+    await page.waitForFunction(() => /Places data: 2026-11-14 · 3 areas/.test(($('poiInfo') || {}).textContent || ''), null, { timeout: 5000 });
     assert.strictEqual(await page.evaluate(() => { state.isOwner = false; renderDrawer(); return !!$('hadInfo'); }), false);
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
