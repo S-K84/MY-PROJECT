@@ -117,6 +117,9 @@ npm test
   `ambil_poi.py` mesti sama dengan `ALONG_Q` (diuji).
   Tugas bulanan (satu sahaja: `had-bulanan.yml`) membuka **isu GitHub** bila gagal (langkah `if: failure()`); uji dengan Run workflow + tanda `ujian_gagal`. Menu ☰ pemilik
   juga memaparkan tarikh data. GitHub mematikan tugas berjadual selepas 60 hari tanpa aktiviti repo: jika tarikh dalam menu lama, semak tab Actions.
+- **Suara had laju (14 Nov 2026, aduan "terlalu kerap"):** "melebihi had laju" hanya selepas melebihi >= 8 s berterusan, ulang paling kerap 3 minit, dan margin 5 km/j bila had
+  automatik (OSM tidak tepat sepenuhnya; papan di skrin kekal 2 km/j). Sebutan had baharu hanya bila kekal >= 6 s, hanya PENURUNAN (kenaikan diingat sahaja), >= 60 s sejak sebutan lalu
+  (`shouldWarnSpeeding`, `shouldSayLimit`; diuji oleh `tests/suara.test.js`). Kamera berturut-turut di tempat yang sama: belum diubah.
 - **ID 30 hari:** pindah data perlu pengesahan pengguna ("Pulihkan data anda?"), kerana pelayar boleh dikongsi oleh akaun Google
   lain. Sekatan dipindah automatik. Data dipindah, bukan disalin.
 - **Deploy:** `@google/clasp@2.4.2` dipin. `clasp login` pemilik juga guna versi ini (format `.clasprc.json` berbeza antara versi).
