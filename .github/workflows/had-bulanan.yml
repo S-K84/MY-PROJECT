@@ -38,7 +38,7 @@ jobs:
       - name: Muat turun fail Malaysia (Geofabrik)
         run: curl -fsSL --retry 5 --retry-delay 20 -o "$RUNNER_TEMP/malaysia.osm.pbf" https://download.geofabrik.de/asia/malaysia-singapore-brunei-latest.osm.pbf && ls -l "$RUNNER_TEMP/malaysia.osm.pbf"
       - name: Pasang pembaca OSM (pyosmium)
-        run: python3 -m venv "$RUNNER_TEMP/venv" && "$RUNNER_TEMP/venv/bin/pip" install --quiet osmium
+        run: python3 -m venv "$RUNNER_TEMP/venv" && "$RUNNER_TEMP/venv/bin/pip" install --quiet osmium==4.3.2
       - name: Hasilkan kawasan had laju
         run: |
           "$RUNNER_TEMP/venv/bin/python" scripts/ambil_had.py "$RUNNER_TEMP/malaysia.osm.pbf"

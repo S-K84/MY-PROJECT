@@ -67,6 +67,7 @@ test('had-bulanan.yml: berjadual bulanan, hanya menyimpan docs/data/had', () => 
   assert.match(y, /workflow_dispatch/);
   assert.match(y, /git add -A docs\/data\/had docs\/data\/poi docs\/data\/titik\.json/);
   assert.match(y, /scripts\/ambil_titik\.py/);
+  assert.match(y, /pip" install --quiet osmium==\d+\.\d+\.\d+/, 'osmium mesti dipin (versi baharu boleh mematahkan tugas bulanan)');
   assert.match(y, /timeout-minutes: \d+/);
   assert.match(y, /download\.geofabrik\.de\/asia\/malaysia-singapore-brunei-latest\.osm\.pbf/);
   assert.ok(!/overpass/i.test(y.replace(/^#.*$/gm, '')), 'tugas bulanan tidak lagi menggunakan Overpass');
