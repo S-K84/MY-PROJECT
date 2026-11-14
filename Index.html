@@ -2617,7 +2617,9 @@ function setMe(pos) {
   // Amaran had laju peribadi
   const lim = curLimit(), over = lim > 0 && (pos.speed || 0) > lim + 2;
   $('speedo').classList.toggle('over', over);
-  if (over && Date.now() - (state.speedWarnAt || 0) > 60000) { state.speedWarnAt = Date.now(); speak(VOICE[voiceLang].speeding, 'speed'); }
+  // Suara: had automatik dari OSM tidak tepat sepenuhnya, jadi margin 3 km/j (papan di skrin kekal 2 km/j); lihat shouldWarnSpeeding
+  const overVoice = lim > 0 && (pos.speed || 0) > lim + (S.speedLimit === -1 ? 3 : 2);
+  if (shouldWarnSpeeding(state, overVoice, Date.now())) speak(VOICE[voiceLang].speeding, 'speed');
 
   if (first) {
     map.setView([pos.lat, pos.lng], 16); refresh();
@@ -4345,15 +4347,28 @@ function updateRoadLimit() {
   const v = state.slRoute === r ? speedAt(state.slInt, along) : 0;
   if (v) { state.roadLimit = v; state.roadLimitAt = along; }
   else if (state.roadLimit && along - (state.roadLimitAt || 0) > 300) state.roadLimit = 0;   // tiada data lagi
-  if (state.shownLimit !== curLimit()) {
-    state.shownLimit = curLimit(); renderSpeedSign();
-    // Sebut had baharu (cth. 90 → 60) — tidak lebih kerap daripada 20 s, dan bukan nilai yang sama berulang
-    const lim = state.shownLimit;
-    if (lim && lim !== state.saidLimit && Date.now() - (state.saidLimitAt || 0) > 20000) {
-      state.saidLimit = lim; state.saidLimitAt = Date.now();
-      speak(VOICE[voiceLang].limit(fmtSpeed(lim)), 'speed');
-    }
-  }
+  if (state.shownLimit !== curLimit()) { state.shownLimit = curLimit(); state.limSince = Date.now(); renderSpeedSign(); }
+  if (shouldSayLimit(state, state.shownLimit, Date.now())) speak(VOICE[voiceLang].limit(fmtSpeed(state.shownLimit)), 'speed');
+}
+const LIMIT_STABLE_MS = 6000, LIMIT_GAP_MS = 60000, OVER_STABLE_MS = 8000, OVER_GAP_MS = 90000;
+/**
+ * Sebut had laju baharu? Hanya bila ia kekal >= 6 s (had berubah-ubah / berkelip dalam data OSM tidak disebut), LEBIH RENDAH daripada yang
+ * terakhir disebut (kenaikan hanya diingat; papan had sentiasa kelihatan), dan >= 60 s sejak sebutan lalu. st = state (saidLimit, saidLimitAt, limSince).
+ */
+function shouldSayLimit(st, lim, now) {
+  if (!lim || lim === st.saidLimit || now - (st.limSince || now) < LIMIT_STABLE_MS) return false;
+  if (st.saidLimit && lim > st.saidLimit) { st.saidLimit = lim; return false; }
+  if (now - (st.saidLimitAt || 0) < LIMIT_GAP_MS) return false;
+  st.saidLimit = lim; st.saidLimitAt = now;
+  return true;
+}
+/** Amaran suara "melebihi had laju": hanya selepas melebihi >= 8 s berterusan, kemudian paling kerap setiap 90 s. st = state (overSince, speedWarnAt). */
+function shouldWarnSpeeding(st, over, now) {
+  if (!over) { st.overSince = 0; return false; }
+  if (!st.overSince) st.overSince = now;
+  if (now - st.overSince < OVER_STABLE_MS || now - (st.speedWarnAt || 0) < OVER_GAP_MS) return false;
+  st.speedWarnAt = now;
+  return true;
 }
 /** Kamera laju OSM di atas laluan (≤ 40 m). Pulangkan [{ a: jarak pada laluan, id }]. */
 function routeCameras(r, elements, fromSeg, maxAlong) {
