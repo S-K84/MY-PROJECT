@@ -104,6 +104,8 @@ npm test
 - **Lampu isyarat & kamera laju:** pertanyaan Overpass dari telefon tidak boleh diharap (13 Nov 2026, versi uji 2026.11.07-f: 5 pelayan
   tamat masa walaupun pertanyaan kecil). Kini `.github/workflows/had-bulanan.yml` (`scripts/ambil_titik.py`, dari fail Geofabrik, bukan Overpass) mengambil semua titik
   Malaysia sebulan sekali ke `docs/data/titik.json` (GitHub Pages; kamera = `highway=speed_camera` atau `enforcement=maxspeed/average_speed`); klien membacanya dahulu (`loadTitik`), Overpass hanya sandaran.
+  Kamera tambahan oleh pemilik: `data/kamera-tambahan.csv` (`lat,lng,nama`) digabung oleh `ambil_titik.py` (id negatif; yang < 30 m dari kamera OSM diabaikan).
+  Selepas fail itu diubah (melalui PR), pemilik tekan Run workflow pada tugas bulanan supaya `titik.json` dikemas kini.
   Ini satu-satunya pengecualian "jangan commit terus ke `main`": bot hanya menyimpan fail data itu (bukan kod, tiada deploy). Jalan
   ber-`maxspeed` (had laju): tugas yang sama (`scripts/ambil_had.py`) memuat turun fail OSM Malaysia penuh dari Geofabrik
   (BUKAN Overpass: 13-14 Nov 2026 Overpass ambil 25-260 s setiap kawasan 0.25° → ~14 jam, dihentikan GitHub selepas 5.5 jam) dan menyimpan

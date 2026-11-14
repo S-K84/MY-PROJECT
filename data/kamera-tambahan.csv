@@ -1,0 +1,7 @@
+# Kamera laju tambahan oleh pemilik (digabung ke docs/data/titik.json oleh tugas bulanan "Data OSM bulanan").
+# Satu kamera setiap baris: lat,lng,nama   (contoh di bawah, buang # untuk guna)
+# Cara dapat koordinat: Google Maps -> tekan lama pada tempat kamera -> salin dua nombor di atas (cth. 2.28440, 102.40265).
+# Baris bermula # diabaikan. Kamera yang kurang 30 m dari kamera OSM diabaikan (sudah ada).
+# Selepas mengubah fail ini: merge PR, kemudian Actions -> "Data OSM bulanan" -> Run workflow.
+lat,lng,nama
+# 2.28440,102.40265,Contoh: PLUS Bemban arah utara

@@ -26,6 +26,19 @@ class T(unittest.TestCase):
         self.assertEqual(t.check({'c': c, 's': s}, c[:95], s[:1900]), '')
         self.assertEqual(t.check(None, c, s), '')
 
+    def test_kamera_tambahan_parse_gabung_dan_dedup(self):
+        rows, warn = t.parse_extra(['# komen', 'lat,lng,nama', '', '2.2844,102.4027,Bemban', '3.1,101.7,"A, B"', 'x,y,salah', '51.5,-0.1,London', '3.2'])
+        self.assertEqual(rows, [(2.2844, 102.4027), (3.1, 101.7)])
+        self.assertEqual(len(warn), 3)                                      # salah, London, baris pendek
+        osm = [[2.28449, 102.40265, 6110021790]]                            # ~10 m dari kamera pertama -> diabaikan
+        merged, added = t.merge_extra(osm, rows)
+        self.assertEqual(added, 1)
+        self.assertEqual(merged, osm + [[3.1, 101.7, -2]])                  # id negatif ikut nombor baris data
+
+    def test_fail_contoh_kamera_tambahan_sah(self):
+        rows, warn = t.parse_extra(open(t.EXTRA, encoding='utf-8').read().splitlines())
+        self.assertEqual(warn, [])
+
 
 if __name__ == '__main__':
     unittest.main()

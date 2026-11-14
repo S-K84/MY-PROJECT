@@ -3,12 +3,15 @@ seperti ambil_had.py / ambil_poi.py (Overpass tidak lagi digunakan di sini).
 
 Format: { "v": 1, "t": "YYYY-MM-DD", "c": [[lat, lng, id], ...] (kamera laju), "s": [[lat, lng, id], ...] (lampu isyarat) }
 Kamera laju: highway=speed_camera  ATAU  enforcement=maxspeed / average_speed (peranti kamera yang ditanda cara baharu).
+Kamera tambahan oleh pemilik: data/kamera-tambahan.csv (lat,lng,nama) digabung ke senarai kamera (id negatif); kamera yang kurang 30 m dari kamera OSM diabaikan.
 Kamera lampu merah (enforcement=traffic_signals) TIDAK dimasukkan. Bilangan setiap jenis dicetak dalam log supaya liputan OSM kelihatan.
 
 Penggunaan: python ambil_titik.py <fail.osm.pbf>      (memerlukan pakej "osmium"; fungsi tulen tidak memerlukannya)
 """
+import csv
 import datetime
 import json
+import math
 import os
 import sys
 
@@ -16,6 +19,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ambil_had import in_singapore  # noqa: E402
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'docs', 'data', 'titik.json')
+EXTRA = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data', 'kamera-tambahan.csv')
+EXTRA_DEDUP_M = 30
 MIN_RATIO = 0.6
 MIN_CAMERAS, MIN_SIGNALS = 20, 1000
 
@@ -38,6 +43,39 @@ def build(nodes):
         if k in out and not in_singapore(lat, lng) and -1 < lat < 8 and 98 < lng < 120:
             out[k][nid] = [round(lat, 5), round(lng, 5), nid]
     return [out['camera'][i] for i in sorted(out['camera'])], [out['signal'][i] for i in sorted(out['signal'])]
+
+
+def _dist_m(a, b):
+    return math.hypot((a[0] - b[0]) * 111320, (a[1] - b[1]) * 111320 * math.cos(math.radians(a[0])))
+
+
+def parse_extra(lines):
+    """Baris CSV (lat,lng,nama) -> ([(lat, lng)], [amaran]). Baris kosong / bermula # / pengepala 'lat' diabaikan; baris tidak sah diberi amaran."""
+    rows, warn = [], []
+    for n, line in enumerate(lines, 1):
+        line = line.strip()
+        if not line or line.startswith('#') or line.lower().startswith('lat,'):
+            continue
+        try:
+            r = next(csv.reader([line]))
+            lat, lng = float(r[0]), float(r[1])
+            if not (-1 < lat < 8 and 98 < lng < 120):
+                raise ValueError('di luar Malaysia')
+            rows.append((lat, lng))
+        except Exception as e:
+            warn.append('baris %d diabaikan (%s): %s' % (n, e, line[:60]))
+    return rows, warn
+
+
+def merge_extra(cams, extra):
+    """Tambah kamera pemilik (id negatif -1, -2, ...) kecuali yang kurang EXTRA_DEDUP_M dari kamera sedia ada. Pulangkan (senarai baharu, bilangan ditambah)."""
+    out, added = list(cams), 0
+    for i, (lat, lng) in enumerate(extra, 1):
+        p = [round(lat, 5), round(lng, 5), -i]
+        if not any(_dist_m(p, q) < EXTRA_DEDUP_M for q in out):
+            out.append(p)
+            added += 1
+    return out, added
 
 
 def check(prev, c, s):
@@ -76,6 +114,14 @@ def main(pbf):
     nodes, tags = read_nodes(pbf)
     print('Bilangan mengikut teg: ' + ', '.join('%s %d' % kv for kv in sorted(tags.items())))
     c, s = build(nodes)
+    try:
+        extra, warn = parse_extra(open(EXTRA, encoding='utf-8').read().splitlines())
+    except FileNotFoundError:
+        extra, warn = [], []
+    for w in warn:
+        print('AMARAN kamera-tambahan.csv: ' + w)
+    c, added = merge_extra(c, extra)
+    print('Kamera tambahan pemilik: %d dalam fail, %d ditambah (selebihnya sudah ada dalam OSM)' % (len(extra), added))
     prev = None
     try:
         prev = json.load(open(OUT, encoding='utf-8'))
