@@ -108,7 +108,7 @@ npm test
   ber-`maxspeed` (had laju): `.github/workflows/had-bulanan.yml` (`scripts/ambil_had.py`) memuat turun fail OSM Malaysia penuh dari Geofabrik
   (BUKAN Overpass: 13-14 Nov 2026 Overpass ambil 25-260 s setiap kawasan 0.25° → ~14 jam, dihentikan GitHub selepas 5.5 jam) dan menyimpan
   kawasan 0.25° ke `docs/data/had/<i>_<j>.json` + `indeks.json` (bot juga commit terus ke `main`, fail data sahaja); klien memuat hanya kawasan di
-  sekitar laluan (`loadHad`), Overpass sandaran. Ujian Python: `tests/py/test_ambil_had.py` (dijalankan oleh `npm test`).
+  sekitar laluan (`loadHad`), Overpass sandaran. Jalan di dalam pulau Singapura dibuang (`in_singapore`; kawasan itu 4.4 MB sendirian, bukan sasaran JomRoute). Ujian Python: `tests/py/test_ambil_had.py` (dijalankan oleh `npm test`).
   Had laju hanya ada di jalan yang OSM ada tanda `maxspeed`.
 - **ID 30 hari:** pindah data perlu pengesahan pengguna ("Pulihkan data anda?"), kerana pelayar boleh dikongsi oleh akaun Google
   lain. Sekatan dipindah automatik. Data dipindah, bukan disalin.

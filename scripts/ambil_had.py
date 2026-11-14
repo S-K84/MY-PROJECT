@@ -28,6 +28,12 @@ def cell_key(lat, lng):
     return '%d_%d' % (math.floor(lat * DIV), math.floor(lng * DIV))
 
 
+def in_singapore(lat, lng):
+    """Kotak kasar pulau Singapura. Hujung barat/utara sengaja dilonggarkan supaya jalan Malaysia (Gelang Patah, Johor Bahru, Pasir Gudang)
+    tidak terbuang. Singapura bukan sasaran JomRoute dan kawasannya terlalu besar (4.4 MB untuk satu kawasan 0.25 darjah)."""
+    return 1.15 <= lat <= 1.455 and 103.65 <= lng <= 104.10
+
+
 def parse_maxspeed(v):
     """'50' -> 50, '60 mph' -> 97 (0 = tidak sah / > 130). Sama seperti parseMaxspeed() dalam klien."""
     m = re.match(r'^\s*(\d{2,3})\s*(mph)?', str(v or ''), re.I)
@@ -41,7 +47,7 @@ def build_tiles(ways):
     """ways: [(id, had, [(lat, lng), ...])] -> {kunci: [[had, [lat, lng, ...]], ...]} (tersusun ikut id; 5 titik perpuluhan)."""
     tiles = {}
     for wid, v, pts in sorted(ways, key=lambda w: w[0]):
-        if not v or len(pts) < 2:
+        if not v or len(pts) < 2 or all(in_singapore(lat, lng) for lat, lng in pts):
             continue
         flat = []
         for lat, lng in pts:

@@ -18,6 +18,16 @@ class T(unittest.TestCase):
         self.assertEqual([w[0] for w in t['12_406']], [90, 60])              # tersusun ikut id
         self.assertEqual(t['13_406'], [[60, [3.1, 101.7, 3.3, 101.7]]])      # jalan penuh, bukan dipotong
 
+    def test_jalan_singapura_dibuang_tetapi_jalan_malaysia_di_sempadan_kekal(self):
+        sg = [(1.30, 103.85), (1.31, 103.86)]                  # tengah Singapura
+        woodlands_ke_jb = [(1.44, 103.77), (1.47, 103.77)]     # melintasi tambak ke Johor Bahru
+        gelang_patah = [(1.33, 103.60), (1.34, 103.61)]        # Malaysia, barat kotak
+        pasir_gudang = [(1.47, 103.90), (1.48, 103.91)]        # Malaysia, utara kotak
+        kl = [(3.1, 101.7), (3.2, 101.7)]
+        t = a.build_tiles([(1, 50, sg), (2, 60, woodlands_ke_jb), (3, 70, gelang_patah), (4, 80, pasir_gudang), (5, 90, kl)])
+        ids = sorted(w[0] for ways in t.values() for w in ways)
+        self.assertEqual(ids, [60, 70, 80, 90])                # 50 (Singapura) dibuang
+
     def test_check_total(self):
         self.assertIn('sedikit', a.check_total(0, 10))
         self.assertIn('susut', a.check_total(100000, 50000))
