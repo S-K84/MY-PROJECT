@@ -1,7 +1,8 @@
 name: Data had laju jalan (bulanan)
 
-# Sebulan sekali ambil jalan ber-had laju Malaysia dari OpenStreetMap (Overpass), kawasan 0.25° demi kawasan, ke docs/data/had/.
+# Sebulan sekali ambil jalan ber-had laju Malaysia dari fail OpenStreetMap penuh (Geofabrik) dan simpan kawasan 0.25° ke docs/data/had/.
 # GitHub Pages menghidangnya; aplikasi memuat hanya kawasan di sekitar laluan (Overpass dari telefon = sandaran).
+# Overpass tidak digunakan di sini: terlalu sibuk (13 Nov 2026: ~14 jam untuk seluruh negara). Fail penuh siap dalam beberapa minit.
 # Hanya fail data yang diubah (bukan kod aplikasi). Push oleh GITHUB_TOKEN tidak mencetuskan deploy.
 on:
   schedule:
@@ -18,18 +19,18 @@ concurrency:
 jobs:
   ambil:
     runs-on: ubuntu-latest
-    timeout-minutes: 345
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
         with:
           ref: main
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-      - name: Ambil data dari Overpass
-        run: node scripts/ambil-had.js
+      - name: Muat turun fail Malaysia (Geofabrik)
+        run: curl -fsSL --retry 5 --retry-delay 20 -o "$RUNNER_TEMP/malaysia.osm.pbf" https://download.geofabrik.de/asia/malaysia-singapore-brunei-latest.osm.pbf && ls -l "$RUNNER_TEMP/malaysia.osm.pbf"
+      - name: Pasang pembaca OSM (pyosmium)
+        run: python3 -m venv "$RUNNER_TEMP/venv" && "$RUNNER_TEMP/venv/bin/pip" install --quiet osmium
+      - name: Hasilkan kawasan had laju
+        run: "$RUNNER_TEMP/venv/bin/python" scripts/ambil_had.py "$RUNNER_TEMP/malaysia.osm.pbf"
       - name: Simpan jika berubah
-        if: ${{ always() }}      # simpan kawasan yang siap walaupun langkah di atas gagal / dihentikan
         run: |
           git add -A docs/data/had
           if git diff --cached --quiet; then
