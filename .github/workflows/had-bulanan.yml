@@ -29,7 +29,8 @@ jobs:
       - name: Pasang pembaca OSM (pyosmium)
         run: python3 -m venv "$RUNNER_TEMP/venv" && "$RUNNER_TEMP/venv/bin/pip" install --quiet osmium
       - name: Hasilkan kawasan had laju
-        run: "$RUNNER_TEMP/venv/bin/python" scripts/ambil_had.py "$RUNNER_TEMP/malaysia.osm.pbf"
+        run: |
+          "$RUNNER_TEMP/venv/bin/python" scripts/ambil_had.py "$RUNNER_TEMP/malaysia.osm.pbf"
       - name: Simpan jika berubah
         run: |
           git add -A docs/data/had

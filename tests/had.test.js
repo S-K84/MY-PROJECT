@@ -15,6 +15,12 @@ test('ambil_had.py: ujian unit Python (kunci kawasan sama dengan klien, penapis 
   assert.strictEqual(r.status, 0, r.stderr);
 });
 
+test('semua fail workflow GitHub ialah YAML yang sah (tugas tidak gagal serta-merta tanpa log)', t => {
+  const r = spawnSync('python3', [path.join(ROOT, 'tests', 'py', 'test_workflows.py')], { encoding: 'utf8' });
+  if (r.error) return t.skip('python3 tiada');
+  assert.strictEqual(r.status, 0, r.stderr);
+});
+
 test('klien: parseMaxspeed sama dengan skrip pengambil (nilai rujukan dikongsi dengan ujian Python)', () => {
   const s = clientScript('IndexUji.html'), ctx = {};
   vm.runInNewContext(fn(s, 'parseMaxspeed') + ';this.f = parseMaxspeed;', ctx);
