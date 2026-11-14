@@ -1,6 +1,7 @@
-name: Data had laju jalan (bulanan)
+name: Data had laju & tempat (bulanan)
 
-# Sebulan sekali ambil jalan ber-had laju Malaysia dari fail OpenStreetMap penuh (Geofabrik) dan simpan kawasan 0.25° ke docs/data/had/.
+# Sebulan sekali ambil jalan ber-had laju (docs/data/had/) dan tempat: minyak, R&R, masjid, tandas, makan, ATM, caj EV, stesen (docs/data/poi/)
+# Malaysia dari fail OpenStreetMap penuh (Geofabrik); kawasan 0.25°.
 # GitHub Pages menghidangnya; aplikasi memuat hanya kawasan di sekitar laluan (Overpass dari telefon = sandaran).
 # Overpass tidak digunakan di sini: terlalu sibuk (13 Nov 2026: ~14 jam untuk seluruh negara). Fail penuh siap dalam beberapa minit.
 # Hanya fail data yang diubah (bukan kod aplikasi). Push oleh GITHUB_TOKEN tidak mencetuskan deploy.
@@ -31,15 +32,18 @@ jobs:
       - name: Hasilkan kawasan had laju
         run: |
           "$RUNNER_TEMP/venv/bin/python" scripts/ambil_had.py "$RUNNER_TEMP/malaysia.osm.pbf"
+      - name: Hasilkan tempat (minyak, R&R, masjid, ...)
+        run: |
+          "$RUNNER_TEMP/venv/bin/python" scripts/ambil_poi.py "$RUNNER_TEMP/malaysia.osm.pbf"
       - name: Simpan jika berubah
         run: |
-          git add -A docs/data/had
+          git add -A docs/data/had docs/data/poi
           if git diff --cached --quiet; then
             echo "Tiada perubahan."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Data bulanan: had laju jalan Malaysia"
+          git commit -m "Data bulanan: had laju & tempat Malaysia"
           git pull --rebase origin main
           git push origin HEAD:main
