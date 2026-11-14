@@ -21,8 +21,9 @@ test('ambil_poi.py: ujian unit Python (kategori sama dengan klien, tajuk/sub, ka
   assert.strictEqual(r.status, 0, r.stderr);
 });
 
-test('saluran uji: tempat dibaca dari fail statik dahulu (poiElements, loadPoi, orNull); kategori Python sepadan dengan ALONG_Q klien', async () => {
-  const s = clientScript('IndexUji.html');
+for (const file of ['Index.html', 'IndexUji.html']) {
+test(`${file}: tempat dibaca dari fail statik dahulu (poiElements, loadPoi, orNull); kategori Python sepadan dengan ALONG_Q klien`, async () => {
+  const s = clientScript(file);
   assert.match(s, /POI_URL = 'https:\\\/\\\/s-k84\.github\.io\/MY-PROJECT\/data\/poi\/'/);
   assert.match(s, /let list = await orNull\(poiAlong\(cat, pts\), 4000\)/);
   assert.match(s, /orNull\(poiNear\(cat, me\), 4000\) \|\| await call\('nearbyPlaces'/);
@@ -45,6 +46,7 @@ test('saluran uji: tempat dibaca dari fail statik dahulu (poiElements, loadPoi, 
   assert.strictEqual(await ctx.l('atm', ['3.099,101.699,3.202,101.702']), null);          // kategori tiada dalam indeks → sandaran
   assert.strictEqual(await ctx.o(new Promise(() => {}), 20), null);                        // tidak menjawab → null selepas had masa
 });
+}
 
 test('semua fail workflow GitHub ialah YAML yang sah (tugas tidak gagal serta-merta tanpa log)', t => {
   const r = spawnSync('python3', [path.join(ROOT, 'tests', 'py', 'test_workflows.py')], { encoding: 'utf8' });
