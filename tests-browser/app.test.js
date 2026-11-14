@@ -769,3 +769,30 @@ test(`${file}: cari sepanjang laluan berfungsi TANPA liputan selepas muat awal (
   } finally { await close(); }
 });
 }
+
+test('IndexUji.html: amaran suara "melebihi had laju" tidak serta-merta, sekali sahaja (bukan setiap minit); had laju tidak disebut serta-merta', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
+  try {
+    await page.evaluate(() => {
+      window.__said = []; window.speak = t => __said.push(t);
+      const line = (a, b, n) => Array.from({ length: n }, (_, i) => ({ lat: a[0] + (b[0] - a[0]) * i / (n - 1), lon: a[1] + (b[1] - a[1]) * i / (n - 1) }));
+      window.fetch = () => Promise.resolve({ ok: true, status: 200, json: async () => ({ elements: [
+        { type: 'way', tags: { highway: 'primary', maxspeed: '90' }, geometry: line([3.1, 101.7], [3.2, 101.7], 11) }] }) });
+      S.speedLimit = -1;
+    });
+    await startNav(page);
+    await drive(page, 40, 100);                 // 100 km/j > 90 + 5, tetapi baru beberapa ms sebenar
+    const said = () => page.evaluate(() => __said.filter(x => /melebihi/.test(x)).length);
+    assert.strictEqual(await said(), 0, 'amaran terlalu awal');
+    assert.strictEqual(await page.evaluate(() => $('speedSign').textContent), '90');
+    assert.strictEqual(await page.evaluate(() => __said.filter(x => /Had laju/.test(x)).length), 0, 'had laju disebut sebelum kekal 6 s');
+    await page.evaluate(() => { state.overSince = Date.now() - 9000; state.limSince = Date.now() - 7000; });   // simulasi: melebihi 9 s, had kekal 7 s
+    await drive(page, 3, 100);
+    assert.strictEqual(await said(), 1);
+    assert.strictEqual(await page.evaluate(() => __said.filter(x => /Had laju/.test(x)).length), 1);
+    await page.evaluate(() => { state.speedWarnAt = Date.now() - 61000; });     // lama: 60 s sudah cukup untuk ulang
+    await drive(page, 5, 100);
+    assert.strictEqual(await said(), 1, 'diulang selepas 61 s');
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});
