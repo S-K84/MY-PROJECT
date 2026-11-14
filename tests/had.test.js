@@ -88,3 +88,14 @@ test(`${file}: had laju dibaca dari fail statik dahulu, Overpass sandaran; hadKe
   assert.deepStrictEqual(JSON.parse(JSON.stringify(els[0].geometry)), [{ lat: 3.1, lon: 101.7 }, { lat: 3.2, lon: 101.7 }]);
 });
 }
+
+test('tugas bulanan (titik & had/tempat): buka isu bila gagal, dan boleh diuji dengan input ujian_gagal', () => {
+  ['titik-bulanan.yml', 'had-bulanan.yml'].forEach(f => {
+    const y = fs.readFileSync(path.join(ROOT, '.github/workflows', f), 'utf8');
+    assert.match(y, /issues: write/, f);
+    assert.match(y, /ujian_gagal:/, f);
+    assert.match(y, /if: \$\{\{ github\.event\.inputs\.ujian_gagal == 'true' \}\}\n\s+run: exit 1/, f);
+    assert.match(y, /Buka isu jika gagal\n\s+if: failure\(\)[\s\S]*gh issue create/, f);
+    assert.ok(!/\$\{\{\s*github\.event\.(issue|pull_request|comment)/.test(y), 'input tidak dipercayai dalam run: ' + f);
+  });
+});
