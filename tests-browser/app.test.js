@@ -80,6 +80,17 @@ for (const file of FILES) {
     } finally { await close(); }
   });
 
+  if (file === 'IndexUji.html') test(`${file}: laluan dipilih ada garisan putih di bawah (jelas di atas jalan merah peta)`, async () => {
+    const { page, errors, close } = await open(file);
+    try {
+      await startNav(page);
+      const r = await page.evaluate(() => state.routeLayers.map(l => [l.options.color, l.options.weight]));
+      assert.ok(r.some(([c, w]) => c === '#fff' && w > 8), JSON.stringify(r));
+      await page.evaluate(() => cancelRoute());
+      assert.deepStrictEqual(errors, []);
+    } finally { await close(); }
+  });
+
   test(`${file}: lapor pantas → dihantar, kemudian Batal memadam`, async () => {
     const { page, errors, close } = await open(file);
     try {

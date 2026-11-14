@@ -3002,11 +3002,14 @@ function drawRoutes() {
   state.routes.forEach((r, i) => {
     if (state.navigating && i !== state.selRoute) return;
     const sel = i === state.selRoute;
+    // Garisan putih di bawah laluan dipilih: biru/oren/merah kekal jelas di atas jalan merah peta OSM
+    const casing = sel ? L.polyline(r.pts.map(p => [p.lat, p.lng]), {
+      color: '#fff', weight: 13, opacity: .9, interactive: false, renderer: lineRenderer }).addTo(map) : null;
     const line = L.polyline(r.pts.map(p => [p.lat, p.lng]), {
       color: sel ? '#33ccff' : '#90a4ae', weight: sel ? 8 : 6, opacity: sel ? .95 : .7, renderer: lineRenderer
     }).addTo(map);
     line.on('click', () => { state.selRoute = i; drawRoutes(); renderRouteChoices(); });
-    if (sel) state.routeLayers.unshift(line); // laluan dipilih sentiasa di indeks 0
+    if (sel) { state.routeLayers.unshift(line); state.routeLayers.push(casing); } // laluan dipilih sentiasa di indeks 0
     else { line.bringToBack(); state.routeLayers.push(line); }
   });
   drawTraffic();
@@ -4132,7 +4135,7 @@ function speedIntervals(r, elements, fromSeg, maxAlong) {
   (elements || []).forEach(w => {
     const v = parseMaxspeed(w.tags && w.tags.maxspeed), g = w.geometry || [];
     if (!v || v > 130 || g.length < 2) return;
-    let s = Infinity, e = -Infinity;
+    let s = Infinity, e = -Infinity, off = Infinity;
     for (let k = 0; k < g.length; k++) {
       const p = { lat: g[k].lat, lng: g[k].lon }, l = locate(p, r, fromSeg, maxAlong);
       if (!(l.off <= 25)) continue;
@@ -4143,17 +4146,21 @@ function speedIntervals(r, elements, fromSeg, maxAlong) {
         const d = Math.abs(angDiff(wb, bearing(a, b)));
         if (d > 35 && d < 145) continue;   // jalan bersilang / susur — bukan jalan yang dilalui
       }
-      s = Math.min(s, l.along); e = Math.max(e, l.along);
+      s = Math.min(s, l.along); e = Math.max(e, l.along); off = Math.min(off, l.off);
     }
-    if (s <= e) out.push({ s, e, v });
+    if (s <= e) out.push({ s, e, v, off });
   });
   return out;
 }
-/** Had laju jalan semasa (0 = tidak diketahui) pada kedudukan 'along'. Selang terpendek yang meliputinya diutamakan. */
+/** Had laju jalan semasa (0 = tidak diketahui) pada kedudukan 'along'. Jalan yang paling dekat dengan laluan (lompatan 10 m)
+ *  diutamakan, kemudian selang terpendek. Tanpa ini jalan servis selari di sebelah lebuh raya (30 km/j) menang (13 Nov 2026). */
 function speedAt(intervals, along) {
   let best = null;
+  const rank = x => [Math.floor((x.off || 0) / 10), x.e - x.s];
   (intervals || []).forEach(x => {
-    if (x.s - 30 <= along && along <= x.e + 30 && (!best || x.e - x.s < best.e - best.s)) best = x;
+    if (!(x.s - 30 <= along && along <= x.e + 30)) return;
+    const a = rank(x), b = best && rank(best);
+    if (!best || a[0] < b[0] || (a[0] === b[0] && a[1] < b[1])) best = x;
   });
   return best ? best.v : 0;
 }
