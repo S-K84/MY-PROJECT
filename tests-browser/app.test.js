@@ -624,8 +624,9 @@ for (const file of FILES) {
   });
 }
 
-test('IndexUji.html: had laju jalan dibaca dari fail statik kawasan walaupun semua pelayan Overpass gagal', async () => {
-  const { page, errors, close } = await open('IndexUji.html');
+for (const file of ['Index.html', 'IndexUji.html']) {
+test(`${file}: had laju jalan dibaca dari fail statik kawasan walaupun semua pelayan Overpass gagal`, async () => {
+  const { page, errors, close } = await open(file);
   try {
     await page.evaluate(() => {
       const json = o => Promise.resolve({ ok: true, status: 200, json: async () => o });
@@ -652,9 +653,11 @@ test('IndexUji.html: had laju jalan dibaca dari fail statik kawasan walaupun sem
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+}
 
-test('IndexUji.html: menu ☰ — pemilik nampak tarikh & bilangan kawasan data had laju; English diterjemah; pengguna biasa tidak', async () => {
-  const { page, errors, close } = await open('IndexUji.html');
+for (const file of ['Index.html', 'IndexUji.html']) {
+test(`${file}: menu ☰ — pemilik nampak tarikh & bilangan kawasan data had laju; English diterjemah; pengguna biasa tidak`, async () => {
+  const { page, errors, close } = await open(file);
   try {
     await page.evaluate(() => {
       window.fetch = u => (/had\/indeks\.json/.test(String(u))
@@ -669,3 +672,4 @@ test('IndexUji.html: menu ☰ — pemilik nampak tarikh & bilangan kawasan data 
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+}
