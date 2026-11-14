@@ -109,6 +109,9 @@ test('saluran uji: had laju automatik — tafsir maxspeed & pilih selang pada la
   assert.strictEqual(ctx.at(iv, 500), 90);
   assert.strictEqual(ctx.at(iv, 1100), 60);       // selang terpendek (jalan kecil di dalam) diutamakan
   assert.strictEqual(ctx.at(iv, 9000), 0);
+  // jalan servis selari 20 m dari laluan (30) tidak boleh mengatasi lebuh raya di bawah laluan (90)
+  const par = [{ s: 0, e: 5000, v: 90, off: 3 }, { s: 800, e: 1400, v: 30, off: 18 }];
+  assert.strictEqual(ctx.at(par, 1000), 90);
   assert.match(s, /speedLimit: -1,/);              // lalai: Automatik untuk pengguna baharu
 });
 
