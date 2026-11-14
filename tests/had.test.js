@@ -22,7 +22,7 @@ test('semua fail workflow GitHub ialah YAML yang sah (tugas tidak gagal serta-me
 });
 
 test('klien: parseMaxspeed sama dengan skrip pengambil (nilai rujukan dikongsi dengan ujian Python)', () => {
-  const s = clientScript('IndexUji.html'), ctx = {};
+  const s = clientScript('Index.html'), ctx = {};
   vm.runInNewContext(fn(s, 'parseMaxspeed') + ';this.f = parseMaxspeed;', ctx);
   const ref = { '90': 90, '60 mph': 97, '140': 140, 'walk': 0, '': 0, '30': 30 };
   Object.keys(ref).forEach(v => assert.strictEqual(ctx.f(v), ref[v], v));   // klien tidak menapis > 130 di sini; speedIntervals yang menapis
@@ -39,8 +39,9 @@ test('had-bulanan.yml: berjadual bulanan, hanya menyimpan docs/data/had', () => 
   assert.ok(!/git add (-A|\.)\s*$/m.test(y));
 });
 
-test('saluran uji: had laju dibaca dari fail statik dahulu, Overpass sandaran; hadKeys & hadElements betul', () => {
-  const s = clientScript('IndexUji.html');
+for (const file of ['Index.html', 'IndexUji.html']) {
+test(`${file}: had laju dibaca dari fail statik dahulu, Overpass sandaran; hadKeys & hadElements betul`, () => {
+  const s = clientScript(file);
   assert.match(s, /HAD_URL = 'https:\\\/\\\/s-k84\.github\.io\/MY-PROJECT\/data\/had\/'/);
   assert.match(s, /loadHad\(bx\)\.then\(els => els \? \{ elements: els \} : overpassRaw\(qW/);
   const ctx = {};
@@ -53,3 +54,4 @@ test('saluran uji: had laju dibaca dari fail statik dahulu, Overpass sandaran; h
   assert.strictEqual(els[0].tags.maxspeed, '90');
   assert.deepStrictEqual(JSON.parse(JSON.stringify(els[0].geometry)), [{ lat: 3.1, lon: 101.7 }, { lat: 3.2, lon: 101.7 }]);
 });
+}
