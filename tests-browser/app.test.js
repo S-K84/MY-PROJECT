@@ -652,3 +652,20 @@ test('IndexUji.html: had laju jalan dibaca dari fail statik kawasan walaupun sem
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+
+test('IndexUji.html: menu ☰ — pemilik nampak tarikh & bilangan kawasan data had laju; English diterjemah; pengguna biasa tidak', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
+  try {
+    await page.evaluate(() => {
+      window.fetch = u => (/had\/indeks\.json/.test(String(u))
+        ? Promise.resolve({ ok: true, status: 200, json: async () => ({ v: 1, t: '2026-11-14', k: ['12_406', '12_407', '13_406'] }) })
+        : Promise.resolve({ ok: false, status: 404 }));
+      state.isOwner = true; renderDrawer();
+    });
+    await page.waitForFunction(() => /Data had laju: 2026-11-14 · 3 kawasan/.test(($('hadInfo') || {}).textContent || ''), null, { timeout: 5000 });
+    await page.evaluate(() => { setVoiceLang('en'); renderDrawer(); });
+    await page.waitForFunction(() => /Speed limit data: 2026-11-14 · 3 areas/.test(($('hadInfo') || {}).textContent || ''), null, { timeout: 5000 });
+    assert.strictEqual(await page.evaluate(() => { state.isOwner = false; renderDrawer(); return !!$('hadInfo'); }), false);
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});
