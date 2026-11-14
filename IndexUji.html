@@ -1516,7 +1516,9 @@ const EN_RULES = [
   [/^Data titik: (\S+) · (\d+) kamera, (\d+) lampu isyarat$/, m => 'Point data: ' + m[1] + ' · ' + m[2] + ' cameras, ' + m[3] + ' traffic lights'],
   [/^Data titik: tiada \(guna Overpass\)$/, () => 'Point data: none (using Overpass)'],
   [/^Data had laju: (\S+) · (\d+) kawasan$/, m => 'Speed limit data: ' + m[1] + ' · ' + m[2] + ' areas'],
-  [/^Data had laju: tiada \(guna Overpass\)$/, () => 'Speed limit data: none (using Overpass)'], [/^⏳ (\d+) laporan menunggu$/, m => '⏳ ' + m[1] + ' reports waiting'],
+  [/^Data had laju: tiada \(guna Overpass\)$/, () => 'Speed limit data: none (using Overpass)'],
+  [/^Data tempat: (\S+) · (\d+) kawasan$/, m => 'Places data: ' + m[1] + ' · ' + m[2] + ' areas'],
+  [/^Data tempat: tiada \(guna Overpass\)$/, () => 'Places data: none (using Overpass)'], [/^⏳ (\d+) laporan menunggu$/, m => '⏳ ' + m[1] + ' reports waiting'],
   [/^📵 Tiada liputan · (\d+) laporan menunggu$/, m => '📵 No signal · ' + m[1] + ' reports waiting'],
   [/^(\d+(?:\.\d+)?) (km|m)$/, m => m[0]], [/^(\d+) km\/j$/, m => m[1] + ' km/h'], [/^km\/j$/, () => 'km/h'], [/^bt\/j$/, () => 'mph'],
   [/^(.+) laporan dihantar\. Terima kasih! 🙏$/, m => m[1] + ' reports sent. Thank you! 🙏'],
@@ -2416,7 +2418,7 @@ function renderDrawer() {
     ${list([sRow({ go: 'sos', icon: '🆘', color: '#d32f2f', label: 'Kecemasan', sub: 'Telefon 999 · hantar lokasi ke keluarga' })])}
     ${list([sRow({ go: 'homescreen', icon: '📲', color: '#5c6bc0', label: 'Tambah ke skrin utama', sub: 'Buka JomRoute seperti app' }),
       sRow({ go: 'root', icon: '⚙️', color: '#78909c', label: 'Tetapan' })])}
-    <p class="pop-muted" style="margin:16px 4px">JomRoute · Peta © OpenStreetMap · Laluan oleh Google<br>Versi ${APP_VERSION}${state.isOwner ? '<br><span id="titikInfo"></span><br><span id="hadInfo"></span>' : ''}</p>`;
+    <p class="pop-muted" style="margin:16px 4px">JomRoute · Peta © OpenStreetMap · Laluan oleh Google<br>Versi ${APP_VERSION}${state.isOwner ? '<br><span id="titikInfo"></span><br><span id="hadInfo"></span><br><span id="poiInfo"></span>' : ''}</p>`;
   if (state.isOwner) showTitikInfo();
 }
 /** Pemilik sahaja: tarikh & bilangan data titik (fail bulanan) di bawah versi dalam menu, untuk nampak jika tugas bulanan berhenti. */
@@ -2428,6 +2430,10 @@ function showTitikInfo() {
   loadHadIndex().then(d => {
     const e = $('hadInfo');
     if (e) e.textContent = d ? 'Data had laju: ' + d.t + ' · ' + d.k.length + ' kawasan' : 'Data had laju: tiada (guna Overpass)';
+  });
+  loadPoiIndex().then(d => {
+    const e = $('poiInfo');
+    if (e) e.textContent = d ? 'Data tempat: ' + d.t + ' · ' + Object.keys(d.k).reduce((n, c) => n + d.k[c].length, 0) + ' kawasan' : 'Data tempat: tiada (guna Overpass)';
   });
 }
 

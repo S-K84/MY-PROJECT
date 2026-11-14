@@ -663,12 +663,16 @@ test(`${file}: menu ☰ — pemilik nampak tarikh & bilangan kawasan data had la
     await page.evaluate(() => {
       window.fetch = u => (/had\/indeks\.json/.test(String(u))
         ? Promise.resolve({ ok: true, status: 200, json: async () => ({ v: 1, t: '2026-11-14', k: ['12_406', '12_407', '13_406'] }) })
+        : /poi\/indeks\.json/.test(String(u))
+        ? Promise.resolve({ ok: true, status: 200, json: async () => ({ v: 1, t: '2026-11-14', k: { fuel: ['12_406', '12_407'], food: ['12_406'] } }) })
         : Promise.resolve({ ok: false, status: 404 }));
       state.isOwner = true; renderDrawer();
     });
     await page.waitForFunction(() => /Data had laju: 2026-11-14 · 3 kawasan/.test(($('hadInfo') || {}).textContent || ''), null, { timeout: 5000 });
+    if (file === 'IndexUji.html') await page.waitForFunction(() => /Data tempat: 2026-11-14 · 3 kawasan/.test(($('poiInfo') || {}).textContent || ''), null, { timeout: 5000 });
     await page.evaluate(() => { setVoiceLang('en'); renderDrawer(); });
     await page.waitForFunction(() => /Speed limit data: 2026-11-14 · 3 areas/.test(($('hadInfo') || {}).textContent || ''), null, { timeout: 5000 });
+    if (file === 'IndexUji.html') await page.waitForFunction(() => /Places data: 2026-11-14 · 3 areas/.test(($('poiInfo') || {}).textContent || ''), null, { timeout: 5000 });
     assert.strictEqual(await page.evaluate(() => { state.isOwner = false; renderDrawer(); return !!$('hadInfo'); }), false);
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
