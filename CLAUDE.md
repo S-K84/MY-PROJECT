@@ -105,8 +105,10 @@ npm test
   tamat masa walaupun pertanyaan kecil). Kini `.github/workflows/titik-bulanan.yml` (`scripts/ambil-titik.js`) mengambil semua titik
   Malaysia sebulan sekali ke `docs/data/titik.json` (GitHub Pages); klien membacanya dahulu (`loadTitik`), Overpass hanya sandaran.
   Ini satu-satunya pengecualian "jangan commit terus ke `main`": bot hanya menyimpan fail data itu (bukan kod, tiada deploy). Jalan
-  ber-`maxspeed` (had laju): `.github/workflows/had-bulanan.yml` (`scripts/ambil-had.js`) menyimpan kawasan 0.5° ke `docs/data/had/<i>_<j>.json`
-  + `indeks.json` (bot juga commit terus ke `main`, fail data sahaja); klien memuat hanya kawasan di sekitar laluan (`loadHad`), Overpass sandaran.
+  ber-`maxspeed` (had laju): `.github/workflows/had-bulanan.yml` (`scripts/ambil_had.py`) memuat turun fail OSM Malaysia penuh dari Geofabrik
+  (BUKAN Overpass: 13-14 Nov 2026 Overpass ambil 25-260 s setiap kawasan 0.25° → ~14 jam, dihentikan GitHub selepas 5.5 jam) dan menyimpan
+  kawasan 0.25° ke `docs/data/had/<i>_<j>.json` + `indeks.json` (bot juga commit terus ke `main`, fail data sahaja); klien memuat hanya kawasan di
+  sekitar laluan (`loadHad`), Overpass sandaran. Ujian Python: `tests/py/test_ambil_had.py` (dijalankan oleh `npm test`).
   Had laju hanya ada di jalan yang OSM ada tanda `maxspeed`.
 - **ID 30 hari:** pindah data perlu pengesahan pengguna ("Pulihkan data anda?"), kerana pelayar boleh dikongsi oleh akaun Google
   lain. Sekatan dipindah automatik. Data dipindah, bukan disalin.
