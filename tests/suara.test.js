@@ -3,6 +3,7 @@ const assert = require('node:assert');
 const vm = require('vm');
 const { clientScript } = require('./helpers');
 
+const files = ['Index.html', 'IndexUji.html'];
 const s = clientScript('IndexUji.html');
 const fn = name => s.match(new RegExp('function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}'))[0];
 const ctx = {};
@@ -44,9 +45,13 @@ test('suara melebihi had laju: tidak serta-merta; selepas melebihi >= 8 s; ulang
   assert.strictEqual(ctx.warn(st, true, T + 508000), true);
 });
 
-test('saluran uji: amaran suara had laju guna margin 3 km/j untuk had automatik dan fungsi pengawal', () => {
+test('amaran suara had laju guna margin 3 km/j untuk had automatik dan fungsi pengawal (kedua-dua fail)', () => {
+  for (const f of files) {
+  const s = clientScript(f);
   assert.match(s, /S\.speedLimit === -1 \? 3 : 2/);
   assert.match(s, /shouldWarnSpeeding\(state, overVoice, Date\.now\(\)\)/);
   assert.match(s, /shouldSayLimit\(state, state\.shownLimit, Date\.now\(\)\)/);
-  assert.ok(!/> 60000\) \{ state\.speedWarnAt/.test(s), 'amaran 60 s lama masih ada');
+  assert.ok(!/> 60000\) \{ state\.speedWarnAt/.test(s), 'amaran 60 s lama masih ada: ' + f);
+  assert.match(s, /OVER_GAP_MS = 90000/);
+  }
 });

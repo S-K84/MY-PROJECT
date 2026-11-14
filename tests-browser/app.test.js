@@ -770,8 +770,9 @@ test(`${file}: cari sepanjang laluan berfungsi TANPA liputan selepas muat awal (
 });
 }
 
-test('IndexUji.html: amaran suara "melebihi had laju" tidak serta-merta, sekali sahaja (bukan setiap minit); had laju tidak disebut serta-merta', async () => {
-  const { page, errors, close } = await open('IndexUji.html');
+for (const file of ['Index.html', 'IndexUji.html']) {
+test(`${file}: amaran suara "melebihi had laju" tidak serta-merta, sekali sahaja (bukan setiap minit); had laju tidak disebut serta-merta`, async () => {
+  const { page, errors, close } = await open(file);
   try {
     await page.evaluate(() => {
       window.__said = []; window.speak = t => __said.push(t);
@@ -796,3 +797,4 @@ test('IndexUji.html: amaran suara "melebihi had laju" tidak serta-merta, sekali 
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+}
