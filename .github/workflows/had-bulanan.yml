@@ -1,6 +1,7 @@
-name: Data had laju & tempat (bulanan)
+name: Data OSM bulanan (had laju, tempat, lampu isyarat & kamera)
 
-# Sebulan sekali ambil jalan ber-had laju (docs/data/had/) dan tempat: minyak, R&R, masjid, tandas, makan, ATM, caj EV, stesen (docs/data/poi/)
+# Sebulan sekali ambil jalan ber-had laju (docs/data/had/), tempat: minyak, R&R, masjid, tandas, makan, ATM, caj EV, stesen (docs/data/poi/)
+# dan lampu isyarat & kamera laju (docs/data/titik.json)
 # Malaysia dari fail OpenStreetMap penuh (Geofabrik); kawasan 0.25°.
 # GitHub Pages menghidangnya; aplikasi memuat hanya kawasan di sekitar laluan (Overpass dari telefon = sandaran).
 # Overpass tidak digunakan di sini: terlalu sibuk (13 Nov 2026: ~14 jam untuk seluruh negara). Fail penuh siap dalam beberapa minit.
@@ -44,16 +45,19 @@ jobs:
       - name: Hasilkan tempat (minyak, R&R, masjid, ...)
         run: |
           "$RUNNER_TEMP/venv/bin/python" scripts/ambil_poi.py "$RUNNER_TEMP/malaysia.osm.pbf"
+      - name: Hasilkan lampu isyarat & kamera laju
+        run: |
+          "$RUNNER_TEMP/venv/bin/python" scripts/ambil_titik.py "$RUNNER_TEMP/malaysia.osm.pbf"
       - name: Simpan jika berubah
         run: |
-          git add -A docs/data/had docs/data/poi
+          git add -A docs/data/had docs/data/poi docs/data/titik.json
           if git diff --cached --quiet; then
             echo "Tiada perubahan."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Data bulanan: had laju & tempat Malaysia"
+          git commit -m "Data bulanan: had laju, tempat, lampu isyarat & kamera Malaysia"
           git pull --rebase origin main
           git push origin HEAD:main
       - name: Buka isu jika gagal
@@ -62,5 +66,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          gh issue create --repo "$GITHUB_REPOSITORY" --title "Tugas bulanan gagal: had laju & tempat" \
-            --body "Tugas bulanan **had laju & tempat** gagal. Data lama kekal dan app masih berfungsi, tetapi data tidak dikemas kini bulan ini. Log: $RUN_URL . Buka halaman log, tekan Run workflow untuk cuba semula, atau beritahu Claude."
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "Tugas bulanan gagal: data OSM (had laju, tempat, lampu isyarat & kamera)" \
+            --body "Tugas bulanan **data OSM (had laju, tempat, lampu isyarat & kamera)** gagal. Data lama kekal dan app masih berfungsi, tetapi data tidak dikemas kini bulan ini. Log: $RUN_URL . Buka halaman log, tekan Run workflow untuk cuba semula, atau beritahu Claude."
