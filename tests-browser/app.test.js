@@ -104,6 +104,7 @@ for (const file of FILES) {
         window.__override = { alongRoute: () => { throw new Error('Carian sepanjang laluan tidak tersedia sekarang. Cuba lagi sebentar.'); } };
         window.fetch = url => (/overpass/.test(url)
           ? Promise.resolve({ ok: true, status: 200, json: async () => ({ elements: [{ lat: 3.15, lon: 101.7001, tags: { name: 'Petronas Ujian' } }] }) })
+          : /github\.io/.test(url) ? Promise.resolve({ ok: false, status: 404 })      // fail statik belum ada → sandaran
           : new Promise(() => {}));
         searchAlong('fuel');
         for (let i = 0; i < 100 && !/Petronas/.test($('alongList').textContent); i++) await new Promise(r => setTimeout(r, 50));
@@ -673,3 +674,35 @@ test(`${file}: menu ☰ — pemilik nampak tarikh & bilangan kawasan data had la
   } finally { await close(); }
 });
 }
+
+test('IndexUji.html: cari sepanjang laluan & berdekatan dari fail statik walaupun server & Overpass gagal', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
+  try {
+    await startNav(page);
+    const r = await page.evaluate(async () => {
+      const json = o => Promise.resolve({ ok: true, status: 200, json: async () => o });
+      window.__urls = [];
+      window.__override = { alongRoute: () => { throw new Error('server gagal'); }, nearbyPlaces: () => { throw new Error('server gagal'); } };
+      window.fetch = u => {
+        u = String(u); __urls.push(u.replace(/^.*data\/poi\//, ''));
+        if (/poi\/indeks\.json/.test(u)) return json({ v: 1, t: '2026-11-14', k: { fuel: ['12_406', '9_999'], atm: ['12_406'] } });
+        if (/poi\/fuel\/12_406\.json/.test(u)) return json({ v: 1, p: [[3.15, 101.7001, 'Petronas Statik', 'Petronas · Jalan A'], [4.9, 100.1, 'Jauh', '']] });
+        if (/poi\/atm\/12_406\.json/.test(u)) return json({ v: 1, p: [[3.1, 101.7, 'ATM Statik', '']] });
+        return Promise.resolve({ ok: false, status: 504 });      // Overpass dll. gagal
+      };
+      searchAlong('fuel');
+      for (let i = 0; i < 100 && !/Petronas Statik/.test($('alongList').textContent); i++) await new Promise(r => setTimeout(r, 50));
+      const along = $('alongList').textContent;
+      document.querySelector('#searchSheet') && $('searchSheet').classList.add('open');
+      nearbySearch('atm');
+      for (let i = 0; i < 100 && !/ATM Statik/.test($('searchBody').textContent); i++) await new Promise(r => setTimeout(r, 50));
+      return { along, near: $('searchBody').textContent, urls: __urls };
+    });
+    assert.match(r.along, /Petronas Statik/);
+    assert.ok(!/Jauh/.test(r.along));
+    assert.match(r.near, /ATM Statik/);
+    assert.ok(r.urls.includes('indeks.json') && r.urls.includes('fuel/12_406.json'), r.urls.join());
+    assert.ok(!r.urls.includes('fuel/9_999.json'), 'kawasan di luar laluan tidak sepatutnya dimuat');
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});

@@ -110,6 +110,9 @@ npm test
   kawasan 0.25° ke `docs/data/had/<i>_<j>.json` + `indeks.json` (bot juga commit terus ke `main`, fail data sahaja); klien memuat hanya kawasan di
   sekitar laluan (`loadHad`), Overpass sandaran. Jalan di dalam pulau Singapura dibuang (`in_singapore`; kawasan itu 4.4 MB sendirian, bukan sasaran JomRoute). Ujian Python: `tests/py/test_ambil_had.py` (dijalankan oleh `npm test`).
   Had laju hanya ada di jalan yang OSM ada tanda `maxspeed`.
+  Tempat (minyak, R&R, masjid, tandas, makan, ATM, caj EV, stesen) untuk "Cari sepanjang laluan" & "Berdekatan": `scripts/ambil_poi.py` (tugas bulanan yang sama)
+  → `docs/data/poi/<kategori>/<i>_<j>.json`; klien `loadPoi` dahulu (tamat masa 4 s), kemudian server/Overpass/Photon sebagai sandaran. Kategori dalam
+  `ambil_poi.py` mesti sama dengan `ALONG_Q` (diuji).
 - **ID 30 hari:** pindah data perlu pengesahan pengguna ("Pulihkan data anda?"), kerana pelayar boleh dikongsi oleh akaun Google
   lain. Sekatan dipindah automatik. Data dipindah, bukan disalin.
 - **Deploy:** `@google/clasp@2.4.2` dipin. `clasp login` pemilik juga guna versi ini (format `.clasprc.json` berbeza antara versi).
