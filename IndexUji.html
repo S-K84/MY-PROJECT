@@ -4232,7 +4232,7 @@ function hadTilesFor(boxes) {
   return loadHadIndex().then(idx => {
     if (!idx) return null;
     const want = hadKeys(boxes).filter(k => idx.k.indexOf(k) >= 0);
-    return Promise.all(want.map(k => hadTiles[k] || (hadTiles[k] = fetchHad(k + '.json').catch(e => { delete hadTiles[k]; throw e; }))));
+    return Promise.all(want.map(k => hadTiles[k] || (hadTiles[k] = fetchHad(k + '.json').then(d => { hadOk++; return d; }, e => { delete hadTiles[k]; throw e; }))));
   });
 }
 function loadHad(boxes) {
@@ -4242,7 +4242,7 @@ function loadHad(boxes) {
 // dikemas kini sebulan sekali oleh .github/workflows/had-bulanan.yml. Kunci kawasan sama seperti had laju (hadKeys).
 // Fail tiada / gagal / lambat → null, dan sumber lama (server Photon + Overpass dari telefon) digunakan sebagai sandaran.
 const POI_URL = 'https:\/\/s-k84.github.io/MY-PROJECT/data/poi/';
-let poiIdxP = null, poiIdxFailAt = 0;
+let poiIdxP = null, poiIdxFailAt = 0, poiIdxWhy = '', poiOk = 0, hadOk = 0, prefetchAt = 0;   // poiIdxWhy/poiOk/hadOk/prefetchAt: diagnostik sementara (cari sepanjang laluan tanpa liputan)
 const poiTiles = {};
 function loadPoiIndex() {
   if (poiIdxP && !(poiIdxFailAt && Date.now() - poiIdxFailAt > 300000)) return poiIdxP;
@@ -4251,7 +4251,7 @@ function loadPoiIndex() {
   poiIdxP = fetchJson(POI_URL + 'indeks.json').then(d => {
     if (!d || !d.k || typeof d.k !== 'object') throw new Error('format');
     return d;
-  }).catch(() => { poiIdxFailAt = Date.now(); return null; });
+  }).catch(e => { poiIdxFailAt = Date.now(); poiIdxWhy = String(e && e.message || e).slice(0, 40); return null; });
   return poiIdxP;
 }
 /** Tempat dalam kawasan -> [{ title, sub, lat, lng }] yang jatuh dalam mana-mana kotak "s,w,n,e". */
@@ -4266,16 +4266,16 @@ function poiElements(tiles, boxes) {
 function poiTilesFor(cat, boxes) {
   return loadPoiIndex().then(idx => {
     const have = idx && idx.k[cat];
-    if (!Array.isArray(have)) return null;
+    if (!Array.isArray(have)) { state.poiWhy = idx ? 'kategori ' + cat + ' tiada dalam indeks' : 'indeks tiada (' + poiIdxWhy + ')'; return null; }
     const want = hadKeys(boxes).filter(k => have.indexOf(k) >= 0);
     return Promise.all(want.map(k => {
       const id = cat + '/' + k;
-      return poiTiles[id] || (poiTiles[id] = fetchJson(POI_URL + id + '.json').catch(e => { delete poiTiles[id]; throw e; }));
+      return poiTiles[id] || (poiTiles[id] = fetchJson(POI_URL + id + '.json').then(d => { poiOk++; return d; }, e => { delete poiTiles[id]; throw e; }));
     }));
   });
 }
 function loadPoi(cat, boxes) {
-  return poiTilesFor(cat, boxes).then(tiles => tiles && poiElements(tiles, boxes), () => null);
+  return poiTilesFor(cat, boxes).then(tiles => tiles && poiElements(tiles, boxes), e => { state.poiWhy = 'fail kawasan gagal: ' + String(e && e.message || e).slice(0, 40); return null; });
 }
 /**
  * Muat awal fail had laju & tempat di SEPANJANG laluan bila navigasi bermula (atau dilencongkan): disimpan dalam ingatan, jadi had laju dan
@@ -4284,6 +4284,7 @@ function loadPoi(cat, boxes) {
 function prefetchRouteData(r) {
   if (!window.fetch || !r || (navigator.connection && navigator.connection.saveData)) return;
   setTimeout(() => {
+    prefetchAt = Date.now();
     const pts = [];
     for (let d = 0; d < r.total; d += 1000) pts.push(slicePts(r, d, d)[0]);
     pts.push(slicePts(r, r.total, r.total)[0]);
@@ -4292,6 +4293,8 @@ function prefetchRouteData(r) {
     Object.keys(ALONG_Q).reduce((p, c) => p.then(() => poiTilesFor(c, boxes).catch(none)), Promise.resolve());
   }, 3000);
 }
+/** Diagnostik sementara: keadaan muat awal (dipaparkan di "Butiran teknikal" bila carian sepanjang laluan gagal). */
+const prefetchStatus = () => 'indeks ' + (poiIdxP ? 'diminta' : 'belum') + ', tempat ' + poiOk + ' fail, had ' + hadOk + ' fail, bermula ' + (prefetchAt ? Math.round((Date.now() - prefetchAt) / 1000) + ' s lalu' : 'belum');
 const poiAlong = (cat, pts) => ALONG_Q[cat] ? loadPoi(cat, routeBoxes(pts, ALONG_Q[cat][1])) : Promise.resolve(null);
 const poiNear = (cat, me) => loadPoi(cat, [[me.lat - 0.08, me.lng - 0.08, me.lat + 0.08, me.lng + 0.08].map(v => v.toFixed(3)).join(',')]);
 /** Jawapan p atau null jika gagal / melebihi ms (supaya sumber sandaran dimulakan). */
@@ -4548,7 +4551,9 @@ async function searchAlong(cat) {
   try {
     // Server (Photon) dan telefon terus ke Overpass berlumba: Overpass dimulakan bila server gagal ATAU belum menjawab
     // dalam 5 s. Hasil pertama yang tiba digunakan.
+    state.poiWhy = '';
     let list = await orNull(poiAlong(cat, pts), 4000);
+    if (!list) diag.push('Fail tempat tidak digunakan: ' + (state.poiWhy || 'tamat masa 4 s') + ' · muat awal: ' + prefetchStatus());
     if (!list) list = await new Promise((resolve, reject) => {
       let direct = null, serverDone = false, errs = 0, netErr = null;
       const startDirect = () => {
@@ -4578,7 +4583,7 @@ async function searchAlong(cat) {
     renderAlong();
   } catch (e) {
     if (req !== state.alongReq) return;
-    if (isNetErr(e)) box.innerHTML = '<div class="hint">📵 Tiada liputan.</div>';
+    if (isNetErr(e)) box.innerHTML = '<div class="hint">📵 Tiada liputan.</div>' + (diag.length ? '<details class="howto"><summary>Butiran teknikal</summary><div class="body">' + diag.map(esc).join('<br>') + '</div></details>' : '');
     else {
       box.innerHTML = failBox();
       // Diagnostik: pertanyaan Overpass paling kecil — beza "pelayan sibuk" dengan "sambungan disekat"

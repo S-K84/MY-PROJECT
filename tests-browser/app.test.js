@@ -734,3 +734,30 @@ test('IndexUji.html: fail had laju & semua kategori tempat di sepanjang laluan d
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+
+test('IndexUji.html: cari sepanjang laluan berfungsi TANPA liputan selepas muat awal (kes mod kapal terbang)', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
+  try {
+    await page.evaluate(() => {
+      const json = o => Promise.resolve({ ok: true, status: 200, json: async () => o });
+      window.fetch = u => {
+        u = String(u);
+        if (/had\/indeks\.json/.test(u)) return json({ v: 1, k: [] });
+        if (/poi\/indeks\.json/.test(u)) return json({ v: 1, k: { fuel: ['12_406'], food: ['12_406'] } });
+        if (/poi\/(fuel|food)\/12_406\.json/.test(u)) return json({ v: 1, p: [[3.15, 101.7001, 'Petronas Muat Awal', '']] });
+        return Promise.resolve({ ok: false, status: 404 });
+      };
+    });
+    await startNav(page);
+    await page.waitForFunction(() => poiOk >= 2, null, { timeout: 15000 });      // muat awal selesai
+    const text = await page.evaluate(async () => {
+      window.fetch = () => Promise.reject(new TypeError('Failed to fetch'));       // mod kapal terbang
+      window.__override = { alongRoute: () => { throw new Error('Failed to fetch'); } };
+      searchAlong('fuel');
+      for (let i = 0; i < 100 && !/Petronas Muat Awal|Tiada liputan/.test($('alongList').textContent); i++) await new Promise(r => setTimeout(r, 50));
+      return $('alongList').textContent;
+    });
+    assert.match(text, /Petronas Muat Awal/);
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});
