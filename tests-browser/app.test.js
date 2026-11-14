@@ -708,3 +708,29 @@ test(`${file}: cari sepanjang laluan & berdekatan dari fail statik walaupun serv
   } finally { await close(); }
 });
 }
+
+test('IndexUji.html: fail had laju & semua kategori tempat di sepanjang laluan dimuat awal bila navigasi bermula (tanpa carian)', async () => {
+  const { page, errors, close } = await open('IndexUji.html');
+  try {
+    await page.evaluate(() => {
+      const json = o => Promise.resolve({ ok: true, status: 200, json: async () => o });
+      window.__urls = [];
+      window.fetch = u => {
+        u = String(u);
+        if (/data\/(had|poi)\//.test(u)) __urls.push(u.replace(/^.*data\//, ''));
+        if (/had\/indeks\.json/.test(u)) return json({ v: 1, k: ['12_406', '9_999'] });
+        if (/poi\/indeks\.json/.test(u)) return json({ v: 1, k: { fuel: ['12_406'], food: ['12_406', '9_999'], atm: ['9_999'] } });
+        if (/had\/12_406\.json/.test(u)) return json({ v: 1, w: [] });
+        if (/poi\/(fuel|food)\/12_406\.json/.test(u)) return json({ v: 1, p: [] });
+        return Promise.resolve({ ok: false, status: 404 });
+      };
+      S.speedLimit = -1;
+    });
+    await startNav(page);
+    await page.waitForFunction(() => __urls.includes('poi/food/12_406.json'), null, { timeout: 15000 });
+    const urls = await page.evaluate(() => __urls);
+    ['had/12_406.json', 'poi/fuel/12_406.json', 'poi/food/12_406.json'].forEach(u => assert.ok(urls.includes(u), u + ' | ' + urls.join()));
+    assert.ok(!urls.some(u => /9_999\.json/.test(u)), 'kawasan di luar laluan tidak sepatutnya dimuat');
+    assert.deepStrictEqual(errors, []);
+  } finally { await close(); }
+});

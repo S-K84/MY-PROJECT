@@ -38,7 +38,7 @@ test(`${file}: tempat dibaca dari fail statik dahulu (poiElements, loadPoi, orNu
     ? { ok: true, json: async () => ({ k: { fuel: ['12_406', '99_99'] } }) }
     : { ok: true, json: async () => ({ p: [[3.15, 101.7, 'A', 's'], [9, 9, 'Jauh', '']] }) }); };
   const f = n => fn(s, n);
-  vm.runInNewContext('let poiIdxP = null, poiIdxFailAt = 0; const poiTiles = {};' + f('fetchJson') + f('loadPoiIndex') + f('poiElements') + f('loadPoi') + f('hadKeys') +
+  vm.runInNewContext('let poiIdxP = null, poiIdxFailAt = 0; const poiTiles = {};' + f('fetchJson') + f('loadPoiIndex') + f('poiElements') + (/function poiTilesFor/.test(s) ? f('poiTilesFor') : '') + f('loadPoi') + f('hadKeys') +
     'const orNull = (p, ms) => Promise.race([p.catch(() => null), new Promise(r => setTimeout(() => r(null), ms))]);this.l = loadPoi; this.o = orNull;', ctx);
   const out = await ctx.l('fuel', ['3.099,101.699,3.202,101.702']);
   assert.deepStrictEqual(JSON.parse(JSON.stringify(out)), [{ title: 'A', sub: 's', lat: 3.15, lng: 101.7 }]);
