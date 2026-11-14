@@ -4227,19 +4227,22 @@ function hadElements(tiles, boxes) {
   return out;
 }
 /** Elemen jalan ber-had laju sekitar kotak (dari fail statik). Pulangkan Promise<elements> atau null jika fail tiada / gagal (guna Overpass). */
-function loadHad(boxes) {
+/** Fail kawasan had laju di sekitar kotak (dimuat & disimpan dalam ingatan). Promise<[...]> / null jika indeks tiada; menolak jika satu fail gagal. */
+function hadTilesFor(boxes) {
   return loadHadIndex().then(idx => {
     if (!idx) return null;
     const want = hadKeys(boxes).filter(k => idx.k.indexOf(k) >= 0);
-    return Promise.all(want.map(k => hadTiles[k] || (hadTiles[k] = fetchHad(k + '.json').catch(e => { delete hadTiles[k]; throw e; }))))
-      .then(tiles => hadElements(tiles, boxes), () => null);
+    return Promise.all(want.map(k => hadTiles[k] || (hadTiles[k] = fetchHad(k + '.json').catch(e => { delete hadTiles[k]; throw e; }))));
   });
+}
+function loadHad(boxes) {
+  return hadTilesFor(boxes).then(tiles => tiles && hadElements(tiles, boxes), () => null);
 }
 // ---- Tempat (minyak, R&R, masjid, tandas, makan, ATM, caj EV, stesen) dari fail statik docs/data/poi/<kategori>/<kawasan>.json,
 // dikemas kini sebulan sekali oleh .github/workflows/had-bulanan.yml. Kunci kawasan sama seperti had laju (hadKeys).
 // Fail tiada / gagal / lambat → null, dan sumber lama (server Photon + Overpass dari telefon) digunakan sebagai sandaran.
 const POI_URL = 'https:\/\/s-k84.github.io/MY-PROJECT/data/poi/';
-let poiIdxP = null, poiIdxFailAt = 0;
+let poiIdxP = null, poiIdxFailAt = 0, poiOk = 0;   // poiOk: bilangan fail tempat yang berjaya dimuat (diperiksa oleh ujian muat awal)
 const poiTiles = {};
 function loadPoiIndex() {
   if (poiIdxP && !(poiIdxFailAt && Date.now() - poiIdxFailAt > 300000)) return poiIdxP;
@@ -4259,17 +4262,35 @@ function poiElements(tiles, boxes) {
   }));
   return out;
 }
-/** Tempat kategori cat dalam kotak. Pulangkan Promise<[...]> atau null jika fail tiada / gagal. */
-function loadPoi(cat, boxes) {
+/** Fail kawasan tempat kategori cat di sekitar kotak (dimuat & disimpan dalam ingatan). Promise<[...]> / null jika indeks tiada; menolak jika satu fail gagal. */
+function poiTilesFor(cat, boxes) {
   return loadPoiIndex().then(idx => {
     const have = idx && idx.k[cat];
     if (!Array.isArray(have)) return null;
     const want = hadKeys(boxes).filter(k => have.indexOf(k) >= 0);
     return Promise.all(want.map(k => {
       const id = cat + '/' + k;
-      return poiTiles[id] || (poiTiles[id] = fetchJson(POI_URL + id + '.json').catch(e => { delete poiTiles[id]; throw e; }));
-    })).then(tiles => poiElements(tiles, boxes), () => null);
+      return poiTiles[id] || (poiTiles[id] = fetchJson(POI_URL + id + '.json').then(d => { poiOk++; return d; }, e => { delete poiTiles[id]; throw e; }));
+    }));
   });
+}
+function loadPoi(cat, boxes) {
+  return poiTilesFor(cat, boxes).then(tiles => tiles && poiElements(tiles, boxes), () => null);
+}
+/**
+ * Muat awal fail had laju & tempat di SEPANJANG laluan bila navigasi bermula (atau dilencongkan): disimpan dalam ingatan, jadi had laju dan
+ * "Cari sepanjang laluan" terus berfungsi bila liputan hilang di tengah lebuh raya. Senyap; gagal / mod jimat data → langkau. Tanpa menukar fail kepada elemen.
+ */
+function prefetchRouteData(r) {
+  if (!window.fetch || !r || (navigator.connection && navigator.connection.saveData)) return;
+  setTimeout(() => {
+    const pts = [];
+    for (let d = 0; d < r.total; d += 1000) pts.push(slicePts(r, d, d)[0]);
+    pts.push(slicePts(r, r.total, r.total)[0]);
+    const boxes = routeBoxes(pts, 300), none = () => null;
+    hadTilesFor(boxes).catch(none);
+    Object.keys(ALONG_Q).reduce((p, c) => p.then(() => poiTilesFor(c, boxes).catch(none)), Promise.resolve());
+  }, 3000);
 }
 const poiAlong = (cat, pts) => ALONG_Q[cat] ? loadPoi(cat, routeBoxes(pts, ALONG_Q[cat][1])) : Promise.resolve(null);
 const poiNear = (cat, me) => loadPoi(cat, [[me.lat - 0.08, me.lng - 0.08, me.lat + 0.08, me.lng + 0.08].map(v => v.toFixed(3)).join(',')]);
@@ -4281,7 +4302,7 @@ function updateRoadLimit() {
   const along = state.meAlong || 0;
   // Muat (semula) bila laluan bertukar atau kedudukan menghampiri hujung kawasan yang sudah dimuat
   if (!state.slBusy && (state.slRoute !== r || state.slTo < Math.min(r.total, along + 4000))) {
-    if (state.slRoute !== r) clearSignals();   // laluan baharu (cth. dilencongkan): buang lampu isyarat laluan lama
+    if (state.slRoute !== r) { clearSignals(); prefetchRouteData(r); }   // laluan baharu (cth. dilencongkan): buang lampu isyarat laluan lama
     state.slBusy = true;
     const navId = state.navId, from = Math.max(0, along - 200), to = Math.min(r.total, along + SL_AHEAD), pts = [];
     for (let d = from; d < to; d += 1000) pts.push(slicePts(r, d, d)[0]);

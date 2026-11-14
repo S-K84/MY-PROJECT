@@ -709,8 +709,9 @@ test(`${file}: cari sepanjang laluan & berdekatan dari fail statik walaupun serv
 });
 }
 
-test('IndexUji.html: fail had laju & semua kategori tempat di sepanjang laluan dimuat awal bila navigasi bermula (tanpa carian)', async () => {
-  const { page, errors, close } = await open('IndexUji.html');
+for (const file of ['Index.html', 'IndexUji.html']) {
+test(`${file}: fail had laju & semua kategori tempat di sepanjang laluan dimuat awal bila navigasi bermula (tanpa carian)`, async () => {
+  const { page, errors, close } = await open(file);
   try {
     await page.evaluate(() => {
       const json = o => Promise.resolve({ ok: true, status: 200, json: async () => o });
@@ -734,9 +735,11 @@ test('IndexUji.html: fail had laju & semua kategori tempat di sepanjang laluan d
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+}
 
-test('IndexUji.html: cari sepanjang laluan berfungsi TANPA liputan selepas muat awal (kes mod kapal terbang)', async () => {
-  const { page, errors, close } = await open('IndexUji.html');
+for (const file of ['Index.html', 'IndexUji.html']) {
+test(`${file}: cari sepanjang laluan berfungsi TANPA liputan selepas muat awal (kes mod kapal terbang)`, async () => {
+  const { page, errors, close } = await open(file);
   try {
     await page.evaluate(() => {
       const json = o => Promise.resolve({ ok: true, status: 200, json: async () => o });
@@ -761,3 +764,4 @@ test('IndexUji.html: cari sepanjang laluan berfungsi TANPA liputan selepas muat 
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+}
