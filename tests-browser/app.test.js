@@ -781,7 +781,7 @@ test('IndexUji.html: amaran suara "melebihi had laju" tidak serta-merta, sekali 
       S.speedLimit = -1;
     });
     await startNav(page);
-    await drive(page, 40, 100);                 // 100 km/j > 90 + 5, tetapi baru beberapa ms sebenar
+    await drive(page, 40, 100);                 // 100 km/j > 90 + 3, tetapi baru beberapa ms sebenar
     const said = () => page.evaluate(() => __said.filter(x => /melebihi/.test(x)).length);
     assert.strictEqual(await said(), 0, 'amaran terlalu awal');
     assert.strictEqual(await page.evaluate(() => $('speedSign').textContent), '90');

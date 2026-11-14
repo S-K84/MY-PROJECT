@@ -2617,8 +2617,8 @@ function setMe(pos) {
   // Amaran had laju peribadi
   const lim = curLimit(), over = lim > 0 && (pos.speed || 0) > lim + 2;
   $('speedo').classList.toggle('over', over);
-  // Suara: had automatik dari OSM tidak tepat sepenuhnya, jadi margin 5 km/j (papan di skrin kekal 2 km/j); lihat shouldWarnSpeeding
-  const overVoice = lim > 0 && (pos.speed || 0) > lim + (S.speedLimit === -1 ? 5 : 2);
+  // Suara: had automatik dari OSM tidak tepat sepenuhnya, jadi margin 3 km/j (papan di skrin kekal 2 km/j); lihat shouldWarnSpeeding
+  const overVoice = lim > 0 && (pos.speed || 0) > lim + (S.speedLimit === -1 ? 3 : 2);
   if (shouldWarnSpeeding(state, overVoice, Date.now())) speak(VOICE[voiceLang].speeding, 'speed');
 
   if (first) {
@@ -4350,7 +4350,7 @@ function updateRoadLimit() {
   if (state.shownLimit !== curLimit()) { state.shownLimit = curLimit(); state.limSince = Date.now(); renderSpeedSign(); }
   if (shouldSayLimit(state, state.shownLimit, Date.now())) speak(VOICE[voiceLang].limit(fmtSpeed(state.shownLimit)), 'speed');
 }
-const LIMIT_STABLE_MS = 6000, LIMIT_GAP_MS = 60000, OVER_STABLE_MS = 8000, OVER_GAP_MS = 180000;
+const LIMIT_STABLE_MS = 6000, LIMIT_GAP_MS = 60000, OVER_STABLE_MS = 8000, OVER_GAP_MS = 90000;
 /**
  * Sebut had laju baharu? Hanya bila ia kekal >= 6 s (had berubah-ubah / berkelip dalam data OSM tidak disebut), LEBIH RENDAH daripada yang
  * terakhir disebut (kenaikan hanya diingat; papan had sentiasa kelihatan), dan >= 60 s sejak sebutan lalu. st = state (saidLimit, saidLimitAt, limSince).
@@ -4362,7 +4362,7 @@ function shouldSayLimit(st, lim, now) {
   st.saidLimit = lim; st.saidLimitAt = now;
   return true;
 }
-/** Amaran suara "melebihi had laju": hanya selepas melebihi >= 8 s berterusan, kemudian paling kerap setiap 3 minit. st = state (overSince, speedWarnAt). */
+/** Amaran suara "melebihi had laju": hanya selepas melebihi >= 8 s berterusan, kemudian paling kerap setiap 90 s. st = state (overSince, speedWarnAt). */
 function shouldWarnSpeeding(st, over, now) {
   if (!over) { st.overSince = 0; return false; }
   if (!st.overSince) st.overSince = now;

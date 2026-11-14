@@ -6,7 +6,7 @@ const { clientScript } = require('./helpers');
 const s = clientScript('IndexUji.html');
 const fn = name => s.match(new RegExp('function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}'))[0];
 const ctx = {};
-vm.runInNewContext('const LIMIT_STABLE_MS = 6000, LIMIT_GAP_MS = 60000, OVER_STABLE_MS = 8000, OVER_GAP_MS = 180000;' +
+vm.runInNewContext('const LIMIT_STABLE_MS = 6000, LIMIT_GAP_MS = 60000, OVER_STABLE_MS = 8000, OVER_GAP_MS = 90000;' +
   fn('shouldSayLimit') + fn('shouldWarnSpeeding') + ';this.say = shouldSayLimit; this.warn = shouldWarnSpeeding;', ctx);
 
 const T = 1e6;   // masa sebenar (Date.now) tidak pernah 0
@@ -31,21 +31,21 @@ test('suara had laju: tidak disebut bila berkelip; disebut bila kekal >= 6 s; ha
   assert.strictEqual(ctx.say(st, 60, T + 137000), true);
 });
 
-test('suara melebihi had laju: tidak serta-merta; selepas melebihi >= 8 s; ulang paling kerap 3 minit; reset bila tidak melebihi', () => {
+test('suara melebihi had laju: tidak serta-merta; selepas melebihi >= 8 s; ulang paling kerap 90 s; reset bila tidak melebihi', () => {
   const st = {};
   assert.strictEqual(ctx.warn(st, true, T), false);
   assert.strictEqual(ctx.warn(st, true, T + 7000), false);
   assert.strictEqual(ctx.warn(st, true, T + 8000), true);
-  for (let t = T + 9000; t < T + 188000; t += 10000) assert.strictEqual(ctx.warn(st, true, t), false, 't=' + (t - T));   // lama: setiap 60 s
-  assert.strictEqual(ctx.warn(st, true, T + 188000), true);
+  for (let t = T + 9000; t < T + 98000; t += 10000) assert.strictEqual(ctx.warn(st, true, t), false, 't=' + (t - T));   // lama: setiap 60 s
+  assert.strictEqual(ctx.warn(st, true, T + 98000), true);
   // perlahan seketika (tidak melebihi) -> pemasa melebihi bermula semula
   assert.strictEqual(ctx.warn(st, false, T + 200000), false);
   assert.strictEqual(ctx.warn(st, true, T + 500000), false);   // baru melebihi
   assert.strictEqual(ctx.warn(st, true, T + 508000), true);
 });
 
-test('saluran uji: amaran suara had laju guna margin 5 km/j untuk had automatik dan fungsi pengawal', () => {
-  assert.match(s, /S\.speedLimit === -1 \? 5 : 2/);
+test('saluran uji: amaran suara had laju guna margin 3 km/j untuk had automatik dan fungsi pengawal', () => {
+  assert.match(s, /S\.speedLimit === -1 \? 3 : 2/);
   assert.match(s, /shouldWarnSpeeding\(state, overVoice, Date\.now\(\)\)/);
   assert.match(s, /shouldSayLimit\(state, state\.shownLimit, Date\.now\(\)\)/);
   assert.ok(!/> 60000\) \{ state\.speedWarnAt/.test(s), 'amaran 60 s lama masih ada');
