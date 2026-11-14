@@ -675,8 +675,9 @@ test(`${file}: menu ☰ — pemilik nampak tarikh & bilangan kawasan data had la
 });
 }
 
-test('IndexUji.html: cari sepanjang laluan & berdekatan dari fail statik walaupun server & Overpass gagal', async () => {
-  const { page, errors, close } = await open('IndexUji.html');
+for (const file of ['Index.html', 'IndexUji.html']) {
+test(`${file}: cari sepanjang laluan & berdekatan dari fail statik walaupun server & Overpass gagal`, async () => {
+  const { page, errors, close } = await open(file);
   try {
     await startNav(page);
     const r = await page.evaluate(async () => {
@@ -706,3 +707,4 @@ test('IndexUji.html: cari sepanjang laluan & berdekatan dari fail statik walaupu
     assert.deepStrictEqual(errors, []);
   } finally { await close(); }
 });
+}

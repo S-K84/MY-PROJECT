@@ -1989,7 +1989,7 @@ async function nearbySearch(cat) {
   const icon = (ALONG.find(x => x[0] === cat) || [])[1] || '📍';
   box.innerHTML = '<div class="hint">Mencari…</div>';
   try {
-    const list = await call('nearbyPlaces', token, cat, me.lat, me.lng);
+    const list = await orNull(poiNear(cat, me), 4000) || await call('nearbyPlaces', token, cat, me.lat, me.lng);
     if (req !== state.searchReq) return;
     const rows = (list || []).map(pl => ({ pl, d: dist(me, pl) })).filter(x => x.d < 8000).sort((a, b) => a.d - b.d).slice(0, 25);
     box.innerHTML = `<button class="place-row" data-act="sugg"><span class="ic">‹</span>
@@ -4184,12 +4184,13 @@ function titikElements(d, boxes) {
 const HAD_URL = 'https:\/\/s-k84.github.io/MY-PROJECT/data/had/';
 let hadIdxP = null, hadIdxFailAt = 0;
 const hadTiles = {};
-function fetchHad(name) {
-  return fetch(HAD_URL + name, { credentials: 'omit', referrerPolicy: 'no-referrer' }).then(res => {
+function fetchJson(url) {
+  return fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer' }).then(res => {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     return res.json();
   });
 }
+const fetchHad = name => fetchJson(HAD_URL + name);
 /** Indeks kawasan (sekali; dicuba semula selepas 5 minit jika gagal). Pulangkan Promise<{k:[...]}> atau null. */
 function loadHadIndex() {
   if (hadIdxP && !(hadIdxFailAt && Date.now() - hadIdxFailAt > 300000)) return hadIdxP;
@@ -4234,6 +4235,46 @@ function loadHad(boxes) {
       .then(tiles => hadElements(tiles, boxes), () => null);
   });
 }
+// ---- Tempat (minyak, R&R, masjid, tandas, makan, ATM, caj EV, stesen) dari fail statik docs/data/poi/<kategori>/<kawasan>.json,
+// dikemas kini sebulan sekali oleh .github/workflows/had-bulanan.yml. Kunci kawasan sama seperti had laju (hadKeys).
+// Fail tiada / gagal / lambat → null, dan sumber lama (server Photon + Overpass dari telefon) digunakan sebagai sandaran.
+const POI_URL = 'https:\/\/s-k84.github.io/MY-PROJECT/data/poi/';
+let poiIdxP = null, poiIdxFailAt = 0;
+const poiTiles = {};
+function loadPoiIndex() {
+  if (poiIdxP && !(poiIdxFailAt && Date.now() - poiIdxFailAt > 300000)) return poiIdxP;
+  poiIdxFailAt = 0;
+  if (!window.fetch) return (poiIdxP = Promise.resolve(null));
+  poiIdxP = fetchJson(POI_URL + 'indeks.json').then(d => {
+    if (!d || !d.k || typeof d.k !== 'object') throw new Error('format');
+    return d;
+  }).catch(() => { poiIdxFailAt = Date.now(); return null; });
+  return poiIdxP;
+}
+/** Tempat dalam kawasan -> [{ title, sub, lat, lng }] yang jatuh dalam mana-mana kotak "s,w,n,e". */
+function poiElements(tiles, boxes) {
+  const bb = boxes.map(b => b.split(',').map(Number)), out = [];
+  tiles.forEach(t => (t && t.p || []).forEach(p => {
+    if (bb.some(b => p[0] >= b[0] && p[0] <= b[2] && p[1] >= b[1] && p[1] <= b[3])) out.push({ title: p[2], sub: p[3] || '', lat: p[0], lng: p[1] });
+  }));
+  return out;
+}
+/** Tempat kategori cat dalam kotak. Pulangkan Promise<[...]> atau null jika fail tiada / gagal. */
+function loadPoi(cat, boxes) {
+  return loadPoiIndex().then(idx => {
+    const have = idx && idx.k[cat];
+    if (!Array.isArray(have)) return null;
+    const want = hadKeys(boxes).filter(k => have.indexOf(k) >= 0);
+    return Promise.all(want.map(k => {
+      const id = cat + '/' + k;
+      return poiTiles[id] || (poiTiles[id] = fetchJson(POI_URL + id + '.json').catch(e => { delete poiTiles[id]; throw e; }));
+    })).then(tiles => poiElements(tiles, boxes), () => null);
+  });
+}
+const poiAlong = (cat, pts) => ALONG_Q[cat] ? loadPoi(cat, routeBoxes(pts, ALONG_Q[cat][1])) : Promise.resolve(null);
+const poiNear = (cat, me) => loadPoi(cat, [[me.lat - 0.08, me.lng - 0.08, me.lat + 0.08, me.lng + 0.08].map(v => v.toFixed(3)).join(',')]);
+/** Jawapan p atau null jika gagal / melebihi ms (supaya sumber sandaran dimulakan). */
+const orNull = (p, ms) => Promise.race([p.catch(() => null), new Promise(r => setTimeout(() => r(null), ms))]);
 function updateRoadLimit() {
   const r = state.routes[state.selRoute];
   if (!r || !state.navigating) return;
@@ -4486,7 +4527,8 @@ async function searchAlong(cat) {
   try {
     // Server (Photon) dan telefon terus ke Overpass berlumba: Overpass dimulakan bila server gagal ATAU belum menjawab
     // dalam 5 s. Hasil pertama yang tiba digunakan.
-    const list = await new Promise((resolve, reject) => {
+    let list = await orNull(poiAlong(cat, pts), 4000);
+    if (!list) list = await new Promise((resolve, reject) => {
       let direct = null, serverDone = false, errs = 0, netErr = null;
       const startDirect = () => {
         if (direct || req !== state.alongReq) return;
