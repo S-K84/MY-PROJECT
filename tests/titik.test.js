@@ -4,30 +4,16 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { clientScript } = require('./helpers');
-const { compact, checkAgainst } = require('../scripts/ambil-titik');
 
 const ROOT = path.join(__dirname, '..');
 const fn = (s, name) => s.match(new RegExp('function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}'))[0];
 
-test('ambil-titik: compact membuang pendua, koordinat rosak & luar Malaysia, membundar dan menyusun ikut id', () => {
-  const out = compact([
-    { type: 'node', id: 9, lat: 3.123456789, lon: 101.7 },
-    { type: 'node', id: 2, lat: 5.4, lon: 100.3 },
-    { type: 'node', id: 9, lat: 3.2, lon: 101.8 },            // pendua
-    { type: 'node', id: 3, lat: 51.5, lon: -0.1 },            // London
-    { type: 'node', id: 4, lat: 'x', lon: 101 },              // rosak
-    { type: 'way', id: 5, lat: 3, lon: 101 }                  // bukan nod
-  ]);
-  assert.deepStrictEqual(out, [[5.4, 100.3, 2], [3.12346, 101.7, 9]]);
-});
+const { spawnSync } = require('child_process');
 
-test('ambil-titik: data kosong atau susut mendadak ditolak (fail lama dikekalkan)', () => {
-  const full = { c: Array(100).fill([3, 101, 1]), s: Array(1000).fill([3, 101, 1]) };
-  assert.match(checkAgainst(null, { c: [], s: [[1, 1, 1]] }), /kosong/);
-  assert.match(checkAgainst(full, { c: full.c, s: Array(300).fill([3, 101, 1]) }), /lampu isyarat susut/);
-  assert.match(checkAgainst(full, { c: Array(10).fill([3, 101, 1]), s: full.s }), /kamera susut/);
-  assert.strictEqual(checkAgainst(full, { c: Array(95).fill([3, 101, 1]), s: Array(990).fill([3, 101, 1]) }), '');
-  assert.strictEqual(checkAgainst(null, { c: [[3, 101, 1]], s: [[3, 101, 1]] }), '');
+test('ambil_titik.py: ujian unit Python (jenis kamera/lampu, Singapura, pendua, semakan jumlah)', t => {
+  const r = spawnSync('python3', [path.join(ROOT, 'tests', 'py', 'test_ambil_titik.py')], { encoding: 'utf8' });
+  if (r.error) return t.skip('python3 tiada');
+  assert.strictEqual(r.status, 0, r.stderr);
 });
 
 for (const file of ['Index.html', 'IndexUji.html']) {
@@ -67,10 +53,3 @@ test(`${file}: loadTitik memuat sekali sahaja; gagal → null (sandaran Overpass
 });
 }
 
-test('titik-bulanan.yml: berjadual bulanan, hanya menyimpan docs/data/titik.json', () => {
-  const y = fs.readFileSync(path.join(ROOT, '.github/workflows/titik-bulanan.yml'), 'utf8');
-  assert.match(y, /cron: '\d+ \d+ \d+ \* \*'/);
-  assert.match(y, /workflow_dispatch/);
-  assert.match(y, /git add docs\/data\/titik\.json/);
-  assert.ok(!/git add (-A|\.)/.test(y));
-});

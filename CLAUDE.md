@@ -102,10 +102,10 @@ npm test
   Peta vektor (MapLibre + OpenFreeMap, percuma tanpa kunci, tulisan sentiasa tegak) ditangguh; ia menukar enjin peta, jadi perlu
   melalui saluran uji dan ujian di iPhone.
 - **Lampu isyarat & kamera laju:** pertanyaan Overpass dari telefon tidak boleh diharap (13 Nov 2026, versi uji 2026.11.07-f: 5 pelayan
-  tamat masa walaupun pertanyaan kecil). Kini `.github/workflows/titik-bulanan.yml` (`scripts/ambil-titik.js`) mengambil semua titik
-  Malaysia sebulan sekali ke `docs/data/titik.json` (GitHub Pages); klien membacanya dahulu (`loadTitik`), Overpass hanya sandaran.
+  tamat masa walaupun pertanyaan kecil). Kini `.github/workflows/had-bulanan.yml` (`scripts/ambil_titik.py`, dari fail Geofabrik, bukan Overpass) mengambil semua titik
+  Malaysia sebulan sekali ke `docs/data/titik.json` (GitHub Pages; kamera = `highway=speed_camera` atau `enforcement=maxspeed/average_speed`); klien membacanya dahulu (`loadTitik`), Overpass hanya sandaran.
   Ini satu-satunya pengecualian "jangan commit terus ke `main`": bot hanya menyimpan fail data itu (bukan kod, tiada deploy). Jalan
-  ber-`maxspeed` (had laju): `.github/workflows/had-bulanan.yml` (`scripts/ambil_had.py`) memuat turun fail OSM Malaysia penuh dari Geofabrik
+  ber-`maxspeed` (had laju): tugas yang sama (`scripts/ambil_had.py`) memuat turun fail OSM Malaysia penuh dari Geofabrik
   (BUKAN Overpass: 13-14 Nov 2026 Overpass ambil 25-260 s setiap kawasan 0.25° → ~14 jam, dihentikan GitHub selepas 5.5 jam) dan menyimpan
   kawasan 0.25° ke `docs/data/had/<i>_<j>.json` + `indeks.json` (bot juga commit terus ke `main`, fail data sahaja); klien memuat hanya kawasan di
   sekitar laluan (`loadHad`), Overpass sandaran. Jalan di dalam pulau Singapura dibuang (`in_singapore`; kawasan itu 4.4 MB sendirian, bukan sasaran JomRoute). Ujian Python: `tests/py/test_ambil_had.py` (dijalankan oleh `npm test`).
@@ -113,7 +113,7 @@ npm test
   Tempat (minyak, R&R, masjid, tandas, makan, ATM, caj EV, stesen) untuk "Cari sepanjang laluan" & "Berdekatan": `scripts/ambil_poi.py` (tugas bulanan yang sama)
   → `docs/data/poi/<kategori>/<i>_<j>.json`; klien `loadPoi` dahulu (tamat masa 4 s), kemudian server/Overpass/Photon sebagai sandaran. Kategori dalam
   `ambil_poi.py` mesti sama dengan `ALONG_Q` (diuji).
-  Kedua-dua tugas bulanan membuka **isu GitHub** bila gagal (langkah `if: failure()`); uji dengan Run workflow + tanda `ujian_gagal`. Menu ☰ pemilik
+  Tugas bulanan (satu sahaja: `had-bulanan.yml`) membuka **isu GitHub** bila gagal (langkah `if: failure()`); uji dengan Run workflow + tanda `ujian_gagal`. Menu ☰ pemilik
   juga memaparkan tarikh data. GitHub mematikan tugas berjadual selepas 60 hari tanpa aktiviti repo: jika tarikh dalam menu lama, semak tab Actions.
 - **ID 30 hari:** pindah data perlu pengesahan pengguna ("Pulihkan data anda?"), kerana pelayar boleh dikongsi oleh akaun Google
   lain. Sekatan dipindah automatik. Data dipindah, bukan disalin.

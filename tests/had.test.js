@@ -65,7 +65,8 @@ test('had-bulanan.yml: berjadual bulanan, hanya menyimpan docs/data/had', () => 
   const y = fs.readFileSync(path.join(ROOT, '.github/workflows/had-bulanan.yml'), 'utf8');
   assert.match(y, /cron: '\d+ \d+ \d+ \* \*'/);
   assert.match(y, /workflow_dispatch/);
-  assert.match(y, /git add -A docs\/data\/had/);
+  assert.match(y, /git add -A docs\/data\/had docs\/data\/poi docs\/data\/titik\.json/);
+  assert.match(y, /scripts\/ambil_titik\.py/);
   assert.match(y, /timeout-minutes: \d+/);
   assert.match(y, /download\.geofabrik\.de\/asia\/malaysia-singapore-brunei-latest\.osm\.pbf/);
   assert.ok(!/overpass/i.test(y.replace(/^#.*$/gm, '')), 'tugas bulanan tidak lagi menggunakan Overpass');
@@ -89,8 +90,8 @@ test(`${file}: had laju dibaca dari fail statik dahulu, Overpass sandaran; hadKe
 });
 }
 
-test('tugas bulanan (titik & had/tempat): buka isu bila gagal, dan boleh diuji dengan input ujian_gagal', () => {
-  ['titik-bulanan.yml', 'had-bulanan.yml'].forEach(f => {
+test('tugas bulanan: buka isu bila gagal, dan boleh diuji dengan input ujian_gagal', () => {
+  ['had-bulanan.yml'].forEach(f => {
     const y = fs.readFileSync(path.join(ROOT, '.github/workflows', f), 'utf8');
     assert.match(y, /issues: write/, f);
     assert.match(y, /ujian_gagal:/, f);
