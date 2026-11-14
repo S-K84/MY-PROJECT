@@ -113,6 +113,8 @@ npm test
   Tempat (minyak, R&R, masjid, tandas, makan, ATM, caj EV, stesen) untuk "Cari sepanjang laluan" & "Berdekatan": `scripts/ambil_poi.py` (tugas bulanan yang sama)
   → `docs/data/poi/<kategori>/<i>_<j>.json`; klien `loadPoi` dahulu (tamat masa 4 s), kemudian server/Overpass/Photon sebagai sandaran. Kategori dalam
   `ambil_poi.py` mesti sama dengan `ALONG_Q` (diuji).
+  Kedua-dua tugas bulanan membuka **isu GitHub** bila gagal (langkah `if: failure()`); uji dengan Run workflow + tanda `ujian_gagal`. Menu ☰ pemilik
+  juga memaparkan tarikh data. GitHub mematikan tugas berjadual selepas 60 hari tanpa aktiviti repo: jika tarikh dalam menu lama, semak tab Actions.
 - **ID 30 hari:** pindah data perlu pengesahan pengguna ("Pulihkan data anda?"), kerana pelayar boleh dikongsi oleh akaun Google
   lain. Sekatan dipindah automatik. Data dipindah, bukan disalin.
 - **Deploy:** `@google/clasp@2.4.2` dipin. `clasp login` pemilik juga guna versi ini (format `.clasprc.json` berbeza antara versi).
